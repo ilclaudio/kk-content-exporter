@@ -1,2 +1,2 @@
-# WW WP Content Exporter
+# KK WP Content Exporter
 KK Content Exporter
