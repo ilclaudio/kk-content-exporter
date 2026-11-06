@@ -46,3 +46,34 @@ wp-config.php
 # Note: If you wish to whitelist themes,
 # uncomment the next line
 #/wp-content/themes
+
+
+# PHPUnit cache (local only)
+.phpunit.cache/
+tests/integration/.cache/
+
+# Node
+node_modules
+
+# Composer
+/vendor/
+composer.lock
+.composer-cache/
+.composer-home/
+
+# Tests
+.phpunit.result.cache
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+
+# Custom directives
+.codex-tmp
+.claude
+.codex
+DEV
+AGENTS/ISSUES_TODO.md
+AGENTS/ISSUES_RESOLVED.md
+AGENTS/CODE_REVIEW_PROGRESS.md
