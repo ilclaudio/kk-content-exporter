@@ -112,7 +112,7 @@ root. All scripts are non-interactive and can be reused by a future CI.
 | `composer run build:zip` | Builds `build/kk-content-exporter-<version>.zip` (clean tree, `check`, `.distignore`, package verification) | No |
 | `composer run svn:prepare` | Prepares the WordPress.org SVN working copy from the build (dry run by default, `-- --apply`; never commits) | No |
 | `composer audit` | Known vulnerabilities in the Composer dependencies | No |
-| Plugin Check on the built package (`wp plugin check <plugin-root>/build/kk-content-exporter` from the Local site root) | WordPress.org directory checks; complements PHPCS. On the working folder it also reports the development files (see *WordPress.org Plugin Directory Rules* in `AGENTS/CODING_STANDARDS.md`) | No; before every release |
+| Plugin Check on the built package (`wp plugin check <plugin-root>/build/kk-content-exporter` from the Local site root) | WordPress.org directory checks; complements PHPCS (details in *WordPress.org Plugin Directory Rules*, `AGENTS/CODING_STANDARDS.md`) | No; before every release |
 
 The commit-msg hook also blocks AI attribution (`Co-Authored-By` trailers, "Generated with" lines) and
 first lines without an allowed prefix or of 72 characters or more. CI on GitHub Actions is planned but not
