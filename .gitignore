@@ -1,79 +1,48 @@
-# WordPress - ignore core, configuration, examples, uploads and logs.
-# https://github.com/github/gitignore/blob/main/WordPress.gitignore
+# Git ignore rules of the KK Content Exporter plugin repository.
+# Required entries are checked by tests/unit/KKCE_Git_Ignore_Unit_Test.php.
 
-# Core
-#
-# Note: if you want to stage/commit WP core files
-# you can delete this whole section/until Configuration.
-/wp-admin/
-/wp-content/index.php
-/wp-content/languages
-/wp-content/plugins/index.php
-/wp-content/themes/index.php
-/wp-includes/
-/index.php
-/license.txt
-/readme.html
-/wp-*.php
-/xmlrpc.php
-
-# Configuration
+# Credentials and local configuration: never commit
+tests/integration/wp-tests-config.local.php
 wp-config.php
-
-# Example themes
-/wp-content/themes/twenty*/
-
-# Example plugin
-/wp-content/plugins/hello.php
-
-# Uploads
-/wp-content/uploads/
-
-# Log files
-*.log
-
-# htaccess
-/.htaccess
-
-# All plugins
-#
-# Note: If you wish to whitelist plugins,
-# uncomment the next line
-#/wp-content/plugins
-
-# All themes
-#
-# Note: If you wish to whitelist themes,
-# uncomment the next line
-#/wp-content/themes
-
-
-# PHPUnit cache (local only)
-.phpunit.cache/
-tests/integration/.cache/
-
-# Node
-node_modules
+.env
+.env.*
+!.env.example
 
 # Composer
 /vendor/
-composer.lock
 .composer-cache/
 .composer-home/
 
-# Tests
+# Tool caches
+.phpunit.cache/
 .phpunit.result.cache
+tests/integration/.cache/
 
-# VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/launch.json
+# Generated release folder, ZIP, SVN working copy and reports
+/build/
 
-# Custom directives
-.codex-tmp
-.claude
-.codex
+# Node (no JavaScript build yet)
+node_modules/
+
+# Logs
+*.log
+
+# Private working material and local AI state
 DEV
 AGENTS/ISSUES_TODO.md
 AGENTS/ISSUES_RESOLVED.md
 AGENTS/CODE_REVIEW_PROGRESS.md
+.claude
+.codex
+.codex-tmp
+
+# Editors and operating systems
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini

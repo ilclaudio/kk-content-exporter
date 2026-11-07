@@ -1,0 +1,86 @@
+{
+  "name": "kkce/kk-content-exporter",
+  "description": "KK Content Exporter: exposes published WordPress content as configurable, read-only JSON feeds.",
+  "type": "wordpress-plugin",
+  "license": "GPL-3.0-or-later",
+  "require": {
+    "php": ">=8.3"
+  },
+  "require-dev": {
+    "brain/monkey": "^2.6",
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.1",
+    "php-stubs/wordpress-stubs": "^6.4",
+    "phpcompatibility/phpcompatibility-wp": "^2.1",
+    "phpstan/extension-installer": "^1.4",
+    "phpstan/phpstan": "^2.1",
+    "phpunit/phpunit": "^9.6",
+    "squizlabs/php_codesniffer": "^3.13",
+    "szepeviktor/phpstan-wordpress": "^2.0",
+    "wp-cli/i18n-command": "^2.6",
+    "wp-cli/wp-cli": "^2.11",
+    "wp-coding-standards/wpcs": "^3.1",
+    "yoast/phpunit-polyfills": "^4.0"
+  },
+  "scripts": {
+    "lint": "@php bin/php-lint.php",
+    "phpcs": [
+      "@php -r \"is_dir('.phpunit.cache') || mkdir('.phpunit.cache');\"",
+      "phpcs"
+    ],
+    "phpcbf": [
+      "@php -r \"is_dir('.phpunit.cache') || mkdir('.phpunit.cache');\"",
+      "phpcbf"
+    ],
+    "phpstan": "phpstan analyse --no-progress --memory-limit=1G",
+    "test:unit": "phpunit --testsuite unit",
+    "test:integration": "phpunit -c phpunit-integration.xml",
+    "test:all": [
+      "@test:unit",
+      "@test:integration"
+    ],
+    "make-pot": "wp i18n make-pot . languages/kk-content-exporter.pot --slug=kk-content-exporter --domain=kk-content-exporter --exclude=vendor,node_modules,tests,DEV,AGENTS,bin,build",
+    "update-po": "wp i18n update-po languages/kk-content-exporter.pot languages",
+    "make-mo": "wp i18n make-mo languages",
+    "i18n": [
+      "@make-pot",
+      "@update-po",
+      "@make-mo"
+    ],
+    "hooks:install": "git config core.hooksPath .githooks",
+    "build:zip": "@php bin/build-zip.php",
+    "svn:prepare": "@php bin/svn-prepare.php",
+    "check": [
+      "@lint",
+      "@phpcs",
+      "@phpstan",
+      "@test:unit"
+    ]
+  },
+  "scripts-descriptions": {
+    "lint": "PHP syntax check (php -l) of every first-party PHP file",
+    "phpcs": "WordPress Coding Standards (phpcs.xml.dist)",
+    "phpcbf": "Automatic fixes for PHPCS findings",
+    "phpstan": "Static analysis at the level set in phpstan.neon.dist",
+    "test:unit": "Unit tests (PHPUnit + Brain Monkey, no WordPress)",
+    "test:integration": "Integration tests (WordPress test suite, dedicated database; see tests/integration/README.md)",
+    "test:all": "Unit and integration tests in order",
+    "make-pot": "Regenerate languages/kk-content-exporter.pot",
+    "update-po": "Merge the .pot into every languages/*.po",
+    "make-mo": "Compile every languages/*.po into .mo",
+    "i18n": "make-pot, update-po and make-mo in order",
+    "hooks:install": "Activate the Git hooks of .githooks/ in this clone",
+    "build:zip": "Build build/kk-content-exporter-<version>.zip (clean tree, checks, .distignore, verification); options after --: --allow-dirty, --skip-checks",
+    "svn:prepare": "Prepare the WordPress.org SVN working copy from the build (dry run by default; --apply; never commits)",
+    "check": "lint, phpcs, phpstan and unit tests (the fast local gate)"
+  },
+  "config": {
+    "platform": {
+      "php": "8.3.0"
+    },
+    "sort-packages": true,
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true,
+      "phpstan/extension-installer": true
+    }
+  }
+}

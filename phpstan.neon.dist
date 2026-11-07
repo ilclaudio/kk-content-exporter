@@ -1,0 +1,16 @@
+# PHPStan configuration of KK Content Exporter.
+# The WordPress extension (szepeviktor/phpstan-wordpress) and the core stubs are loaded by
+# phpstan/extension-installer. The level is written only here (see AGENTS/CODING_STANDARDS.md).
+# No baseline: every error must be fixed, not recorded.
+
+parameters:
+  level: 6
+  phpVersion: 80300
+  paths:
+    - kk-content-exporter.php
+    - uninstall.php
+    - includes
+    - bin
+  bootstrapFiles:
+    - tests/phpstan/bootstrap.php
+  tmpDir: .phpunit.cache/phpstan

@@ -1,0 +1,27 @@
+# EditorConfig: https://editorconfig.org
+# WordPress Coding Standards require LF line endings.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.php]
+indent_style = tab
+indent_size = 4
+
+[*.{xml,dist}]
+indent_style = tab
+indent_size = 4
+
+[*.{js,json,yml,yaml,neon}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[readme.txt]
+trim_trailing_whitespace = false

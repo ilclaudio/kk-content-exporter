@@ -1,0 +1,60 @@
+# Files and folders left out of the release ZIP (composer run build:zip).
+# One pattern per line. A pattern that starts with "/" is anchored to the plugin root and excludes
+# that file or folder with everything inside it; any other pattern is matched (shell glob) against
+# every path segment, at any depth. bin/build-zip.php also refuses a package that contains a
+# development file even if it is missing from this list.
+
+# Version control and editors
+/.git
+/.github
+/.githooks
+/.gitignore
+/.gitattributes
+/.distignore
+/.editorconfig
+/.vscode
+/.idea
+/.claude
+/.codex
+/.codex-tmp
+.DS_Store
+Thumbs.db
+desktop.ini
+.env
+.env.*
+
+# Development tools, caches and dependencies
+/.phpunit.cache
+/.composer-cache
+/.composer-home
+/bin
+/build
+/tests
+/vendor
+/node_modules
+/composer.json
+/composer.lock
+/phpcs.xml.dist
+/phpstan.neon.dist
+/phpunit.xml
+/phpunit-integration.xml
+
+# AI context and private material
+/AGENTS
+/AGENTS.md
+/CLAUDE.md
+/DEV
+
+# Repository-only documentation
+/README.md
+/CONTRIBUTING.md
+/SECURITY.md
+/VERSION.txt
+
+# Leftovers
+*.log
+*.po~
+*.pot~
+*.orig
+*.swp
+*~

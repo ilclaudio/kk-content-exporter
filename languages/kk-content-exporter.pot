@@ -1,0 +1,39 @@
+# Copyright (C) 2026 IoClaudio
+# This file is distributed under the GPL-3.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: KK Content Exporter 0.0.1\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/kk-content-exporter\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-11-06T23:21:24+01:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: kk-content-exporter\n"
+
+#. Plugin Name of the plugin
+#: kk-content-exporter.php:3
+msgid "KK Content Exporter"
+msgstr ""
+
+#. Description of the plugin
+#: kk-content-exporter.php:4
+msgid "Exposes published content of a chosen post type as configurable, read-only JSON feeds."
+msgstr ""
+
+#. Author of the plugin
+#: kk-content-exporter.php:8
+msgid "IoClaudio"
+msgstr ""
+
+#. Author URI of the plugin
+#: kk-content-exporter.php:9
+msgid "https://www.claudiobattaglino.it"
+msgstr ""
+
+#: includes/class-plugin.php:87
+msgid "Development version: no feeds can be configured yet."
+msgstr ""
