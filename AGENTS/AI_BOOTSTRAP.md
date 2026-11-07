@@ -24,16 +24,19 @@ order:
    normal files and write through the link; if a tool refuses to write through the symlink, write to
    the real target path it reports. If a symlink is dangling (its target is unreachable), do not
    recreate or replace it; report it to the operator and continue the bootstrap.
-8. Do not read `AGENTS/CODE_REVIEW.md` or `AGENTS/I18N.md` during bootstrap: read the first only when
-   Trigger D (`/kkce-review`) runs, the second only for translation work.
-9. Report exactly: `Bootstrap completed` + the full list of files read, including the root entry
-   points.
+8. Do not read `AGENTS/CODE_REVIEW.md`, `AGENTS/TRIGGERS.md` or `AGENTS/I18N.md` during bootstrap: read
+   `TRIGGERS.md` when a request matches a trigger or concerns an issue, `CODE_REVIEW.md` only when
+   Trigger D (`/kkce-review`) runs, `I18N.md` only for translation work.
+9. Steps 9-13 make one report block. Start with `Bootstrap completed` + the full list of files read,
+   including the root entry points.
 10. List the skills available in the current session. Explicitly state whether the applicable official
     WordPress skills (`AGENTS/AI_BEHAVIOR.md`, *Official WordPress Skills*) are loaded; if they are not,
     notify the human operator.
-11. List the available trigger commands from `AGENTS/AI_BEHAVIOR.md` using the format:
-    `Trigger X` (`/slug`) — brief description.
-12. State: `Local issue files ensured: AGENTS/ISSUES_TODO.md, AGENTS/ISSUES_RESOLVED.md (created if missing; never commit them).`
+11. List the available trigger commands from the table in `AGENTS/AI_BEHAVIOR.md` using the format:
+    `Trigger X` (`/slug`) — brief description. When one of them is invoked, read `AGENTS/TRIGGERS.md`
+    first.
+12. Mention the local issue files only when they were created or a symlink is dangling, saying that
+    they must never be committed.
 13. Check whether the Git hooks of the project are active with `git config --get core.hooksPath`
     (a read-only check). If the value is not `.githooks`, warn the human operator that commits are not
     checked for secrets, PHP syntax, PHPCS, PHPStan, unit tests and commit messages, and tell them to run
@@ -74,6 +77,8 @@ order:
   rules, verification matrix.
 - `GIT_WORKFLOW.md`: branches, commits, version alignment, release package; read during bootstrap and
   applied only when the task includes VCS work.
+- `TRIGGERS.md`: detailed workflows of the triggers A-D, shared issue rules, Issue Management; read only
+  when a request matches a trigger or concerns an issue.
 - `CODE_REVIEW.md`: review method, evidence, coverage and project plan; read only by Trigger D.
 - `I18N.md`: translation workflow (new language, `.pot`/`.po`/`.mo`, future JavaScript translations);
   read only for translation work.
