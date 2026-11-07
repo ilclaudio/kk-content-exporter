@@ -371,7 +371,7 @@ runs only) this is the only write permitted during a review. Interactive remedia
 | `languages/*.pot` | Generated template | Never edit: run `composer run make-pot` |
 | `.phpunit.cache/`, `build/` | Tool caches and generated output | Never edit by hand |
 | `DEV/` | Symlink to private working material | Read when needed; modify only when the operator asks; never stage |
-| `AGENTS/ISSUES_TODO.md`, `AGENTS/ISSUES_RESOLVED.md`, `AGENTS/CODE_REVIEW_PROGRESS.md` | Local ignored files (the first two are symlinks to `DEV/CODE_REVIEW/`) | Write through the link; never replace the symlinks with regular files; never stage |
+| `AGENTS/ISSUES_TODO.md`, `AGENTS/ISSUES_RESOLVED.md`, `AGENTS/CODE_REVIEW_PROGRESS.md` | Local ignored files (the first two are symlinks to `DEV/CODE_REVIEW/`) | Write through the link; never replace the symlinks with regular files; never stage. When `DEV/` does not exist (fresh clone, CI) they are ordinary local files created by the bootstrap |
 | `tests/integration/wp-tests-config.local.php` | Local database settings | Never read its values, never stage |
 
 First-party code that receives full attention: `kk-content-exporter.php`, `uninstall.php`, `includes/`,

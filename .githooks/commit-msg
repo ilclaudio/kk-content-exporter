@@ -1,13 +1,41 @@
 #!/usr/bin/env bash
 #
-# Checks the commit message. Blocks Co-Authored-By trailers that credit an AI assistant
-# (see "AI attribution in commits" in AGENTS/GIT_WORKFLOW.md).
+# Checks the commit message:
+#   1. no AI attribution (Co-Authored-By trailer or "Generated with" line), see
+#      "AI attribution in commits" in AGENTS/GIT_WORKFLOW.md;
+#   2. first line with an allowed prefix and under 72 characters, see "Commits" in the same file.
+# Merge, revert, fixup and squash commits are exempt from the second check.
 
 set -euo pipefail
 
 echo "[KKCE commit-msg] Checking the commit message..." >&2
 
-if grep -Eiq '^Co-Authored-By:.*(claude|chatgpt|codex|copilot|gemini|openai|anthropic)' "$1"; then
+message_file="$1"
+ai_names='claude|chatgpt|codex|copilot|gemini|openai|anthropic'
+
+if grep -Eiq "^Co-Authored-By:.*(${ai_names})" "$message_file"; then
 	echo "Commit blocked: remove the Co-Authored-By trailer that credits an AI assistant." >&2
+	exit 1
+fi
+
+if grep -Eiq "^[^#].*Generated with.*(${ai_names})" "$message_file"; then
+	echo "Commit blocked: remove the \"Generated with ...\" line that credits an AI assistant." >&2
+	exit 1
+fi
+
+# First line that is not a comment.
+first_line="$(grep -v '^#' "$message_file" | head -n 1 || true)"
+
+if [[ "$first_line" =~ ^(Merge|Revert|fixup!|squash!) ]]; then
+	exit 0
+fi
+
+if ! [[ "$first_line" =~ ^(Feature|Bug-fix|Refactor|Docs|Chore):\  ]]; then
+	echo "Commit blocked: the first line must start with 'Feature: ', 'Bug-fix: ', 'Refactor: ', 'Docs: ' or 'Chore: '." >&2
+	exit 1
+fi
+
+if [ "${#first_line}" -ge 72 ]; then
+	echo "Commit blocked: the first line must be under 72 characters (it has ${#first_line})." >&2
 	exit 1
 fi
