@@ -19,6 +19,7 @@ class KKCE_Agents_Docs_Unit_Test extends KKCE_Unit_Test_Case {
 		'AGENTS/ISSUES_TODO.md',
 		'AGENTS/ISSUES_RESOLVED.md',
 		'AGENTS/CODE_REVIEW_PROGRESS.md',
+		'tests/integration/wp-tests-config.local.php',
 	);
 
 	/**
