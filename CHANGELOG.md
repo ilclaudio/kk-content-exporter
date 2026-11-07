@@ -15,6 +15,10 @@ follows [Semantic Versioning](https://semver.org/). The version of the first ent
 - Configuration meta of a feed (source post type, access, active flag, items per page): sanitized on
   every write, hidden from REST and editable by administrators only. New feeds are public-access,
   disabled, with 50 items per page.
+- Capability `kkce_read_export`, granted to administrators on activation (idempotent) and kept on
+  deactivation.
+- The list of the feeds shows the slug, the source post type, the access and the status of every feed.
+  Italian translation of the new strings.
 
 ### Changed
 
