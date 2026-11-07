@@ -8,6 +8,7 @@
 namespace KKCE\Admin;
 
 use KKCE\Feed_Post_Type;
+use WP_Post;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -65,6 +66,26 @@ final class Feed_List {
 		$result[ self::COLUMN_STATUS ] = __( 'Status', 'kk-content-exporter' );
 
 		return $result;
+	}
+
+	/**
+	 * Removes "Quick Edit" from the row actions of the feeds.
+	 *
+	 * Quick edit can change the slug of a feed outside the editor, skipping the validation of the
+	 * slug (format, reserved words, uniqueness).
+	 *
+	 * @param mixed $actions Row actions of the post.
+	 * @param mixed $post    The post of the row.
+	 * @return mixed The actions, without quick edit when the post is a feed.
+	 */
+	public static function row_actions( $actions, $post ) {
+		if ( ! is_array( $actions ) || ! $post instanceof WP_Post || Feed_Post_Type::POST_TYPE !== $post->post_type ) {
+			return $actions;
+		}
+
+		unset( $actions['inline hide-if-no-js'] );
+
+		return $actions;
 	}
 
 	/**

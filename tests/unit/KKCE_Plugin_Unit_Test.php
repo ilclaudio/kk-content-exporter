@@ -27,6 +27,11 @@ class KKCE_Plugin_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertNotFalse( has_action( 'init', array( \KKCE\Feed_Post_Type::class, 'register_meta' ) ) );
 		$this->assertSame( 10, has_filter( 'manage_kkce_feed_posts_columns', array( \KKCE\Admin\Feed_List::class, 'columns' ) ) );
 		$this->assertSame( 10, has_action( 'manage_kkce_feed_posts_custom_column', array( \KKCE\Admin\Feed_List::class, 'render_column' ) ) );
+		$this->assertSame( 10, has_filter( 'post_row_actions', array( \KKCE\Admin\Feed_List::class, 'row_actions' ) ) );
+		$this->assertSame( 10, has_action( 'add_meta_boxes_kkce_feed', array( \KKCE\Admin\Feed_Editor::class, 'add_meta_box' ) ) );
+		$this->assertSame( 10, has_filter( 'wp_insert_post_data', array( \KKCE\Admin\Feed_Editor::class, 'filter_post_data' ) ) );
+		$this->assertSame( 10, has_action( 'save_post_kkce_feed', array( \KKCE\Admin\Feed_Editor::class, 'save' ) ) );
+		$this->assertSame( 10, has_action( 'admin_notices', array( \KKCE\Admin\Feed_Editor::class, 'render_notices' ) ) );
 	}
 
 	/**

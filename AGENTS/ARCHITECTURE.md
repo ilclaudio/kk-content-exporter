@@ -21,6 +21,8 @@ same change that adds them.
 | `includes/class-plugin.php` | `KKCE\Plugin`: registers the hooks, loads the text domain |
 | `includes/class-feed-post-type.php` | `KKCE\Feed_Post_Type`: registers the private post type `kkce_feed` (administrators only, no REST), the keys and the sanitizers of its configuration meta (`_kkce_post_type`, `_kkce_access`, `_kkce_active`, `_kkce_per_page`) |
 | `includes/admin/class-feed-list.php` | `KKCE\Admin\Feed_List`: columns of the `kkce_feed` list (slug, source, access, status), read through the sanitizers and escaped |
+| `includes/admin/class-feed-editor.php` | `KKCE\Admin\Feed_Editor`: the "Feed settings" meta box of the `kkce_feed` editor and its saving (nonce per feed, `edit_post` capability, slug set through `wp_insert_post_data`, meta written on `save_post_kkce_feed`, errors shown once in a notice) |
+| `includes/class-feed-form.php` | `KKCE\Feed_Form`: pure processing of the submitted editor values (which value is saved, which error is reported) |
 | `includes/class-feed-validator.php` | `KKCE\Feed_Validator`: pure validation (no WordPress call) of the slug, the items per page and the source post type; returns error codes, the editor writes the messages |
 | `languages/` | `kk-content-exporter.pot`, `kk-content-exporter-it_IT.po` / `.mo` |
 | `readme.txt` | WordPress.org readme (Stable tag, requirements, changelog) |
@@ -84,7 +86,19 @@ Add new hooks in `Plugin::boot()` (or in a class it wires), never as side effect
 
 ## Public Endpoints and Hooks
 
-None yet. Planned: REST `GET kkce/v1/<feed-slug>` (read-only, public or authenticated) registered on
+No public endpoint, shortcode, cron job or WP-CLI command yet, and the plugin offers no hook of its own.
+Admin hooks used (all in `Plugin::boot()`): `manage_kkce_feed_posts_columns`, `manage_kkce_feed_posts_custom_column`,
+`post_row_actions` (removes Quick Edit from the feeds, because it could change a slug without validation),
+`add_meta_boxes_kkce_feed`, `wp_insert_post_data`, `save_post_kkce_feed`, `admin_notices`.
+`wp_insert_post_data` runs for every post type and returns at once for anything but `kkce_feed`.
+
+Rules of the editor: a field with an invalid value keeps its previous value and is reported in a notice, the
+other fields are saved; a feed can be enabled only with a slug and a source post type; a slug that is invalid,
+reserved or used by another feed is refused, never renamed silently (WordPress alone would add "-2", so the
+slugs it renames itself, `feed`, `rss`, `rss2`, `rdf`, `atom` and `embed`, are reserved too); the source
+post type must be a public post type, `attachment` excluded.
+
+Planned: REST `GET kkce/v1/<feed-slug>` (read-only, public or authenticated) registered on
 `rest_api_init`; capability `kkce_read_export`; private post type `kkce_feed`. No shortcodes, cron jobs or
 WP-CLI commands are planned for V1. The admin preview and the mapping editor (Phase 2) will need an
 admin-only REST or AJAX call: document it here when it is added.
