@@ -19,6 +19,11 @@ follows [Semantic Versioning](https://semver.org/). The version of the first ent
   deactivation.
 - The list of the feeds shows the slug, the source post type, the access and the status of every feed.
   Italian translation of the new strings.
+- Editor of a feed: a "Feed settings" box with the slug, the source post type, the access, the active flag
+  and the items per page. Saving requires a nonce and the capability to edit the feed. A value that is not
+  valid keeps its previous value and is reported in a notice; the other values are saved. A slug that is
+  reserved, malformed or used by another feed is refused. A feed can be enabled only with a slug and a source
+  post type. Quick Edit is removed from the feeds.
 
 ### Changed
 

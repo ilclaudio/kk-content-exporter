@@ -213,6 +213,23 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Quick edit is removed from the feeds, because it could change the slug without validation.
+	 */
+	public function test_quick_edit_is_removed_for_feeds_only() {
+		$actions = array(
+			'edit'                 => '<a href="#">Edit</a>',
+			'inline hide-if-no-js' => '<button>Quick Edit</button>',
+		);
+
+		$feed = apply_filters( 'post_row_actions', $actions, get_post( $this->feed() ) );
+		$post = apply_filters( 'post_row_actions', $actions, get_post( self::factory()->post->create() ) );
+
+		$this->assertArrayNotHasKey( 'inline hide-if-no-js', $feed );
+		$this->assertArrayHasKey( 'edit', $feed );
+		$this->assertSame( $actions, $post );
+	}
+
+	/**
 	 * Other columns print nothing.
 	 */
 	public function test_other_columns_print_nothing() {

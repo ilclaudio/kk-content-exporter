@@ -86,6 +86,10 @@ class KKCE_Feed_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertContains( 'feeds', $reserved );
 		$this->assertContains( 'settings', $reserved );
 		$this->assertContains( 'preview', $reserved );
+		// WordPress silently renames these flat slugs (adds "-2"), so they must be refused here.
+		foreach ( array( 'feed', 'rss', 'rss2', 'rdf', 'atom', 'embed' ) as $wordpress_slug ) {
+			$this->assertContains( $wordpress_slug, $reserved );
+		}
 		foreach ( $reserved as $slug ) {
 			$this->assertSame( Feed_Validator::ERROR_RESERVED, Feed_Validator::validate_slug( $slug, array() ), $slug );
 		}
@@ -144,6 +148,35 @@ class KKCE_Feed_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 			'boolean'        => array( true, Feed_Validator::ERROR_NOT_INTEGER ),
 			'array'          => array( array( 10 ), Feed_Validator::ERROR_NOT_INTEGER ),
 			'overflow'       => array( '99999999999999999999', Feed_Validator::ERROR_NOT_INTEGER ),
+		);
+	}
+
+	/**
+	 * The access is `public` or `authenticated`; any other value is refused, never guessed.
+	 *
+	 * @dataProvider access_provider
+	 *
+	 * @param mixed  $value    Value.
+	 * @param string $expected Error code.
+	 */
+	public function test_validate_access( $value, string $expected ) {
+		$this->assertSame( $expected, Feed_Validator::validate_access( $value ) );
+	}
+
+	/**
+	 * Data for test_validate_access().
+	 *
+	 * @return array<string, array{0: mixed, 1: string}>
+	 */
+	public function access_provider(): array {
+		return array(
+			'public'        => array( 'public', Feed_Validator::VALID ),
+			'authenticated' => array( 'authenticated', Feed_Validator::VALID ),
+			'unknown'       => array( 'everyone', Feed_Validator::ERROR_NOT_ALLOWED ),
+			'wrong case'    => array( 'Public', Feed_Validator::ERROR_NOT_ALLOWED ),
+			'empty'         => array( '', Feed_Validator::ERROR_NOT_ALLOWED ),
+			'null'          => array( null, Feed_Validator::ERROR_NOT_ALLOWED ),
+			'array'         => array( array( 'public' ), Feed_Validator::ERROR_NOT_ALLOWED ),
 		);
 	}
 

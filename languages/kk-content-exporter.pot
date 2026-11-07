@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-07T18:00:19+01:00\n"
+"POT-Creation-Date: 2026-11-07T18:36:06+01:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: kk-content-exporter\n"
@@ -39,39 +39,118 @@ msgstr ""
 msgid "https://www.claudiobattaglino.it"
 msgstr ""
 
-#: includes/admin/class-feed-list.php:62
+#: includes/admin/class-feed-editor.php:87
+msgid "Feed settings"
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:132
+#: includes/admin/class-feed-list.php:63
 msgid "Slug"
 msgstr ""
 
-#: includes/admin/class-feed-list.php:63
+#: includes/admin/class-feed-editor.php:135
+msgid "Last part of the address of the feed. Lowercase letters, digits and dashes. Leave it empty to use the title."
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:139
+#: includes/admin/class-feed-list.php:64
 msgid "Source"
 msgstr ""
 
-#: includes/admin/class-feed-list.php:64
+#: includes/admin/class-feed-editor.php:142
+msgid "&mdash; Select a post type &mdash;"
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:147
+msgid "The post type whose published content the feed exports."
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:151
+#: includes/admin/class-feed-editor.php:154
+#: includes/admin/class-feed-list.php:65
 msgid "Access"
 msgstr ""
 
-#: includes/admin/class-feed-list.php:65
+#: includes/admin/class-feed-editor.php:157
+msgid "Public: anyone can read the feed"
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:161
+msgid "Authenticated: only an authorized user can read the feed"
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:167
+msgid "Items per page"
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:173
+#: includes/admin/class-feed-list.php:66
 msgid "Status"
 msgstr ""
 
-#: includes/admin/class-feed-list.php:127
+#: includes/admin/class-feed-editor.php:177
+msgid "Enable the feed"
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:179
+msgid "A feed needs a slug and a source post type to be enabled."
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:395
+msgid "Enter a slug for the feed."
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:396
+msgid "The slug can contain only lowercase letters, digits and single dashes between them."
+msgstr ""
+
+#. translators: %d: maximum number of characters of a slug.
+#: includes/admin/class-feed-editor.php:399
+#, php-format
+msgid "The slug can have at most %d characters."
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:402
+msgid "This slug is reserved. Choose another one."
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:403
+msgid "Another feed already uses this slug."
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:404
+msgid "The source post type is not available. The previous source was kept."
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:405
+msgid "The access value is not valid. The previous access was kept."
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:406
+msgid "Items per page must be a whole number of at least 1. The previous value was kept."
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:407
+msgid "The feed was saved disabled: set a valid slug and a source post type first."
+msgstr ""
+
+#: includes/admin/class-feed-list.php:148
 msgid "Authenticated"
 msgstr ""
 
-#: includes/admin/class-feed-list.php:128
+#: includes/admin/class-feed-list.php:149
 msgid "Public"
 msgstr ""
 
-#: includes/admin/class-feed-list.php:139
+#: includes/admin/class-feed-list.php:160
 msgid "Active"
 msgstr ""
 
-#: includes/admin/class-feed-list.php:140
+#: includes/admin/class-feed-list.php:161
 msgid "Disabled"
 msgstr ""
 
-#: includes/admin/class-feed-list.php:152
+#: includes/admin/class-feed-list.php:173
 msgid "Not set"
 msgstr ""
 
@@ -127,6 +206,6 @@ msgstr ""
 msgid "All Feeds"
 msgstr ""
 
-#: includes/class-plugin.php:96
+#: includes/class-plugin.php:101
 msgid "Development version: no feeds can be configured yet."
 msgstr ""

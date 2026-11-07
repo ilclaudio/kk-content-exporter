@@ -73,8 +73,12 @@ final class Feed_Validator {
 	public const SLUG_MAX_LENGTH = 64;
 
 	/**
-	 * Slugs that a feed cannot use, so that the plugin can add fixed routes under `kkce/v1` later
-	 * without clashing with existing feeds.
+	 * Slugs that a feed cannot use.
+	 *
+	 * The first group keeps room for fixed routes under `kkce/v1` that the plugin may add later without
+	 * clashing with existing feeds. The second group are the flat slugs that WordPress renames on its
+	 * own (`wp_unique_post_slug()` adds "-2"): refusing them keeps the rule that a slug is never
+	 * changed silently.
 	 */
 	public const RESERVED_SLUGS = array(
 		'feeds',
@@ -86,6 +90,12 @@ final class Feed_Validator {
 		'status',
 		'health',
 		'index',
+		'feed',
+		'rss',
+		'rss2',
+		'rdf',
+		'atom',
+		'embed',
 	);
 
 	/**
@@ -140,6 +150,23 @@ final class Feed_Validator {
 		}
 
 		return $value < 1 ? self::ERROR_TOO_SMALL : self::VALID;
+	}
+
+	/**
+	 * Validates the access: exactly `public` or `authenticated`.
+	 *
+	 * Anything else is refused and never guessed, so that a damaged or tampered value cannot open a
+	 * feed that was restricted.
+	 *
+	 * @param mixed $value Value entered by the administrator.
+	 * @return string `self::VALID` or an error code.
+	 */
+	public static function validate_access( $value ): string {
+		if ( Feed_Post_Type::ACCESS_PUBLIC === $value || Feed_Post_Type::ACCESS_AUTHENTICATED === $value ) {
+			return self::VALID;
+		}
+
+		return self::ERROR_NOT_ALLOWED;
 	}
 
 	/**
