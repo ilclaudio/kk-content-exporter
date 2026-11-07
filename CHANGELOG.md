@@ -12,6 +12,13 @@ follows [Semantic Versioning](https://semver.org/). The version of the first ent
 
 - Private post type `kkce_feed` for the feed configurations: not public, not exposed in REST, managed
   by administrators only.
+- Configuration meta of a feed (source post type, access, active flag, items per page): sanitized on
+  every write, hidden from REST and editable by administrators only. New feeds are public-access,
+  disabled, with 50 items per page.
+
+### Changed
+
+- Development tooling: PHPStan now runs at level 8 (was 6).
 
 ## [0.0.1] - 2026-11-06
 

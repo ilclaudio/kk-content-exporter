@@ -13,7 +13,7 @@ class KKCE_PHPStan_Config_Unit_Test extends KKCE_Unit_Test_Case {
 	/**
 	 * Minimum PHPStan level of the project (AGENTS/CODING_STANDARDS.md).
 	 */
-	const MINIMUM_LEVEL = 6;
+	const MINIMUM_LEVEL = 8;
 
 	/**
 	 * Top-level folders that hold no first-party runtime or tooling PHP to analyze.
