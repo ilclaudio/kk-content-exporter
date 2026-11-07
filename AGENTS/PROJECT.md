@@ -69,7 +69,9 @@ into public documentation):
 
 - `DEV/TODO/Plugin_WordPress_Export.md`: functional specification (what the plugin does).
 - `DEV/TODO/TODO_KK_Content_Exporter_Plan.md`: development plan in phases (how and when).
-- `DEV/TODO/README.md`: index of the operational plans (read at bootstrap).
+- `DEV/TODO/README.md`: index of the operational plans (read at bootstrap); each plan is a
+  `DEV/TODO/TODO_<Name>.md` file (rules: *Operational plans* in `AGENTS/AI_BEHAVIOR.md`).
+- `DEV/PROCEDURES/README.md`: index of the release and publication procedures (`PROC_<Name>.md`).
 
 When the specification and the code disagree, stop and ask the operator which one is right.
 

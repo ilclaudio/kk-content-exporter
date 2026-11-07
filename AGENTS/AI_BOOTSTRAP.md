@@ -24,7 +24,7 @@ context. First read the root entry point for the active agent: `AGENTS.md` for e
    the real target path it reports. If a symlink is dangling (its target is unreachable), do not
    recreate or replace it; report it to the operator and continue the bootstrap.
 8. Do not read `AGENTS/CODE_REVIEW.md` or `AGENTS/I18N.md` during bootstrap: read the first only when
-   Trigger F (`/code-review`) runs, the second only for translation work.
+   Trigger D (`/kkce-review`) runs, the second only for translation work.
 9. Report exactly: `Bootstrap completed` + the full list of files read, including the root entry
    points.
 10. List the skills available in the current session. Explicitly state whether the applicable official
@@ -66,21 +66,23 @@ context. First read the root entry point for the active agent: `AGENTS.md` for e
 - `PROJECT.md`: purpose, scope, requirements, prefixes, boundaries, links to the private specification and plan.
 - `ARCHITECTURE.md`: plugin structure, lifecycle (bootstrap, activation, deactivation, uninstall),
   conventions, planned data model and endpoints, technology stack, canonical quality-check commands.
-- `AI_BEHAVIOR.md`: workflow rules, test-driven workflow, skills, triggers, issue management,
-  documentation duties, Definition of Done.
+- `AI_BEHAVIOR.md`: workflow rules, test-driven workflow, skills, operational plans (`DEV/TODO/TODO_*.md`),
+  triggers, issue management, documentation duties, Definition of Done.
 - `CODING_STANDARDS.md`: coding constraints, WordPress security checklist, WordPress.org rules, i18n
   rules, verification matrix.
 - `GIT_WORKFLOW.md`: branches, commits, version alignment, release package; read during bootstrap and
   applied only when the task includes VCS work.
-- `CODE_REVIEW.md`: review method, evidence, coverage and project plan; read only by Trigger F.
+- `CODE_REVIEW.md`: review method, evidence, coverage and project plan; read only by Trigger D.
 - `I18N.md`: translation workflow (new language, `.pot`/`.po`/`.mo`, future JavaScript translations);
   read only for translation work.
 - `CODE_REVIEW_PROGRESS.md`: ignored local state of a full code-review run; created and read only by
-  Trigger F, never at bootstrap; never committed.
+  Trigger D, never at bootstrap; never committed.
 - `ISSUES_TODO.md`: ignored local backlog (symlink), ensured during bootstrap and read by issue workflows.
 - `ISSUES_RESOLVED.md`: ignored local archive (symlink), ensured during bootstrap and searched only when required.
 - `../DEV/TODO/README.md`: optional private operational-plan index; read only after confirming that
   `DEV/TODO/` is accessible, without loading individual plans.
+- `../DEV/PROCEDURES/README.md`: optional private index of the release procedures (`PROC_*.md`); not read
+  at bootstrap, only for release or publication work.
 
 
 ## Reload trigger

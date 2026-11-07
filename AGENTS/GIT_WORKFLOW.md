@@ -114,7 +114,8 @@ folder is added to the repository, decide whether it ships and update `.distigno
 Release checklist (operator): align the version in the five places (*Version alignment*), update
 `CHANGELOG.md` and the `== Changelog ==` of `readme.txt`, commit, `composer run build:zip`, install the
 ZIP on a clean WordPress (also with ACF, CMB2, Polylang), run Plugin Check on it, then
-`composer run svn:prepare -- --apply` and `svn commit`.
+`composer run svn:prepare -- --apply` and `svn commit`. On the maintainer machine the detailed steps are
+the private procedures in `DEV/PROCEDURES/` (see *Procedures* in `AGENTS/AI_BEHAVIOR.md`).
 
 ## Pull Requests
 
