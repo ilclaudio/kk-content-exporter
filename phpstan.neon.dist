@@ -4,7 +4,7 @@
 # No baseline: every error must be fixed, not recorded.
 
 parameters:
-  level: 6
+  level: 8
   phpVersion: 80300
   paths:
     - kk-content-exporter.php

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ilclaudio/kk-content-exporter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ilclaudio/kk-content-exporter/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/ilclaudio/kk-content-exporter)](LICENSE)
-[![PHPStan level 6](https://img.shields.io/badge/PHPStan-level%206-brightgreen.svg)](https://phpstan.org/)
+[![PHPStan level 8](https://img.shields.io/badge/PHPStan-level%208-brightgreen.svg)](https://phpstan.org/)
 
 A WordPress plugin that exposes published content as configurable, read-only JSON feeds for an
 external importer. An administrator picks a post type, configures one or more feeds and maps the

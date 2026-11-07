@@ -29,7 +29,7 @@ WordPress.org Plugin Directory guidelines and the project conventions below.
 ### Formatting and documentation
 - Tabs for indentation; LF line endings (`.editorconfig`, `.gitattributes`).
 - File header docblock with `@package KKCE`; docblocks for every class, method and function, with
-  `@param` / `@return` types precise enough for PHPStan level 6 (`array<string, mixed>`, `list<int>`, ...).
+  `@param` / `@return` types precise enough for PHPStan level 8 (`array<string, mixed>`, `list<int>`, ...).
 - Comments and docblocks in English.
 
 ### Naming conventions
@@ -166,7 +166,7 @@ Never state that something was verified when the check did not run. The canonica
 |---|---|---|
 | Any PHP file | `composer run lint` (or `php -l <file>`) | Syntax |
 | Any PHP file | `composer run phpcs` | 0 errors and 0 warnings; fix with `composer run phpcbf`; never weaken the ruleset |
-| Any PHP file | `composer run phpstan` | Level 6, no baseline, no `ignoreErrors` |
+| Any PHP file | `composer run phpstan` | Level 8, no baseline, no `ignoreErrors` |
 | PHP, configuration or release files | `composer run test:unit` | Also run by the pre-commit hook |
 | WordPress behavior (hooks firing, post types, meta, capabilities, queries, REST, activation, translations) | `composer run test:integration` | Dedicated database `kkce_wordpress_test`; see `tests/integration/README.md` |
 | New or changed strings | `composer run i18n` | Regenerates `.pot`, merges `.po`, compiles `.mo`; then translate the new `it_IT` entries |
@@ -174,7 +174,7 @@ Never state that something was verified when the check did not run. The canonica
 | Before a release | Plugin Check, `composer audit` | See *WordPress.org Plugin Directory Rules* |
 
 ### PHPStan quality gate
-Level 6 on every first-party PHP file (`phpstan.neon.dist`; `KKCE_PHPStan_Config_Unit_Test` fails when
+Level 8 on every first-party PHP file (`phpstan.neon.dist`; `KKCE_PHPStan_Config_Unit_Test` fails when
 a PHP file or folder is not analyzed, when the level is lowered or when a baseline appears). Model
 WordPress's dynamic APIs with precise PHPDoc, runtime guards and, when needed, stubs in `tests/phpstan/`.
 Any unavoidable exception is limited to one identifier and path, documented with its reason.

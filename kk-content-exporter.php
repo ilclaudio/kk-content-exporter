@@ -1,6 +1,7 @@
 <?php
 /**
  * Plugin Name:       KK Content Exporter
+ * Plugin URI:        https://github.com/ilclaudio/kk-content-exporter/
  * Description:       Exposes published content of a chosen post type as configurable, read-only JSON feeds.
  * Version:           0.0.1
  * Requires at least: 6.4

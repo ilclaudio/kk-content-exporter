@@ -17,7 +17,7 @@ Run from the plugin root (PowerShell or Git Bash):
 ```sh
 composer run lint              # php -l on every first-party PHP file
 composer run phpcs             # WordPress Coding Standards (0 errors, 0 warnings)
-composer run phpstan           # PHPStan level 6, no baseline
+composer run phpstan           # PHPStan level 8, no baseline
 composer run test:unit         # unit suite
 composer run test:integration  # integration suite
 composer run test:all          # unit, then integration
@@ -48,7 +48,7 @@ run it before proposing a commit that touches WordPress behavior. Details:
 
 Some unit tests check the consistency of files rather than code: `KKCE_Release_Version_Unit_Test`
 (version and requirements across header, `readme.txt`, `VERSION.txt`, `CHANGELOG.md`, Composer, PHPCS
-and PHPStan), `KKCE_PHPStan_Config_Unit_Test` (every PHP file analyzed, level ≥ 6, no baseline) and
+and PHPStan), `KKCE_PHPStan_Config_Unit_Test` (every PHP file analyzed, level ≥ 8, no baseline) and
 `KKCE_Agents_Docs_Unit_Test` (AI context documents and their references), `KKCE_Release_Build_Unit_Test`
 (`.distignore` and package verification), `KKCE_Composer_Scripts_Unit_Test` (scripts work on a fresh
 clone) and `KKCE_Git_Ignore_Unit_Test` (credentials, build output and private files ignored by Git).

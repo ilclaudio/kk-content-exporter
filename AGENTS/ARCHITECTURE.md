@@ -5,8 +5,8 @@
 
 KK Content Exporter is a classic WordPress plugin (no blocks, no build step). PHP classes live in
 the `KKCE` namespace under `includes/` and are loaded by the plugin's own autoloader; Composer is a
-development tool only and is never shipped. The code contains the bootstrap and the private feed post type: the other features
-of the plan (feed configuration, mapping, REST endpoints) are not implemented yet. Update this file in the
+development tool only and is never shipped. The code contains the bootstrap and the private feed post type with its configuration meta: the other features
+of the plan (feed editor, mapping, REST endpoints) are not implemented yet. Update this file in the
 same change that adds them.
 
 
@@ -19,7 +19,7 @@ same change that adds them.
 | `includes/` | First-party classes of the `KKCE` namespace (`class-*.php`) |
 | `includes/class-autoloader.php` | `KKCE\Autoloader`: maps `KKCE\<Sub>\<Class_Name>` to `includes/<sub>/class-<class-name>.php` |
 | `includes/class-plugin.php` | `KKCE\Plugin`: registers the hooks, loads the text domain |
-| `includes/class-feed-post-type.php` | `KKCE\Feed_Post_Type`: registers the private post type `kkce_feed` (administrators only, no REST) |
+| `includes/class-feed-post-type.php` | `KKCE\Feed_Post_Type`: registers the private post type `kkce_feed` (administrators only, no REST), the keys and the sanitizers of its configuration meta (`_kkce_post_type`, `_kkce_access`, `_kkce_active`, `_kkce_per_page`) |
 | `languages/` | `kk-content-exporter.pot`, `kk-content-exporter-it_IT.po` / `.mo` |
 | `readme.txt` | WordPress.org readme (Stable tag, requirements, changelog) |
 | `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md` | Repository documentation |
@@ -48,7 +48,9 @@ image, language), `includes/output/` (normalization and serialization).
 2. **Boot** (`plugins_loaded`): `Plugin::boot()` only registers hooks and is idempotent. No
    translatable string is evaluated before `init` (WordPress 6.7+ reports translations loaded too early).
 3. **Init** (`init`): `Plugin::load_textdomain()` loads the bundled translations. The post type `kkce_feed` is registered by
-   `Feed_Post_Type::register()`. Post meta and REST routes (on `rest_api_init`) will be registered from here.
+   `Feed_Post_Type::register()` and its configuration meta by `Feed_Post_Type::register_meta()` (both on `init`).
+   WordPress returns stored meta as strings (`'1'` or `''` for the flag, `'20'` for the number): readers convert
+   them with `sanitize_active()` and `sanitize_per_page()`. REST routes (on `rest_api_init`) will be registered from here.
 4. **Activation** (`Plugin::activate()`): currently empty. Will add the capability `kkce_read_export`
    and flush rewrite rules only if needed. Activation must be idempotent and must not create content.
 5. **Deactivation** (`Plugin::deactivate()`): never deletes the feed configuration.
@@ -103,7 +105,7 @@ root. All scripts are non-interactive and can be reused by a future CI.
 | `composer run lint` | `php -l` on every first-party PHP file (`bin/php-lint.php`) | Staged PHP files only |
 | `composer run phpcs` | PHPCS with `phpcs.xml.dist`; target: 0 errors and 0 warnings | Staged PHP files, errors only |
 | `composer run phpcbf` | Automatic PHPCS fixes | No |
-| `composer run phpstan` | PHPStan on the whole plugin at the level of `phpstan.neon.dist` (6), no baseline | Yes |
+| `composer run phpstan` | PHPStan on the whole plugin at the level of `phpstan.neon.dist` (8), no baseline | Yes |
 | `composer run test:unit` | Unit suite (includes the contract tests on versions, PHPStan coverage and AGENTS documents) | Yes |
 | `composer run test:integration` | Integration suite on the WordPress test suite, database `kkce_wordpress_test` (see `tests/integration/README.md`) | No |
 | `composer run test:all` | Unit then integration suites | No |
