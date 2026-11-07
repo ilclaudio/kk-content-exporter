@@ -2,7 +2,7 @@
 
 ## Purpose and authority
 
-Review rules for Trigger F in `AGENTS/AI_BEHAVIOR.md`. Read this file with `AGENTS/ARCHITECTURE.md`
+Review rules for Trigger D in `AGENTS/AI_BEHAVIOR.md`. Read this file with `AGENTS/ARCHITECTURE.md`
 and `AGENTS/CODING_STANDARDS.md`. Use the applicable official WordPress skills
 (`wp-plugin-development`, `wp-rest-api`, `wp-plugin-directory-guidelines`, `wp-phpstan`). If these
 documents or a skill conflict, stop the affected work, explain the practical pros and cons, and ask the
@@ -85,7 +85,7 @@ hypothesis. Never claim an unexecuted check passed. Use the operator timezone fo
 personal data in reports.
 
 Progress file: a full run keeps its state in the ignored local file `AGENTS/CODE_REVIEW_PROGRESS.md`.
-Bootstrap does not create or read it; Trigger F creates it when a full run starts and updates it at the
+Bootstrap does not create or read it; Trigger D creates it when a full run starts and updates it at the
 end of every authorized phase and whenever a phase is skipped. If it is missing or empty, the run has not
 started unless the operator supplies a checkpoint, which takes precedence over the file. Structure:
 

@@ -83,6 +83,12 @@ if ( 0 !== $kkce_code ) {
 	kkce_svn_fail( 'the svn command-line client is not available.' );
 }
 
+// The working copy holds tags/ at depth "empty", so a tag that exists only on the server is not visible
+// locally: ask the server before touching anything.
+if ( kkce_release_svn_tag_exists( kkce_svn( array( 'list', $kkce_url . '/tags' ) ), $kkce_version ) ) {
+	kkce_svn_fail( "tags/{$kkce_version} already exists on {$kkce_url}: bump the version before releasing." );
+}
+
 if ( is_dir( $kkce_dir . '/.svn' ) ) {
 	kkce_svn( array( 'update', '--quiet', $kkce_dir . '/trunk', $kkce_dir . '/tags' ) );
 } else {
@@ -90,8 +96,9 @@ if ( is_dir( $kkce_dir . '/.svn' ) ) {
 	kkce_svn( array( 'update', '--quiet', '--set-depth', 'infinity', $kkce_dir . '/trunk' ) );
 }
 
+// A tag prepared by a previous run and not committed yet.
 if ( file_exists( $kkce_dir . '/tags/' . $kkce_version ) ) {
-	kkce_svn_fail( "tags/{$kkce_version} already exists: bump the version before releasing." );
+	kkce_svn_fail( "tags/{$kkce_version} already exists in {$kkce_dir} (prepared but not committed): commit it or run svn revert -R {$kkce_dir}." );
 }
 
 // Mirror the build into trunk/: remove what is there (except .svn), then copy the build.

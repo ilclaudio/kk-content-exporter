@@ -132,3 +132,16 @@ function kkce_release_versions_agree( array $versions ): bool {
 	$unique = array_unique( array_values( $versions ) );
 	return 1 === count( $unique ) && 1 === preg_match( '/^\d+\.\d+\.\d+$/', (string) reset( $unique ) );
 }
+
+/**
+ * Whether a release tag appears in the output of `svn list <url>/tags`.
+ *
+ * Folders are listed with a trailing slash (`1.0.0/`); lines may carry spaces or a carriage return.
+ *
+ * @param list<string> $listing Output lines of `svn list`.
+ * @param string       $version Tag to look for.
+ * @return bool
+ */
+function kkce_release_svn_tag_exists( array $listing, string $version ): bool {
+	return in_array( $version . '/', array_map( 'trim', $listing ), true );
+}

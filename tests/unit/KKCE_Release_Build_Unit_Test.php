@@ -115,4 +115,21 @@ class KKCE_Release_Build_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertFalse( kkce_release_versions_agree( array( 'a' => '1.0', 'b' => '1.0' ) ) );
 		$this->assertFalse( kkce_release_versions_agree( array( 'a' => '', 'b' => '' ) ) );
 	}
+
+	/**
+	 * A tag listed by `svn list <url>/tags` is detected, without partial or file matches.
+	 *
+	 * Regression: svn:prepare checked only the local tags/ folder, which the working copy keeps at depth
+	 * "empty", so a tag that existed only on the server was not detected.
+	 */
+	public function test_svn_tag_exists_in_the_server_listing() {
+		$listing = array( '0.9.0/', "1.0.0/\r", '  1.0.1/  ', '1.0.10/', 'README.txt' );
+
+		$this->assertTrue( kkce_release_svn_tag_exists( $listing, '1.0.0' ) );
+		$this->assertTrue( kkce_release_svn_tag_exists( $listing, '1.0.1' ) );
+		$this->assertFalse( kkce_release_svn_tag_exists( $listing, '1.0.2' ) );
+		$this->assertFalse( kkce_release_svn_tag_exists( $listing, '1.0' ) );
+		$this->assertFalse( kkce_release_svn_tag_exists( array( '1.0.0' ), '1.0.0' ), 'a file is not a tag' );
+		$this->assertFalse( kkce_release_svn_tag_exists( array(), '1.0.0' ), 'empty tags/ on the first release' );
+	}
 }
