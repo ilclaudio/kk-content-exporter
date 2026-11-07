@@ -41,6 +41,7 @@ final class Plugin {
 		self::$booted = true;
 
 		add_action( 'init', array( self::class, 'load_textdomain' ) );
+		add_action( 'init', array( Feed_Post_Type::class, 'register' ) );
 		add_filter( 'plugin_row_meta', array( self::class, 'filter_plugin_row_meta' ), 10, 2 );
 	}
 

@@ -41,7 +41,7 @@ Mandatory workflow (read-only GET requests only; local or operator-authorized ta
   error format);
 - check the response container: `items`, `pagination` (`page`, `per_page`, `total`, `total_pages`),
   `meta` (`feed`, `generated_at`); stable order by modified date and ID;
-- check the parameters: `page`, `per_page` (default 50, max 100), `modified_after`; invalid values
+- check the parameters: `page`, `per_page` (default of the feed, 50 if unset; maximum from the plugin settings, 100 by default), `modified_after`; invalid values
   must give HTTP 400, a missing or disabled feed HTTP 404, an unauthorized request 401/403;
 - check the exported data against the *Export safety* rules of `AGENTS/CODING_STANDARDS.md` (mapped
   keys only; no drafts, private or password-protected content; no sensitive keys; no author e-mail or
