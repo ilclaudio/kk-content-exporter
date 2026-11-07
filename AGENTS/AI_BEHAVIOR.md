@@ -22,9 +22,8 @@ Operational rules for AI assistants working on this plugin.
   search for orphan references. State anything that could not be verified in the final report.
 - When planning, changing or fixing code, follow `Test-driven workflow` below.
 - Before starting a task, check whether an available WordPress skill covers it (`Official WordPress Skills`).
-- Never weaken `phpcs.xml.dist` or `phpstan.neon.dist` to silence a finding, and never add a PHPStan
-  baseline. If a finding cannot be fixed safely in code, report it and ask whether to file it in
-  `AGENTS/ISSUES_TODO.md`.
+- Never weaken the quality gates (rules in `AGENTS/CODING_STANDARDS.md`, *Verification*). If a finding
+  cannot be fixed safely in code, report it and ask whether to file it in `AGENTS/ISSUES_TODO.md`.
 - `phpcs:ignore` is an exceptional last resort, allowed only for a demonstrable false positive or an
   unavoidable incompatibility with one precise sniff: smallest possible line and sniff, an English
   reason beside it, recorded in the relevant plan or issue. No blanket, file-wide or unreasoned suppression.
@@ -116,7 +115,7 @@ Do not install or enable skills without the operator's authorization.
 - If a skill conflicts with `AGENTS/*.md`, stop before acting and ask the operator which instruction
   set to follow, with the practical pros and cons of each option.
 - A skill never authorizes actions otherwise restricted by these documents (editing outside the
-  repository, Git write operations (commit, push, staging, branches: never done by an AI agent), installing software).
+  repository, Git write operations (`AGENTS/GIT_WORKFLOW.md`), installing software).
 - In the work summary, state which skills were used, and why a plausible one was skipped.
 
 ### Relevance for this project
@@ -299,7 +298,7 @@ Update the documentation affected by a change in the same task as the code.
 Before marking work complete:
 - Run the checks of `Verification` in `AGENTS/CODING_STANDARDS.md` that match the change; at minimum
   `composer run check` when the dependencies are installed.
-- PHPCS: 0 errors and 0 warnings; PHPStan: 0 errors at the configured level, no baseline.
+- PHPCS and PHPStan report no findings (targets in `AGENTS/CODING_STANDARDS.md`, *Verification*).
 - Run the matching test suites: unit always; integration when WordPress behavior is touched. State
   which suites did not run and why.
 - For `Bug` and `Security` fixes, the regression test exists and passes.

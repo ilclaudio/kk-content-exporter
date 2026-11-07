@@ -40,9 +40,10 @@ recorded in the progress file; reconcile new or changed paths rather than resett
   string, `0` and `false`; type conversions and their failures (omit + log); dates in ISO 8601 UTC and
   date-only values; relative-to-absolute URLs in HTML; image metadata; pagination arithmetic, stable
   ordering (modified GMT + ID), `modified_after` boundaries; behavior without the optional plugins.
-- **Data exposure** (highest priority): only `publish` and non password-protected content, also for
-  authenticated requests; only mapped keys; sensitive keys blocked; no author e-mail or login; feed
-  isolation; disabled or missing feeds return 404.
+- **Data exposure** (highest priority): the *Export safety* rules of `AGENTS/CODING_STANDARDS.md`
+  (published and non password-protected content only, also for authenticated requests; mapped keys
+  only; sensitive keys blocked; no author e-mail or login); plus feed isolation and 404 for disabled or
+  missing feeds.
 - **Security**: trust boundaries, sanitization and unslashing, contextual escaping, prepared SQL,
   capabilities and nonces on admin actions, `permission_callback` and argument schemas on REST routes,
   401 vs 403, Application Password flow over HTTPS, import of configurations (validation, imported
