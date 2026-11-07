@@ -69,6 +69,22 @@ class KKCE_Agents_Docs_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
+	 * Every `composer run <script>` command cited in the AI context and in the developer documents is a
+	 * script defined in composer.json.
+	 */
+	public function test_cited_composer_scripts_exist() {
+		$composer = json_decode( $this->read_plugin_file( 'composer.json' ), true );
+		$scripts  = array_keys( $composer['scripts'] );
+		$cited_in = array_merge( self::DOCUMENTS, array( 'README.md', 'CONTRIBUTING.md', 'tests/README.md', 'tests/unit/README.md', 'tests/integration/README.md' ) );
+		foreach ( $cited_in as $document ) {
+			preg_match_all( '/composer run ([a-z][a-z0-9:-]*)/', $this->read_plugin_file( $document ), $matches );
+			foreach ( array_unique( $matches[1] ) as $script ) {
+				$this->assertContains( $script, $scripts, "composer run {$script} is cited in {$document} but is not defined in composer.json" );
+			}
+		}
+	}
+
+	/**
 	 * Every AGENTS/*.md document is listed in the File Map of AI_BOOTSTRAP.md.
 	 */
 	public function test_every_agents_document_is_in_the_file_map() {

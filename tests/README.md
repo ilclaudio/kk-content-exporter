@@ -40,7 +40,7 @@ number of tests run.
 
 With the hooks active (`composer run hooks:install`), every commit runs: secret scan, `php -l` and
 PHPCS (errors only) on the staged PHP files, PHPStan on the whole plugin and the unit suite; the
-message is checked for AI `Co-Authored-By` trailers. The integration suite is not run by the hook:
+message is checked for AI attribution, the allowed prefix and the first-line length. The integration suite is not run by the hook:
 run it before proposing a commit that touches WordPress behavior. Details:
 `AGENTS/GIT_WORKFLOW.md` (*Pre-commit checks*).
 

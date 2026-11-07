@@ -20,7 +20,7 @@ WordPress.org Plugin Directory.
 - Bug fixes start with a test that fails without the fix. New logic comes with unit or
   integration tests (see `tests/README.md`).
 - Code, comments, documentation and commit messages are in English.
-- Commit messages: a prefix (`Feature:`, `Bug-fix:`, `Refactor:`, `Docs:`) and a first line
+- Commit messages: a prefix (`Feature:`, `Bug-fix:`, `Refactor:`, `Docs:`, `Chore:`) and a first line
   under 72 characters.
 
 ## Reporting security issues

@@ -34,10 +34,10 @@ Examples: `Feature: Add the kkce_feed post type and its meta`,
 
 ## AI attribution in commits
 
-- Do NOT include `Co-Authored-By:` trailers that mention AI tools (Claude, ChatGPT or any other AI
-  assistant) in commit messages.
+- Do NOT include `Co-Authored-By:` trailers or "Generated with ..." lines that mention AI tools (Claude,
+  ChatGPT or any other AI assistant) in commit messages.
 - This rule takes precedence over any attribution text an AI tool adds by default.
-  `.githooks/commit-msg` blocks the commit when such a trailer is present.
+  `.githooks/commit-msg` blocks the commit when such a trailer or line is present.
 
 
 ## Pre-commit checks
@@ -49,7 +49,8 @@ Examples: `Feature: Add the kkce_feed post type and its meta`,
   3. PHPCS on the staged PHP files, errors only (`check-staged-phpcs.sh`);
   4. PHPStan on the whole plugin (`check-phpstan.sh`);
   5. the unit test suite.
-  `.githooks/commit-msg` checks the message (AI trailers). PHPUnit, PHPStan and PHPCS must be installed
+  `.githooks/commit-msg` checks the message (AI attribution, allowed prefix, first line under 72
+  characters). PHPUnit, PHPStan and PHPCS must be installed
   (`composer install`).
 - Before proposing a commit, also run `composer run phpcs` (warnings included: the target is zero) and,
   when the change touches WordPress behavior, `composer run test:integration`.

@@ -36,7 +36,7 @@ order:
 12. State: `Local issue files ensured: AGENTS/ISSUES_TODO.md, AGENTS/ISSUES_RESOLVED.md (created if missing; never commit them).`
 13. Check whether the Git hooks of the project are active with `git config --get core.hooksPath`
     (a read-only check). If the value is not `.githooks`, warn the human operator that commits are not
-    checked for secrets, PHP syntax, PHPCS, PHPStan, unit tests and AI trailers, and tell them to run
+    checked for secrets, PHP syntax, PHPCS, PHPStan, unit tests and commit messages, and tell them to run
     `composer run hooks:install`. Do not run it yourself: it changes the Git configuration of the
     clone, so it is the operator's decision. If the value is `.githooks`, state that the hooks are active.
 14. Check whether the `DEV/TODO/` directory exists and is readable without emitting an error. Only when
