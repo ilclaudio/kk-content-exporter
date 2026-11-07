@@ -1,0 +1,54 @@
+# Continuous integration: calls the same Composer scripts used locally and by the Git hooks
+# (see "Quality checks" in AGENTS/ARCHITECTURE.md). The integration suite is not run here yet.
+name: CI
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Checks (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: [ '8.3', '8.4' ]
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2
+          coverage: none
+
+      - name: Install the development tools
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Lint, PHPCS, PHPStan and unit tests
+        run: composer run check
+
+  audit:
+    name: Composer audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+
+      - name: Audit the locked dependencies
+        run: composer audit --locked

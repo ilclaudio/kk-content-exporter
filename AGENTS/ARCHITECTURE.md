@@ -115,8 +115,9 @@ root. All scripts are non-interactive and can be reused by a future CI.
 | Plugin Check on the built package (`wp plugin check <plugin-root>/build/kk-content-exporter` from the Local site root) | WordPress.org directory checks; complements PHPCS (details in *WordPress.org Plugin Directory Rules*, `AGENTS/CODING_STANDARDS.md`) | No; before every release |
 
 The commit-msg hook also blocks AI attribution (`Co-Authored-By` trailers, "Generated with" lines) and
-first lines without an allowed prefix or of 72 characters or more. CI on GitHub Actions is planned but not
-configured yet: when it is added, it must call these Composer scripts.
+first lines without an allowed prefix or of 72 characters or more. CI on GitHub Actions (`.github/workflows/ci.yml`)
+runs `composer run check` on PHP 8.3 and 8.4 and `composer audit --locked`; it must keep calling these
+Composer scripts. The integration suite and Plugin Check are not in CI yet.
 
 
 ## References
