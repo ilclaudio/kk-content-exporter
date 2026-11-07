@@ -2,7 +2,7 @@
 
 ## Purpose and authority
 
-Review rules for Trigger D in `AGENTS/AI_BEHAVIOR.md`. Read this file with `AGENTS/ARCHITECTURE.md`
+Review rules for Trigger D in `AGENTS/TRIGGERS.md`. Read this file with `AGENTS/ARCHITECTURE.md`
 and `AGENTS/CODING_STANDARDS.md`. Use the applicable official WordPress skills
 (`wp-plugin-development`, `wp-rest-api`, `wp-plugin-directory-guidelines`, `wp-phpstan`). If these
 documents or a skill conflict, stop the affected work, explain the practical pros and cons, and ask the
@@ -67,7 +67,7 @@ finding needs a file and line, the triggering input or state, expected and obser
 and a practical correction proposal. Identify who controls sensitive input and the actual execution
 path: an unescaped value or a search hit alone does not prove a vulnerability. Honor the intentional
 patterns documented in `AGENTS/ARCHITECTURE.md` and `AGENTS/CODING_STANDARDS.md` (for example the
-`load_plugin_textdomain()` call). Use the severity levels of `AGENTS/AI_BEHAVIOR.md` conservatively.
+`load_plugin_textdomain()` call). Use the severity levels of `AGENTS/TRIGGERS.md` (*Issue Management*) conservatively.
 Keep unverified hypotheses in a separate "Assumptions and open questions" section; never file them.
 Deduplicate against this run and `AGENTS/ISSUES_TODO.md`; extend an existing root cause instead of
 creating duplicates. Propose the closure of stale backlog entries with evidence; do not close them
