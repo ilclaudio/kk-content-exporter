@@ -8,7 +8,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2026-11-06T22:54:45+01:00\n"
-"PO-Revision-Date: 2026-11-07T12:15:29+00:00\n"
+"PO-Revision-Date: 2026-11-07T17:00:20+00:00\n"
 "Language: it_IT\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: WP-CLI 2.12.0\n"
@@ -19,73 +19,114 @@ msgstr ""
 msgid "KK Content Exporter"
 msgstr "KK Content Exporter"
 
-#. Description of the plugin
+#. Plugin URI of the plugin
 #: kk-content-exporter.php:4
+msgid "https://github.com/ilclaudio/kk-content-exporter/"
+msgstr ""
+
+#. Description of the plugin
+#: kk-content-exporter.php:5
 msgid "Exposes published content of a chosen post type as configurable, read-only JSON feeds."
 msgstr "Espone i contenuti pubblicati di un tipo di contenuto scelto come feed JSON configurabili e in sola lettura."
 
 #. Author of the plugin
-#: kk-content-exporter.php:8
+#: kk-content-exporter.php:9
 msgid "IoClaudio"
 msgstr ""
 
 #. Author URI of the plugin
-#: kk-content-exporter.php:9
+#: kk-content-exporter.php:10
 msgid "https://www.claudiobattaglino.it"
 msgstr ""
 
-#: includes/class-feed-post-type.php:40
+#: includes/admin/class-feed-list.php:62
+msgid "Slug"
+msgstr "Slug"
+
+#: includes/admin/class-feed-list.php:63
+msgid "Source"
+msgstr "Sorgente"
+
+#: includes/admin/class-feed-list.php:64
+msgid "Access"
+msgstr "Accesso"
+
+#: includes/admin/class-feed-list.php:65
+msgid "Status"
+msgstr "Stato"
+
+#: includes/admin/class-feed-list.php:127
+msgid "Authenticated"
+msgstr "Autenticato"
+
+#: includes/admin/class-feed-list.php:128
+msgid "Public"
+msgstr "Pubblico"
+
+#: includes/admin/class-feed-list.php:139
+msgid "Active"
+msgstr "Attivo"
+
+#: includes/admin/class-feed-list.php:140
+msgid "Disabled"
+msgstr "Disattivato"
+
+#: includes/admin/class-feed-list.php:152
+msgid "Not set"
+msgstr "Non impostato"
+
+#: includes/class-feed-post-type.php:80
 msgid "Configurations of the JSON feeds."
 msgstr "Configurazioni dei feed JSON."
 
-#: includes/class-feed-post-type.php:94
+#: includes/class-feed-post-type.php:261
 msgid "Feeds"
 msgstr "Feed"
 
-#: includes/class-feed-post-type.php:95
+#: includes/class-feed-post-type.php:262
 msgid "Feed"
 msgstr "Feed"
 
-#: includes/class-feed-post-type.php:96
+#: includes/class-feed-post-type.php:263
 msgid "Content Exporter"
 msgstr "Content Exporter"
 
-#: includes/class-feed-post-type.php:97
+#: includes/class-feed-post-type.php:264
 msgid "Add New"
 msgstr "Aggiungi"
 
-#: includes/class-feed-post-type.php:98
+#: includes/class-feed-post-type.php:265
 msgid "Add New Feed"
 msgstr "Aggiungi un feed"
 
-#: includes/class-feed-post-type.php:99
+#: includes/class-feed-post-type.php:266
 msgid "Edit Feed"
 msgstr "Modifica il feed"
 
-#: includes/class-feed-post-type.php:100
+#: includes/class-feed-post-type.php:267
 msgid "New Feed"
 msgstr "Nuovo feed"
 
-#: includes/class-feed-post-type.php:101
+#: includes/class-feed-post-type.php:268
 msgid "View Feed"
 msgstr "Visualizza il feed"
 
-#: includes/class-feed-post-type.php:102
+#: includes/class-feed-post-type.php:269
 msgid "Search Feeds"
 msgstr "Cerca feed"
 
-#: includes/class-feed-post-type.php:103
+#: includes/class-feed-post-type.php:270
 msgid "No feeds found."
 msgstr "Nessun feed trovato."
 
-#: includes/class-feed-post-type.php:104
+#: includes/class-feed-post-type.php:271
 msgid "No feeds found in Trash."
 msgstr "Nessun feed nel cestino."
 
-#: includes/class-feed-post-type.php:105
+#: includes/class-feed-post-type.php:272
 msgid "All Feeds"
 msgstr "Tutti i feed"
 
-#: includes/class-plugin.php:88
+#: includes/class-plugin.php:96
 msgid "Development version: no feeds can be configured yet."
 msgstr "Versione di sviluppo: non è ancora possibile configurare feed."

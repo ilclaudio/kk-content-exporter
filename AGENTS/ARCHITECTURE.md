@@ -20,6 +20,7 @@ same change that adds them.
 | `includes/class-autoloader.php` | `KKCE\Autoloader`: maps `KKCE\<Sub>\<Class_Name>` to `includes/<sub>/class-<class-name>.php` |
 | `includes/class-plugin.php` | `KKCE\Plugin`: registers the hooks, loads the text domain |
 | `includes/class-feed-post-type.php` | `KKCE\Feed_Post_Type`: registers the private post type `kkce_feed` (administrators only, no REST), the keys and the sanitizers of its configuration meta (`_kkce_post_type`, `_kkce_access`, `_kkce_active`, `_kkce_per_page`) |
+| `includes/admin/class-feed-list.php` | `KKCE\Admin\Feed_List`: columns of the `kkce_feed` list (slug, source, access, status), read through the sanitizers and escaped |
 | `includes/class-feed-validator.php` | `KKCE\Feed_Validator`: pure validation (no WordPress call) of the slug, the items per page and the source post type; returns error codes, the editor writes the messages |
 | `languages/` | `kk-content-exporter.pot`, `kk-content-exporter-it_IT.po` / `.mo` |
 | `readme.txt` | WordPress.org readme (Stable tag, requirements, changelog) |
@@ -36,7 +37,8 @@ same change that adds them.
 | `AGENTS/`, `AGENTS.md`, `CLAUDE.md` | AI collaboration context |
 | `DEV/` | Symlink to private working material; ignored by Git, never shipped |
 
-Planned folders (created when their first class arrives): `includes/admin/` (feed list and editor),
+`includes/admin/` holds the classes of the administration screens (the feed list now, the editor and the settings
+page next). Planned folders (created when their first class arrives):
 `includes/rest/` (endpoints), `includes/sources/` (field providers: core, meta, ACF, CMB2, taxonomies,
 image, language), `includes/output/` (normalization and serialization).
 
@@ -52,9 +54,11 @@ image, language), `includes/output/` (normalization and serialization).
    `Feed_Post_Type::register()` and its configuration meta by `Feed_Post_Type::register_meta()` (both on `init`).
    WordPress returns stored meta as strings (`'1'` or `''` for the flag, `'20'` for the number): readers convert
    them with `sanitize_active()` and `sanitize_per_page()`. REST routes (on `rest_api_init`) will be registered from here.
-4. **Activation** (`Plugin::activate()`): currently empty. Will add the capability `kkce_read_export`
-   and flush rewrite rules only if needed. Activation must be idempotent and must not create content.
-5. **Deactivation** (`Plugin::deactivate()`): never deletes the feed configuration.
+4. **Activation** (`Plugin::activate()`): grants the capability `kkce_read_export` (`Plugin::READ_EXPORT_CAPABILITY`)
+   to the administrator role. It is idempotent, creates no content and does not flush rewrite rules (the
+   `kkce_feed` post type has none). A role added later does not receive the capability until the plugin is
+   activated again.
+5. **Deactivation** (`Plugin::deactivate()`): never deletes the feed configuration or the capability.
 6. **Uninstall** (`uninstall.php`): the only place where data is removed. The removal of the
    configuration will be optional (an explicit setting), never implicit.
 

@@ -25,6 +25,45 @@ class KKCE_Plugin_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( 10, has_filter( 'plugin_row_meta', array( Plugin::class, 'filter_plugin_row_meta' ) ) );
 		$this->assertNotFalse( has_action( 'init', array( \KKCE\Feed_Post_Type::class, 'register' ) ) );
 		$this->assertNotFalse( has_action( 'init', array( \KKCE\Feed_Post_Type::class, 'register_meta' ) ) );
+		$this->assertSame( 10, has_filter( 'manage_kkce_feed_posts_columns', array( \KKCE\Admin\Feed_List::class, 'columns' ) ) );
+		$this->assertSame( 10, has_action( 'manage_kkce_feed_posts_custom_column', array( \KKCE\Admin\Feed_List::class, 'render_column' ) ) );
+	}
+
+	/**
+	 * Activation grants the export capability to the administrator role, once.
+	 */
+	public function test_activate_grants_the_export_capability_to_administrators() {
+		$role = \Mockery::mock();
+		$role->shouldReceive( 'add_cap' )->once()->with( 'kkce_read_export' );
+
+		Functions\expect( 'get_role' )->once()->with( 'administrator' )->andReturn( $role );
+
+		Plugin::activate();
+
+		$this->assertSame( 'kkce_read_export', Plugin::READ_EXPORT_CAPABILITY );
+	}
+
+	/**
+	 * Activation does not fail when the administrator role does not exist.
+	 */
+	public function test_activate_does_nothing_without_the_administrator_role() {
+		Functions\expect( 'get_role' )->once()->with( 'administrator' )->andReturn( null );
+
+		Plugin::activate();
+
+		$this->addToAssertionCount( 1 );
+	}
+
+	/**
+	 * Deactivation never touches roles or capabilities.
+	 */
+	public function test_deactivate_does_not_touch_roles() {
+		Functions\expect( 'get_role' )->never();
+		Functions\expect( 'remove_role' )->never();
+
+		Plugin::deactivate();
+
+		$this->addToAssertionCount( 1 );
 	}
 
 	/**

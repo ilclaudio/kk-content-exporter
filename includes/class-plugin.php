@@ -23,6 +23,11 @@ final class Plugin {
 	public const TEXT_DOMAIN = 'kk-content-exporter';
 
 	/**
+	 * Capability that allows reading the authenticated feeds. Granted to administrators on activation.
+	 */
+	public const READ_EXPORT_CAPABILITY = 'kkce_read_export';
+
+	/**
 	 * Whether the hooks have already been registered.
 	 *
 	 * @var bool
@@ -43,6 +48,8 @@ final class Plugin {
 		add_action( 'init', array( self::class, 'load_textdomain' ) );
 		add_action( 'init', array( Feed_Post_Type::class, 'register' ) );
 		add_action( 'init', array( Feed_Post_Type::class, 'register_meta' ) );
+		add_filter( 'manage_' . Feed_Post_Type::POST_TYPE . '_posts_columns', array( Admin\Feed_List::class, 'columns' ) );
+		add_action( 'manage_' . Feed_Post_Type::POST_TYPE . '_posts_custom_column', array( Admin\Feed_List::class, 'render_column' ), 10, 2 );
 		add_filter( 'plugin_row_meta', array( self::class, 'filter_plugin_row_meta' ), 10, 2 );
 	}
 
@@ -92,17 +99,27 @@ final class Plugin {
 	/**
 	 * Activation callback.
 	 *
-	 * Nothing to set up yet: capabilities and the feed post type arrive in Phase 1.
+	 * Grants the export capability to the administrator role. It is idempotent (granting twice
+	 * changes nothing), creates no content and needs no rewrite flush, because the feed post type
+	 * has no rewrite rules.
 	 *
 	 * @return void
 	 */
 	public static function activate(): void {
+		$role = get_role( 'administrator' );
+
+		if ( null === $role ) {
+			return;
+		}
+
+		$role->add_cap( self::READ_EXPORT_CAPABILITY );
 	}
 
 	/**
 	 * Deactivation callback.
 	 *
-	 * Deactivation never deletes the feed configuration; data removal belongs to `uninstall.php`.
+	 * Deactivation never deletes the feed configuration or the capability; data removal belongs to
+	 * `uninstall.php`.
 	 *
 	 * @return void
 	 */
