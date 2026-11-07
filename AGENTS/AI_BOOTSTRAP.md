@@ -7,8 +7,9 @@ harden security and write documentation for the KK Content Exporter plugin.
 
 ## Session bootstrap
 Run this section only once at session start, unless the operator explicitly asks to reload the AGENTS
-context. First read the root entry point for the active agent: `AGENTS.md` for every agent, then
-`CLAUDE.md` for Claude Code. Then read only these versioned instruction files in this exact order:
+context. The root entry point of the active agent (`AGENTS.md` for Codex and other agents, `CLAUDE.md`
+for Claude Code) already sent you here. Then read only these versioned instruction files in this exact
+order:
 
 1. `AGENTS/AI_BOOTSTRAP.md` (this file).
 2. `AGENTS/PROJECT.md`.
@@ -62,7 +63,8 @@ context. First read the root entry point for the active agent: `AGENTS.md` for e
 
 ## File Map
 - `AI_BOOTSTRAP.md` (this file): session bootstrap, common rules, file map.
-- `../AGENTS.md`: entry point and rules for every agent; `../CLAUDE.md`: Claude Code additions.
+- `../AGENTS.md`: entry point for Codex and other agents; `../CLAUDE.md`: entry point for Claude Code.
+  Both point here and repeat only the essential rules and the tool-specific details.
 - `PROJECT.md`: purpose, scope, requirements, prefixes, boundaries, links to the private specification and plan.
 - `ARCHITECTURE.md`: plugin structure, lifecycle (bootstrap, activation, deactivation, uninstall),
   conventions, planned data model and endpoints, technology stack, canonical quality-check commands.
