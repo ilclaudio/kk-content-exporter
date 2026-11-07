@@ -26,5 +26,11 @@
 	"phpcs.enable": true,
 	"phpcs.executablePath": "vendor/bin/phpcs.bat",
 	"phpcs.standard": "phpcs.xml.dist",
-	"files.eol": "\n"
+	"files.eol": "\n",
+	"terminal.integrated.env.windows": {
+		"TEMP": "${workspaceFolder}\\.codex-tmp",
+		"TMP": "${workspaceFolder}\\.codex-tmp",
+		"COMPOSER_HOME": "${workspaceFolder}\\.composer-home",
+		"COMPOSER_CACHE_DIR": "${workspaceFolder}\\.composer-cache"
+	}
 }
