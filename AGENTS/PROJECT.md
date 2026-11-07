@@ -30,7 +30,7 @@ downloads, timeouts, import logs and scheduling.
 ## Scope of version 1.0.0 (summary)
 
 - Feeds stored in the private administrative post type `kkce_feed` (not exposed in REST): title for the
-  name, post meta for mapping and options, revisions that restore the whole configuration.
+  name, post meta for mapping and options, default WordPress revisions (a full restore of the mapping is not a requirement).
 - One public, read-only REST endpoint per feed: `GET /wp-json/kkce/v1/<feed-slug>`; slug unique, feed
   can be enabled or disabled; new and imported feeds start disabled.
 - Mapping rows: source, free JSON key (proposed equal to the source name), expected type
@@ -41,13 +41,18 @@ downloads, timeouts, import logs and scheduling.
   featured image (ID, absolute URL, alt, modified date), language (fixed per feed or Polylang).
   Repeater, flexible content, groups, relationships and serialized structures are out of V1.
 - Response: `{ "items": [...], "pagination": {...}, "meta": {...} }`; dates in ISO 8601 UTC (date-only
-  fields keep `YYYY-MM-DD`); pagination `page` / `per_page` (default 50, max 100); stable order by
+  fields keep `YYYY-MM-DD`); pagination `page` / `per_page` (default 50 per feed; maximum set in the plugin settings, 100 by default, no ceiling); stable order by
   modified date GMT and ID; incremental filter `modified_after`.
 - Access: public (anonymous, published data only) or authenticated (HTTPS + Application Password of a
   technical user with the dedicated capability `kkce_read_export`).
 - Never exported: drafts, private or password-protected content, unmapped meta, sensitive keys
   (passwords, tokens, sessions, capabilities), author e-mail or login. The plugin never writes to
   source content and makes no external request.
+- Source post types: public ones only (`public => true`), `attachment` excluded.
+- Settings page (Settings API): master switch of the endpoints, authentication required for every feed,
+  maximum items per page, log retention, removal of data on uninstall.
+- Admin interface: native WordPress markup and vanilla JavaScript, no build step.
+- Multisite: network activation is not supported in V1 (single-site operation).
 
 Out of V1 (Phase 4 of the plan): taxonomy/meta filters, cache with ETag/Last-Modified, WPML, an
 endpoint outside `/wp-json/`, cursors.

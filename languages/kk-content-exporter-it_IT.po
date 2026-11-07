@@ -8,7 +8,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2026-11-06T22:54:45+01:00\n"
-"PO-Revision-Date: 2026-11-06T22:21:26+00:00\n"
+"PO-Revision-Date: 2026-11-07T12:15:29+00:00\n"
 "Language: it_IT\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: WP-CLI 2.12.0\n"
@@ -34,6 +34,58 @@ msgstr ""
 msgid "https://www.claudiobattaglino.it"
 msgstr ""
 
-#: includes/class-plugin.php:87
+#: includes/class-feed-post-type.php:40
+msgid "Configurations of the JSON feeds."
+msgstr "Configurazioni dei feed JSON."
+
+#: includes/class-feed-post-type.php:94
+msgid "Feeds"
+msgstr "Feed"
+
+#: includes/class-feed-post-type.php:95
+msgid "Feed"
+msgstr "Feed"
+
+#: includes/class-feed-post-type.php:96
+msgid "Content Exporter"
+msgstr "Content Exporter"
+
+#: includes/class-feed-post-type.php:97
+msgid "Add New"
+msgstr "Aggiungi"
+
+#: includes/class-feed-post-type.php:98
+msgid "Add New Feed"
+msgstr "Aggiungi un feed"
+
+#: includes/class-feed-post-type.php:99
+msgid "Edit Feed"
+msgstr "Modifica il feed"
+
+#: includes/class-feed-post-type.php:100
+msgid "New Feed"
+msgstr "Nuovo feed"
+
+#: includes/class-feed-post-type.php:101
+msgid "View Feed"
+msgstr "Visualizza il feed"
+
+#: includes/class-feed-post-type.php:102
+msgid "Search Feeds"
+msgstr "Cerca feed"
+
+#: includes/class-feed-post-type.php:103
+msgid "No feeds found."
+msgstr "Nessun feed trovato."
+
+#: includes/class-feed-post-type.php:104
+msgid "No feeds found in Trash."
+msgstr "Nessun feed nel cestino."
+
+#: includes/class-feed-post-type.php:105
+msgid "All Feeds"
+msgstr "Tutti i feed"
+
+#: includes/class-plugin.php:88
 msgid "Development version: no feeds can be configured yet."
 msgstr "Versione di sviluppo: non è ancora possibile configurare feed."

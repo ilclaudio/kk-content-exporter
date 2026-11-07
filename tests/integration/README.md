@@ -69,6 +69,7 @@ single test does not depend on the others and leaves no data behind.
 
 | File | What it checks |
 |---|---|
+| `KKCE_Feed_Post_Type_Integration_Test.php` | The post type `kkce_feed` is registered, private, without REST routes, with the title only, and manageable by administrators only |
 | `KKCE_Environment_Integration_Test.php` | The plugin loads (constants, classes, `plugin_basename()`, `boot()` hooked on `plugins_loaded`) and the bundled `it_IT` translation is loaded when the locale is Italian |
 
 ## Adding a test

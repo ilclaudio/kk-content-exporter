@@ -5,8 +5,8 @@
 
 KK Content Exporter is a classic WordPress plugin (no blocks, no build step). PHP classes live in
 the `KKCE` namespace under `includes/` and are loaded by the plugin's own autoloader; Composer is a
-development tool only and is never shipped. Version 0.0.1 contains only the bootstrap: the features
-of the plan (feed post type, mapping, REST endpoints) are not implemented yet. Update this file in the
+development tool only and is never shipped. The code contains the bootstrap and the private feed post type: the other features
+of the plan (feed configuration, mapping, REST endpoints) are not implemented yet. Update this file in the
 same change that adds them.
 
 
@@ -19,6 +19,7 @@ same change that adds them.
 | `includes/` | First-party classes of the `KKCE` namespace (`class-*.php`) |
 | `includes/class-autoloader.php` | `KKCE\Autoloader`: maps `KKCE\<Sub>\<Class_Name>` to `includes/<sub>/class-<class-name>.php` |
 | `includes/class-plugin.php` | `KKCE\Plugin`: registers the hooks, loads the text domain |
+| `includes/class-feed-post-type.php` | `KKCE\Feed_Post_Type`: registers the private post type `kkce_feed` (administrators only, no REST) |
 | `languages/` | `kk-content-exporter.pot`, `kk-content-exporter-it_IT.po` / `.mo` |
 | `readme.txt` | WordPress.org readme (Stable tag, requirements, changelog) |
 | `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md` | Repository documentation |
@@ -46,8 +47,8 @@ image, language), `includes/output/` (normalization and serialization).
    deactivation hooks; hooks `KKCE\Plugin::boot()` on `plugins_loaded`.
 2. **Boot** (`plugins_loaded`): `Plugin::boot()` only registers hooks and is idempotent. No
    translatable string is evaluated before `init` (WordPress 6.7+ reports translations loaded too early).
-3. **Init** (`init`): `Plugin::load_textdomain()` loads the bundled translations. Post types, post
-   meta and REST routes (on `rest_api_init`) will be registered from here.
+3. **Init** (`init`): `Plugin::load_textdomain()` loads the bundled translations. The post type `kkce_feed` is registered by
+   `Feed_Post_Type::register()`. Post meta and REST routes (on `rest_api_init`) will be registered from here.
 4. **Activation** (`Plugin::activate()`): currently empty. Will add the capability `kkce_read_export`
    and flush rewrite rules only if needed. Activation must be idempotent and must not create content.
 5. **Deactivation** (`Plugin::deactivate()`): never deletes the feed configuration.
@@ -77,15 +78,16 @@ Add new hooks in `Plugin::boot()` (or in a class it wires), never as side effect
 ## Public Endpoints and Hooks
 
 None yet. Planned: REST `GET kkce/v1/<feed-slug>` (read-only, public or authenticated) registered on
-`rest_api_init`; capability `kkce_read_export`; private post type `kkce_feed`. No shortcodes, AJAX
-handlers, cron jobs or WP-CLI commands are planned for V1.
+`rest_api_init`; capability `kkce_read_export`; private post type `kkce_feed`. No shortcodes, cron jobs or
+WP-CLI commands are planned for V1. The admin preview and the mapping editor (Phase 2) will need an
+admin-only REST or AJAX call: document it here when it is added.
 
 
 ## Technology Stack
 
 - Platform: WordPress 6.4+ (development site on WordPress 7.1), PHP 8.3+.
-- No runtime dependencies; no JavaScript or CSS build yet (the admin layout is still to be decided:
-  no CSS framework).
+- No runtime dependencies; no JavaScript or CSS build: the admin scripts are vanilla JavaScript (decision
+  2026-11-07) and no CSS framework is used.
 - Development tools (Composer): PHP_CodeSniffer with WordPress Coding Standards and
   PHPCompatibilityWP; PHPStan with `szepeviktor/phpstan-wordpress` and `php-stubs/wordpress-stubs`;
   PHPUnit 9.6 with Yoast PHPUnit Polyfills; Brain Monkey; WP-CLI with `i18n-command`.

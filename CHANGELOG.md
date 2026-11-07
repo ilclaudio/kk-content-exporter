@@ -6,6 +6,13 @@ follows [Semantic Versioning](https://semver.org/). The version of the first ent
 `VERSION.txt`, the plugin header, `KKCE_VERSION` and the `Stable tag` of `readme.txt`
 (checked by `KKCE_Release_Version_Unit_Test`).
 
+## [Unreleased]
+
+### Added
+
+- Private post type `kkce_feed` for the feed configurations: not public, not exposed in REST, managed
+  by administrators only.
+
 ## [0.0.1] - 2026-11-06
 
 ### Added
