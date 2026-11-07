@@ -1,0 +1,29 @@
+# Normalize line endings to LF on commit (WordPress Coding Standards).
+* text=auto eol=lf
+
+*.php  text eol=lf
+*.js   text eol=lf
+*.css  text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.txt  text eol=lf
+*.xml  text eol=lf
+*.dist text eol=lf
+*.neon text eol=lf
+*.po   text eol=lf
+*.pot  text eol=lf
+*.sh   text eol=lf
+.githooks/* text eol=lf
+
+# Binary files: no line-ending conversion
+*.mo    binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.svg   binary
+*.zip   binary
+*.pdf   binary
+
+# The release ZIP is built from .distignore (composer run build:zip): see "Release package" in AGENTS/GIT_WORKFLOW.md.

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+#
+# Checks the commit message. Blocks Co-Authored-By trailers that credit an AI assistant
+# (see "AI attribution in commits" in AGENTS/GIT_WORKFLOW.md).
+
+set -euo pipefail
+
+echo "[KKCE commit-msg] Checking the commit message..." >&2
+
+if grep -Eiq '^Co-Authored-By:.*(claude|chatgpt|codex|copilot|gemini|openai|anthropic)' "$1"; then
+	echo "Commit blocked: remove the Co-Authored-By trailer that credits an AI assistant." >&2
+	exit 1
+fi

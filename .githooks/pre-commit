@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+#
+# Pre-commit gate of KK Content Exporter. Activate once per clone with
+# `composer run hooks:install` (git config core.hooksPath .githooks).
+# Checks, in order; the first failure stops the commit:
+#   1. secret scan of the staged changes;
+#   2. php -l on the staged PHP files;
+#   3. PHPCS (errors only) on the staged PHP files;
+#   4. PHPStan on the whole plugin (level from phpstan.neon.dist);
+#   5. unit test suite (includes the release-version consistency contract test).
+
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+
+"$repo_root/.githooks/check-staged-secrets.sh"
+"$repo_root/.githooks/check-staged-php-lint.sh"
+"$repo_root/.githooks/check-staged-phpcs.sh"
+"$repo_root/.githooks/check-phpstan.sh"
+
+if [ ! -f "$repo_root/vendor/bin/phpunit" ]; then
+	echo "[KKCE pre-commit] PHPUnit is not installed. Run 'composer install' and commit again." >&2
+	exit 1
+fi
+echo "[KKCE pre-commit] Running unit tests..." >&2
+(cd "$repo_root" && php vendor/bin/phpunit --testsuite unit --colors=never)
