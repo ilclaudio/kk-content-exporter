@@ -127,7 +127,7 @@ Do not install or enable skills without the operator's authorization.
 | PHPStan configuration, stubs for optional plugins, typing of WordPress APIs | `wp-phpstan` |
 | WP-CLI on the Local site (i18n, plugin activation, Plugin Check, options, cache) | `wp-wpcli-and-ops` |
 | Structured inspection of the repository or an unfamiliar area | `wp-project-triage`, `wordpress-router` |
-| Slow queries, autoloaded options, large feeds, caching (Phase 4) | `wp-performance` |
+| Slow queries, autoloaded options, large feeds, caching (Phase 6) | `wp-performance` |
 | Disposable WordPress instances (clean install tests of the ZIP) | `wp-playground`, `blueprint` |
 | Admin UI built with WordPress components, when the layout decision is taken | `wpds` |
 
@@ -291,7 +291,7 @@ Update the documentation affected by a change in the same task as the code.
   `## [x.y.z] - YYYY-MM-DD` with `Added` / `Changed` / `Fixed` / `Removed` / `Security`; the
   `== Changelog ==` of `readme.txt` carries a short summary of the same entries.
 - Guides (mapping, authentication, JSON examples, incremental reading limits) go in `docs/` as
-  Markdown when Phase 3 requires them; they must not expose private material from `DEV/`.
+  Markdown when the release (Phase 5) requires them; they must not expose private material from `DEV/`.
 
 
 ## Definition of Done
