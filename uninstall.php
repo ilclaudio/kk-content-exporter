@@ -2,8 +2,9 @@
 /**
  * Uninstall routine of the plugin.
  *
- * Runs only when an administrator deletes the plugin from the Plugins screen. The plugin does
- * not store any data yet; the optional removal of the feed configuration arrives in Phase 1.
+ * Runs only when an administrator deletes the plugin from the Plugins screen. Nothing is removed
+ * yet: the feeds (post type `kkce_feed` and their meta) and the capability `kkce_read_export` stay
+ * on the site until the optional removal of the configuration is implemented.
  *
  * @package KKCE
  */

@@ -1,5 +1,7 @@
 === KK Content Exporter ===
 Contributors: ioclaudio
+Author: ioclaudio
+Author URI: https://www.claudiobattaglino.it/
 Tags: export, json, rest-api, feed, content
 Requires at least: 6.4
 Tested up to: 7.1
@@ -14,11 +16,11 @@ Exposes published content of a chosen post type as configurable, read-only JSON 
 
 KK Content Exporter lets an administrator choose a post type, configure one or more feeds and map the fields of the content to freely named JSON keys. Each feed is served by a read-only REST endpoint.
 
-**This is a development version.** No feed can be configured yet: the features are being built and will be available in version 1.0.0.
+**This is a development version.** Feeds can already be created and configured, but they are not served yet: the field mapping and the endpoints arrive before version 1.0.0.
 
 Planned for version 1.0.0:
 
-* Feeds stored in a private administrative post type, with full revisions of their configuration.
+* Feeds stored in a private administrative post type.
 * Free mapping of WordPress fields, selected post meta, taxonomies, featured image and language to JSON keys.
 * Optional, read-only support for simple fields of Advanced Custom Fields, CMB2 and Polylang, when those plugins are active. None of them is required.
 * Public or authenticated (Application Passwords) feeds, with pagination and incremental reading.

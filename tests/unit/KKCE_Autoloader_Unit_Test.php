@@ -63,6 +63,10 @@ class KKCE_Autoloader_Unit_Test extends KKCE_Unit_Test_Case {
 			'prefix look-alike'  => array( 'KKCEX\\Plugin' ),
 			'namespace only'     => array( 'KKCE\\' ),
 			'path traversal'     => array( 'KKCE\\..\\Plugin.' ),
+			'parent folder part' => array( 'KKCE\\..\\Plugin' ),
+			'deep traversal'     => array( 'KKCE\\..\\..\\..\\uploads\\Evil' ),
+			'current folder part' => array( 'KKCE\\.\\Plugin' ),
+			'empty part'         => array( 'KKCE\\Admin\\\\Feed_Editor' ),
 		);
 	}
 

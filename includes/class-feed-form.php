@@ -20,7 +20,10 @@ defined( 'ABSPATH' ) || exit;
  * - a field with an invalid value keeps its current value and reports an error; the other fields are
  *   still saved;
  * - the access is never guessed: an unknown value keeps the current access;
- * - a feed can be active only if it has a slug and a source post type, otherwise it is saved disabled.
+ * - a feed can be active only if it has a usable slug and a source post type, otherwise it is saved
+ *   disabled. When the submitted slug is refused, the stored slug is kept (never renamed) but it is
+ *   checked with the same rules: a stored slug that is malformed, reserved or used by another feed
+ *   cannot serve an active feed.
  *
  * @phpstan-type FormInput array{slug: string, post_type: string, access: string, active: bool, per_page: string}
  * @phpstan-type FormValues array{slug: string, post_type: string, access: string, active: bool, per_page: int}
@@ -60,8 +63,10 @@ final class Feed_Form {
 		}
 		if ( Feed_Validator::VALID === $code ) {
 			$values['slug'] = $slug;
+			$slug_usable    = true;
 		} else {
 			$errors['slug'] = $code;
+			$slug_usable    = self::is_usable_slug( $current['slug'], $context['slug_is_taken'] );
 		}
 
 		if ( '' === $input['post_type'] ) {
@@ -91,7 +96,7 @@ final class Feed_Form {
 
 		$values['active'] = false;
 		if ( $input['active'] ) {
-			if ( '' !== $values['slug'] && '' !== $values['post_type'] ) {
+			if ( $slug_usable && '' !== $values['post_type'] ) {
 				$values['active'] = true;
 			} else {
 				$errors['active'] = self::ERROR_INCOMPLETE;
@@ -102,5 +107,21 @@ final class Feed_Form {
 			'values' => $values,
 			'errors' => $errors,
 		);
+	}
+
+	/**
+	 * Whether a stored slug can still serve an active feed: well formed, not reserved and not used by
+	 * another feed.
+	 *
+	 * The stored slug is not always one that the editor accepted: WordPress gives the old slug back
+	 * when a feed is restored from the trash (without checking drafts for duplicates), and generates
+	 * one from the title when a published post has none.
+	 *
+	 * @param string                 $slug          Stored slug.
+	 * @param callable(string): bool $slug_is_taken Whether another feed uses a slug.
+	 * @return bool
+	 */
+	private static function is_usable_slug( string $slug, callable $slug_is_taken ): bool {
+		return Feed_Validator::VALID === Feed_Validator::validate_slug( $slug, array() ) && ! $slug_is_taken( $slug );
 	}
 }

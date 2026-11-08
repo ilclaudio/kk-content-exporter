@@ -105,11 +105,12 @@ class KKCE_Feed_Post_Type_Unit_Test extends KKCE_Unit_Test_Case {
 		return array(
 			'public'        => array( 'public', 'public' ),
 			'authenticated' => array( 'authenticated', 'authenticated' ),
-			'unknown'       => array( 'private', 'public' ),
-			'empty'         => array( '', 'public' ),
-			'wrong case'    => array( 'Authenticated', 'public' ),
-			'array'         => array( array( 'authenticated' ), 'public' ),
-			'null'          => array( null, 'public' ),
+			'unknown'       => array( 'private', 'authenticated' ),
+			'empty'         => array( '', 'authenticated' ),
+			'wrong case'    => array( 'Public', 'authenticated' ),
+			'trailing space' => array( 'public ', 'authenticated' ),
+			'array'         => array( array( 'public' ), 'authenticated' ),
+			'null'          => array( null, 'authenticated' ),
 		);
 	}
 

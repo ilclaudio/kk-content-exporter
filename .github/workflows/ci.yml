@@ -1,5 +1,7 @@
 # Continuous integration: calls the same Composer scripts used locally and by the Git hooks
 # (see "Quality checks" in AGENTS/ARCHITECTURE.md). The integration suite is not run here yet.
+# Actions are pinned to a full commit SHA, with the tag in a comment (checked by
+# tests/unit/KKCE_CI_Workflow_Unit_Test.php); update the SHA and the comment together.
 name: CI
 
 on:
@@ -21,10 +23,10 @@ jobs:
         php: [ '8.3', '8.4' ]
     steps:
       - name: Check out the code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: ${{ matrix.php }}
           tools: composer:v2
@@ -41,10 +43,10 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Check out the code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: '8.3'
           tools: composer:v2

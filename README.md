@@ -8,8 +8,8 @@ A WordPress plugin that exposes published content as configurable, read-only JSO
 external importer. An administrator picks a post type, configures one or more feeds and maps the
 content fields freely to JSON keys; each feed is served at `GET /wp-json/kkce/v1/<feed-slug>`.
 
-> **Status:** version 0.0.1 contains only the plugin bootstrap. The feed features are under
-> development and no feed can be configured yet.
+> **Status:** in development. Feeds can be created and configured in the admin; the field mapping
+> and the endpoint `kkce/v1/<feed-slug>` are not implemented yet.
 
 This file is for developers. The description for site administrators is in [`readme.txt`](readme.txt)
 (WordPress.org format).

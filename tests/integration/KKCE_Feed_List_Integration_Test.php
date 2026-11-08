@@ -208,7 +208,7 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 		}
 		wp_cache_delete( $id, 'post_meta' );
 
-		$this->assertSame( 'Public', $this->cell( 'kkce_access', $id ) );
+		$this->assertSame( 'Authenticated', $this->cell( 'kkce_access', $id ), 'A damaged access fails closed.' );
 		$this->assertSame( 'Disabled', $this->cell( 'kkce_status', $id ) );
 	}
 
