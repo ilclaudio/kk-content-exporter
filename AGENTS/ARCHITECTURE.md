@@ -6,9 +6,8 @@
 KK Content Exporter is a classic WordPress plugin (no blocks, no build step). PHP classes live in
 the `KKCE` namespace under `includes/` and are loaded by the plugin's own autoloader; Composer is a
 development tool only and is never shipped. The code contains the bootstrap, the private feed post type with its configuration meta, the
-feed list and the feed editor: the other features of the plan (settings page, mapping, REST endpoints,
-uninstall cleanup) are not implemented yet. Update this file in the
-same change that adds them.
+feed list, the feed editor, the settings page and the uninstall cleanup: the other features of the plan
+(field mapping, REST endpoints, log) are not implemented yet. Update this file in the same change that adds them.
 
 
 ## Key Directories and Files
@@ -16,12 +15,15 @@ same change that adds them.
 | Path | Content |
 |---|---|
 | `kk-content-exporter.php` | Main file: plugin header, `ABSPATH` guard, constants, autoloader, lifecycle hooks |
-| `uninstall.php` | Uninstall routine (guarded by `WP_UNINSTALL_PLUGIN`) |
+| `uninstall.php` | Uninstall routine (guarded by `WP_UNINSTALL_PLUGIN`): loads the autoloader and calls `KKCE\Uninstaller::run()` |
 | `includes/` | First-party classes of the `KKCE` namespace (`class-*.php`) |
 | `includes/class-autoloader.php` | `KKCE\Autoloader`: maps `KKCE\<Sub>\<Class_Name>` to `includes/<sub>/class-<class-name>.php` |
 | `includes/class-plugin.php` | `KKCE\Plugin`: registers the hooks, loads the text domain |
 | `includes/class-feed-post-type.php` | `KKCE\Feed_Post_Type`: registers the private post type `kkce_feed` (administrators only, no REST), the keys and the sanitizers of its configuration meta (`_kkce_post_type`, `_kkce_access`, `_kkce_active`, `_kkce_per_page`) |
 | `includes/admin/class-feed-list.php` | `KKCE\Admin\Feed_List`: columns of the `kkce_feed` list (slug, source, access, status), read through the sanitizers and escaped |
+| `includes/class-settings.php` | `KKCE\Settings`: option `kkce_settings` (defaults, safe reading, processing of the form: pure; `get()` and `sanitize_option()` are the only WordPress calls) |
+| `includes/class-uninstaller.php` | `KKCE\Uninstaller`: deletes feeds (every status, with meta), the option and the capability when the setting asks for it |
+| `includes/admin/class-settings-page.php` | `KKCE\Admin\Settings_Page`: submenu page built with the Settings API, and the diagnostics |
 | `includes/admin/class-feed-editor.php` | `KKCE\Admin\Feed_Editor`: the "Feed settings" meta box of the `kkce_feed` editor and its saving (nonce per feed, `edit_post` capability, slug set through `wp_insert_post_data`, meta written on `save_post_kkce_feed`, errors shown once in a notice) |
 | `includes/class-feed-form.php` | `KKCE\Feed_Form`: pure processing of the submitted editor values (which value is saved, which error is reported) |
 | `includes/class-feed-validator.php` | `KKCE\Feed_Validator`: pure validation (no WordPress call) of the slug, the items per page and the source post type; returns error codes, the editor writes the messages |
@@ -64,8 +66,12 @@ image, language), `includes/output/` (normalization and serialization).
    `kkce_feed` post type has none). A role added later does not receive the capability until the plugin is
    activated again.
 5. **Deactivation** (`Plugin::deactivate()`): never deletes the feed configuration or the capability.
-6. **Uninstall** (`uninstall.php`): the only place where data is removed. The removal of the
-   configuration will be optional (an explicit setting), never implicit.
+6. **Uninstall** (`uninstall.php`): the only place where data is removed, and only when the setting "Delete all
+   the data of the plugin when the plugin is deleted" is on (off by default; a missing or damaged value means
+   keep). The plugin is not loaded at that time, so the file registers the autoloader and the feeds are found by
+   the name of the post type. Feeds in every status (trash included) are deleted with their meta, then the option
+   `kkce_settings` and the capability `kkce_read_export` from every role and every user who received it directly.
+   Multisite network activation is not supported in V1.
 
 Add new hooks in `Plugin::boot()` (or in a class it wires), never as side effects of including a file.
 
@@ -92,7 +98,8 @@ Add new hooks in `Plugin::boot()` (or in a class it wires), never as side effect
 No public endpoint, shortcode, cron job or WP-CLI command yet, and the plugin offers no hook of its own.
 Admin hooks used (all in `Plugin::boot()`): `manage_kkce_feed_posts_columns`, `manage_kkce_feed_posts_custom_column`,
 `post_row_actions` (removes Quick Edit from the feeds, because it could change a slug without validation),
-`add_meta_boxes_kkce_feed`, `wp_insert_post_data`, `save_post_kkce_feed`, `admin_notices`, and `untrashed_post`
+`add_meta_boxes_kkce_feed`, `wp_insert_post_data`, `save_post_kkce_feed`, `admin_notices`, `untrashed_post`,
+`admin_menu` and `admin_init` (the settings page)
 (`Feed_Post_Type::disable_restored_feed()`: a feed restored from the trash starts disabled).
 `wp_insert_post_data` runs for every post type and returns at once for anything but `kkce_feed`.
 
@@ -102,7 +109,14 @@ slug is refused, the stored one is kept but checked with the same rules, because
 outside the editor: on restore from the trash, or from the title of a published post without one); a slug that is invalid,
 reserved or used by another feed is refused, never renamed silently (WordPress alone would add "-2", so the
 slugs it renames itself, `feed`, `rss`, `rss2`, `rdf`, `atom` and `embed`, are reserved too); the source
-post type must be a public post type, `attachment` excluded.
+post type must be a public post type, `attachment` excluded; the items per page of a feed cannot exceed the
+global maximum of the settings (a feed that already exceeds a lowered maximum keeps its value, and the editor
+reports it at every save until it is lowered).
+
+Settings page: the warnings are shown on the page only, not on every admin screen. The REST check runs the
+core filter `rest_authentication_errors` as an anonymous user (the only `phpcs:ignore` of the project, on that
+line: invoking a core hook is intentional) and no request is made; the Application Passwords check asks
+`wp_is_application_passwords_available()` and looks at enabled feeds only (first 100).
 
 Planned: REST `GET kkce/v1/<feed-slug>` (read-only, public or authenticated) registered on
 `rest_api_init`; capability `kkce_read_export`; private post type `kkce_feed`. No shortcodes, cron jobs or

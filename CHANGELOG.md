@@ -28,6 +28,12 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
   reserved, malformed or used by another feed is refused. A feed can be enabled only with a slug and a source
   post type. Quick Edit is removed from the feeds. A feed restored from the trash starts disabled, and a feed
   cannot be enabled on a slug that is malformed, reserved or used by another feed.
+- Settings page (Content Exporter > Settings): endpoints on/off, authentication required for all feeds,
+  maximum items per page (100 by default, no upper limit; a feed cannot exceed it) and removal of the data
+  on uninstall. The page reports a REST API blocked for anonymous requests and authenticated feeds on a
+  site without Application Passwords. Italian translation of the new strings.
+- Uninstall: when the setting is on, deleting the plugin removes the feeds with their settings, the plugin
+  settings and the capability `kkce_read_export`; otherwise nothing is removed.
 
 ### Changed
 

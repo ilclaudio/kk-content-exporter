@@ -63,6 +63,11 @@ final class Feed_Validator {
 	public const ERROR_TOO_SMALL = 'too_small';
 
 	/**
+	 * Error: the integer is larger than the maximum.
+	 */
+	public const ERROR_TOO_LARGE = 'too_large';
+
+	/**
 	 * Error: the value is not in the list of allowed values.
 	 */
 	public const ERROR_NOT_ALLOWED = 'not_allowed';
@@ -135,12 +140,14 @@ final class Feed_Validator {
 	/**
 	 * Validates the number of items per page: an integer of at least 1.
 	 *
-	 * The upper limit is a global setting and is applied where the setting is known.
+	 * The upper limit is a global setting: callers that know it pass it as `$max`; without it there is
+	 * no upper limit.
 	 *
-	 * @param mixed $value Value entered by the administrator.
+	 * @param mixed    $value Value entered by the administrator.
+	 * @param int|null $max   Maximum allowed, or null for no limit.
 	 * @return string `self::VALID` or an error code.
 	 */
-	public static function validate_per_page( $value ): string {
+	public static function validate_per_page( $value, ?int $max = null ): string {
 		if ( is_string( $value ) ) {
 			$value = filter_var( $value, FILTER_VALIDATE_INT );
 		}
@@ -149,7 +156,11 @@ final class Feed_Validator {
 			return self::ERROR_NOT_INTEGER;
 		}
 
-		return $value < 1 ? self::ERROR_TOO_SMALL : self::VALID;
+		if ( $value < 1 ) {
+			return self::ERROR_TOO_SMALL;
+		}
+
+		return null !== $max && $value > $max ? self::ERROR_TOO_LARGE : self::VALID;
 	}
 
 	/**

@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-08T13:04:39+01:00\n"
+"POT-Creation-Date: 2026-11-08T19:44:41+01:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: kk-content-exporter\n"
@@ -39,98 +39,104 @@ msgstr ""
 msgid "https://www.claudiobattaglino.it"
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:87
+#: includes/admin/class-feed-editor.php:88
 msgid "Feed settings"
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:132
+#: includes/admin/class-feed-editor.php:133
 #: includes/admin/class-feed-list.php:63
 msgid "Slug"
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:135
+#: includes/admin/class-feed-editor.php:136
 msgid "Last part of the address of the feed. Lowercase letters, digits and dashes. Leave it empty to use the title."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:139
+#: includes/admin/class-feed-editor.php:140
 #: includes/admin/class-feed-list.php:64
 msgid "Source"
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:142
+#: includes/admin/class-feed-editor.php:143
 msgid "&mdash; Select a post type &mdash;"
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:147
+#: includes/admin/class-feed-editor.php:148
 msgid "The post type whose published content the feed exports."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:151
-#: includes/admin/class-feed-editor.php:154
+#: includes/admin/class-feed-editor.php:152
+#: includes/admin/class-feed-editor.php:155
 #: includes/admin/class-feed-list.php:65
 msgid "Access"
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:157
+#: includes/admin/class-feed-editor.php:158
 msgid "Public: anyone can read the feed"
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:161
+#: includes/admin/class-feed-editor.php:162
 msgid "Authenticated: only an authorized user can read the feed"
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:167
+#: includes/admin/class-feed-editor.php:168
 msgid "Items per page"
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:173
+#: includes/admin/class-feed-editor.php:174
 #: includes/admin/class-feed-list.php:66
 msgid "Status"
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:177
+#: includes/admin/class-feed-editor.php:178
 msgid "Enable the feed"
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:179
+#: includes/admin/class-feed-editor.php:180
 msgid "A feed needs a slug and a source post type to be enabled."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:395
+#: includes/admin/class-feed-editor.php:397
 msgid "Enter a slug for the feed."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:396
+#: includes/admin/class-feed-editor.php:398
 msgid "The slug can contain only lowercase letters, digits and single dashes between them."
 msgstr ""
 
 #. translators: %d: maximum number of characters of a slug.
-#: includes/admin/class-feed-editor.php:399
+#: includes/admin/class-feed-editor.php:401
 #, php-format
 msgid "The slug can have at most %d characters."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:402
+#: includes/admin/class-feed-editor.php:404
 msgid "This slug is reserved. Choose another one."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:403
+#: includes/admin/class-feed-editor.php:405
 msgid "Another feed already uses this slug."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:404
+#: includes/admin/class-feed-editor.php:406
 msgid "The source post type is not available. The previous source was kept."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:405
+#: includes/admin/class-feed-editor.php:407
 msgid "The access value is not valid. The previous access was kept."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:406
+#. translators: %d: maximum number of items per page set in the plugin settings.
+#: includes/admin/class-feed-editor.php:410
+#, php-format
+msgid "Items per page cannot be higher than the maximum set in the plugin settings (%d). The previous value was kept."
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:413
 msgid "Items per page must be a whole number of at least 1. The previous value was kept."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:407
+#: includes/admin/class-feed-editor.php:414
 msgid "The feed was saved disabled: set a valid slug and a source post type first."
 msgstr ""
 
@@ -152,6 +158,71 @@ msgstr ""
 
 #: includes/admin/class-feed-list.php:173
 msgid "Not set"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:63
+#: includes/admin/class-settings-page.php:146
+msgid "Content Exporter settings"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:64
+msgid "Settings"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:92
+msgid "Endpoints"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:94
+msgid "Serve the feeds"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:95
+msgid "Turn it off to stop every feed from answering. The feeds and their settings are kept."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:98
+msgid "Authentication"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:100
+msgid "Require authentication for all feeds"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:101
+msgid "It takes precedence over the access chosen in each feed."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:104
+msgid "Maximum items per page"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:107
+msgid "The largest number of items that a feed can serve in one page. There is no upper limit: very high values make every response heavy and are your responsibility."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:110
+msgid "Uninstall"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:112
+msgid "Delete all the data of the plugin when the plugin is deleted"
+msgstr ""
+
+#: includes/admin/class-settings-page.php:113
+msgid "The feeds, their settings, these settings and the capability are removed permanently. Leave it off to keep them."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:142
+msgid "You do not have permission to access this page."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:217
+msgid "The REST API seems to be blocked for anonymous requests, probably by a security plugin or a setting of the site. Public feeds cannot be read until anonymous requests to the REST API are allowed."
+msgstr ""
+
+#: includes/admin/class-settings-page.php:221
+msgid "Some feeds require authentication, but Application Passwords are not available on this site: WordPress offers them only over HTTPS or in a local environment. Authenticated feeds cannot be read until then."
 msgstr ""
 
 #: includes/class-feed-post-type.php:80
@@ -206,6 +277,14 @@ msgstr ""
 msgid "All Feeds"
 msgstr ""
 
-#: includes/class-plugin.php:102
+#: includes/class-plugin.php:104
 msgid "Development version: feeds can be configured, but they are not served yet."
+msgstr ""
+
+#: includes/class-settings.php:163
+msgid "The maximum items per page must be a whole number of at least 1. The previous value was kept."
+msgstr ""
+
+#: includes/class-settings.php:166
+msgid "A setting was not valid and the previous value was kept."
 msgstr ""

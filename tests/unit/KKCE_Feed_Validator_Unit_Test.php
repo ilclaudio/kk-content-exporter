@@ -126,6 +126,19 @@ class KKCE_Feed_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
+	 * With a maximum, a larger number is refused; the minimum is checked first.
+	 */
+	public function test_validate_per_page_with_a_maximum() {
+		$this->assertSame( Feed_Validator::VALID, Feed_Validator::validate_per_page( 100, 100 ) );
+		$this->assertSame( Feed_Validator::VALID, Feed_Validator::validate_per_page( '99', 100 ) );
+		$this->assertSame( Feed_Validator::ERROR_TOO_LARGE, Feed_Validator::validate_per_page( 101, 100 ) );
+		$this->assertSame( Feed_Validator::ERROR_TOO_LARGE, Feed_Validator::validate_per_page( '5000', 100 ) );
+		$this->assertSame( Feed_Validator::ERROR_TOO_SMALL, Feed_Validator::validate_per_page( 0, 100 ) );
+		$this->assertSame( Feed_Validator::ERROR_NOT_INTEGER, Feed_Validator::validate_per_page( 'many', 100 ) );
+		$this->assertSame( Feed_Validator::VALID, Feed_Validator::validate_per_page( 5000, null ), 'Without a maximum there is no limit.' );
+	}
+
+	/**
 	 * Data for test_validate_per_page().
 	 *
 	 * @return array<string, array{0: mixed, 1: string}>
