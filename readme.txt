@@ -24,6 +24,7 @@ Planned for version 1.0.0:
 * Free mapping of WordPress fields, selected post meta, taxonomies, featured image and language to JSON keys.
 * Optional, read-only support for simple fields of Advanced Custom Fields, CMB2 and Polylang, when those plugins are active. None of them is required.
 * Public or authenticated (Application Passwords) feeds, with pagination and incremental reading.
+* A settings page to switch every feed off, to require authentication for all feeds and to set the maximum number of items per page. It also tells you when something keeps the feeds from working, such as a REST API blocked for anonymous requests.
 * Only published, non password-protected content is ever exported. The plugin never writes to the source content.
 
 The plugin makes no request to external services.
@@ -42,6 +43,18 @@ No. Feeds are served under their own namespace and the plugin does not change th
 = Are drafts or private posts exported? =
 
 No. Only published content that is not protected by a password is exported.
+
+= Does the plugin work on a multisite network? =
+
+It works on a single site. Network activation is not supported in this version: activate the plugin on each site where you need it.
+
+= What happens to my feeds when I delete the plugin? =
+
+By default nothing is deleted: the feeds and their settings stay in the database, so you can install the plugin again. To remove everything, turn on "Delete all the data of the plugin when the plugin is deleted" in Content Exporter > Settings before you delete the plugin. The removal is permanent.
+
+= Why is there a maximum of items per page? =
+
+It protects your site: a feed cannot serve more items in a page than the maximum you set (100 by default). There is no upper limit for the maximum itself; very high values make each response heavy and are your responsibility.
 
 == Changelog ==
 

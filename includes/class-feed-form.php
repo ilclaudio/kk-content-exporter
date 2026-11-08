@@ -27,7 +27,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @phpstan-type FormInput array{slug: string, post_type: string, access: string, active: bool, per_page: string}
  * @phpstan-type FormValues array{slug: string, post_type: string, access: string, active: bool, per_page: int}
- * @phpstan-type FormContext array{suggested_slug: string, slug_is_taken: callable(string): bool, allowed_post_types: list<string>, current: FormValues}
+ * @phpstan-type FormContext array{suggested_slug: string, slug_is_taken: callable(string): bool, allowed_post_types: list<string>, max_per_page: int, current: FormValues}
  */
 final class Feed_Form {
 
@@ -41,7 +41,8 @@ final class Feed_Form {
 	 *
 	 * @param array<string, mixed> $input   Submitted values.
 	 * @param array<string, mixed> $context Suggested slug, a callback that tells whether a slug is used by
-	 *                                      another feed, the selectable post types and the current values.
+	 *                                      another feed, the selectable post types, the global maximum of
+	 *                                      items per page and the current values.
 	 * @return array<string, mixed> Values to save (`values`), and the error code of every refused field (`errors`).
 	 *
 	 * @phpstan-param FormInput   $input
@@ -87,7 +88,7 @@ final class Feed_Form {
 			$errors['access'] = $code;
 		}
 
-		$code = Feed_Validator::validate_per_page( $input['per_page'] );
+		$code = Feed_Validator::validate_per_page( $input['per_page'], $context['max_per_page'] );
 		if ( Feed_Validator::VALID === $code ) {
 			$values['per_page'] = Feed_Post_Type::sanitize_per_page( $input['per_page'] );
 		} else {

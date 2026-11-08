@@ -43,6 +43,7 @@ class KKCE_Feed_Form_Unit_Test extends KKCE_Unit_Test_Case {
 				'suggested_slug'     => 'my-title',
 				'slug_is_taken'      => static fn( string $slug ): bool => 'taken' === $slug,
 				'allowed_post_types' => array( 'post', 'page' ),
+				'max_per_page'       => 100,
 				'current'            => array(
 					'slug'      => 'old-slug',
 					'post_type' => 'post',
@@ -225,6 +226,29 @@ class KKCE_Feed_Form_Unit_Test extends KKCE_Unit_Test_Case {
 			'decimal'  => array( '2.5', 'not_integer' ),
 			'empty'    => array( '', 'not_integer' ),
 		);
+	}
+
+	/**
+	 * Items per page above the global maximum keep the current number and report the error.
+	 */
+	public function test_items_per_page_above_the_global_maximum_is_refused() {
+		$result = Feed_Form::process( $this->input( array( 'per_page' => '101' ) ), $this->context() );
+
+		$this->assertSame( 'too_large', $result['errors']['per_page'] );
+		$this->assertSame( 50, $result['values']['per_page'] );
+	}
+
+	/**
+	 * The maximum itself is accepted, and a different global maximum changes the limit.
+	 */
+	public function test_items_per_page_equal_to_the_global_maximum_is_accepted() {
+		$result = Feed_Form::process( $this->input( array( 'per_page' => '100' ) ), $this->context() );
+		$this->assertArrayNotHasKey( 'per_page', $result['errors'] );
+		$this->assertSame( 100, $result['values']['per_page'] );
+
+		$result = Feed_Form::process( $this->input( array( 'per_page' => '101' ) ), $this->context( array( 'max_per_page' => 500 ) ) );
+		$this->assertArrayNotHasKey( 'per_page', $result['errors'] );
+		$this->assertSame( 101, $result['values']['per_page'] );
 	}
 
 	/**

@@ -381,6 +381,26 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The items per page of a feed cannot exceed the global maximum of the settings.
+	 */
+	public function test_items_per_page_cannot_exceed_the_global_maximum() {
+		update_option( \KKCE\Settings::OPTION, array( 'enabled' => '1', 'max_per_page' => '30' ) );
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields( array( 'per_page' => '30' ) ) );
+		$this->assertSame( 30, Feed_Post_Type::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ), 'The maximum itself is accepted.' );
+
+		$this->submit( $feed, $this->fields( array( 'per_page' => '31', 'access' => 'public' ) ) );
+
+		$this->assertSame( 30, Feed_Post_Type::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ), 'The previous value is kept.' );
+		$this->assertSame( 'public', get_post_meta( $feed, '_kkce_access', true ), 'The other fields are still saved.' );
+
+		update_option( \KKCE\Settings::OPTION, array( 'enabled' => '1', 'max_per_page' => '500' ) );
+		$this->submit( $feed, $this->fields( array( 'per_page' => '200' ) ) );
+
+		$this->assertSame( 200, Feed_Post_Type::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ), 'A higher maximum allows it.' );
+	}
+
+	/**
 	 * Other post types are not touched by the editor, even when the request carries the fields.
 	 */
 	public function test_other_post_types_are_not_touched() {

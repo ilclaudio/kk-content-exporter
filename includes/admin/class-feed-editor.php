@@ -10,6 +10,7 @@ namespace KKCE\Admin;
 use KKCE\Feed_Form;
 use KKCE\Feed_Post_Type;
 use KKCE\Feed_Validator;
+use KKCE\Settings;
 use WP_Post;
 
 defined( 'ABSPATH' ) || exit;
@@ -229,6 +230,7 @@ final class Feed_Editor {
 				'suggested_slug'     => self::suggest_slug( $title ),
 				'slug_is_taken'      => static fn( string $slug ): bool => self::slug_is_taken( $slug, $post_id ),
 				'allowed_post_types' => array_keys( self::selectable_post_types() ),
+				'max_per_page'       => Settings::get()['max_per_page'],
 				'current'            => self::current_values( $post_id ),
 			)
 		);
@@ -403,6 +405,11 @@ final class Feed_Editor {
 			'slug.taken'          => __( 'Another feed already uses this slug.', 'kk-content-exporter' ),
 			'post_type.not_allowed' => __( 'The source post type is not available. The previous source was kept.', 'kk-content-exporter' ),
 			'access.not_allowed'  => __( 'The access value is not valid. The previous access was kept.', 'kk-content-exporter' ),
+			'per_page.too_large'  => sprintf(
+				/* translators: %d: maximum number of items per page set in the plugin settings. */
+				__( 'Items per page cannot be higher than the maximum set in the plugin settings (%d). The previous value was kept.', 'kk-content-exporter' ),
+				Settings::get()['max_per_page']
+			),
 			'per_page.not_integer', 'per_page.too_small' => __( 'Items per page must be a whole number of at least 1. The previous value was kept.', 'kk-content-exporter' ),
 			'active.incomplete'   => __( 'The feed was saved disabled: set a valid slug and a source post type first.', 'kk-content-exporter' ),
 			default               => '',
