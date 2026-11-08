@@ -48,6 +48,7 @@ final class Plugin {
 		add_action( 'init', array( self::class, 'load_textdomain' ) );
 		add_action( 'init', array( Feed_Post_Type::class, 'register' ) );
 		add_action( 'init', array( Feed_Post_Type::class, 'register_meta' ) );
+		add_action( 'untrashed_post', array( Feed_Post_Type::class, 'disable_restored_feed' ) );
 		add_filter( 'manage_' . Feed_Post_Type::POST_TYPE . '_posts_columns', array( Admin\Feed_List::class, 'columns' ) );
 		add_action( 'manage_' . Feed_Post_Type::POST_TYPE . '_posts_custom_column', array( Admin\Feed_List::class, 'render_column' ), 10, 2 );
 		add_filter( 'post_row_actions', array( Admin\Feed_List::class, 'row_actions' ), 10, 2 );
@@ -93,12 +94,12 @@ final class Plugin {
 	}
 
 	/**
-	 * Note shown while the plugin has no features yet.
+	 * Note shown while the plugin is in development: feeds can be configured, but not served yet.
 	 *
 	 * @return string
 	 */
 	public static function development_notice(): string {
-		return __( 'Development version: no feeds can be configured yet.', 'kk-content-exporter' );
+		return __( 'Development version: feeds can be configured, but they are not served yet.', 'kk-content-exporter' );
 	}
 
 	/**

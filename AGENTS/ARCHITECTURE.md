@@ -5,8 +5,9 @@
 
 KK Content Exporter is a classic WordPress plugin (no blocks, no build step). PHP classes live in
 the `KKCE` namespace under `includes/` and are loaded by the plugin's own autoloader; Composer is a
-development tool only and is never shipped. The code contains the bootstrap and the private feed post type with its configuration meta: the other features
-of the plan (feed editor, mapping, REST endpoints) are not implemented yet. Update this file in the
+development tool only and is never shipped. The code contains the bootstrap, the private feed post type with its configuration meta, the
+feed list and the feed editor: the other features of the plan (settings page, mapping, REST endpoints,
+uninstall cleanup) are not implemented yet. Update this file in the
 same change that adds them.
 
 
@@ -55,7 +56,9 @@ image, language), `includes/output/` (normalization and serialization).
 3. **Init** (`init`): `Plugin::load_textdomain()` loads the bundled translations. The post type `kkce_feed` is registered by
    `Feed_Post_Type::register()` and its configuration meta by `Feed_Post_Type::register_meta()` (both on `init`).
    WordPress returns stored meta as strings (`'1'` or `''` for the flag, `'20'` for the number): readers convert
-   them with `sanitize_active()` and `sanitize_per_page()`. REST routes (on `rest_api_init`) will be registered from here.
+   them with `sanitize_active()` and `sanitize_per_page()`. `sanitize_access()` fails closed: only the exact value
+   `public` opens a feed, any other stored value gives `authenticated` (a feed without the meta gets the registered
+   default `public`). REST routes (on `rest_api_init`) will be registered from here.
 4. **Activation** (`Plugin::activate()`): grants the capability `kkce_read_export` (`Plugin::READ_EXPORT_CAPABILITY`)
    to the administrator role. It is idempotent, creates no content and does not flush rewrite rules (the
    `kkce_feed` post type has none). A role added later does not receive the capability until the plugin is
@@ -89,11 +92,14 @@ Add new hooks in `Plugin::boot()` (or in a class it wires), never as side effect
 No public endpoint, shortcode, cron job or WP-CLI command yet, and the plugin offers no hook of its own.
 Admin hooks used (all in `Plugin::boot()`): `manage_kkce_feed_posts_columns`, `manage_kkce_feed_posts_custom_column`,
 `post_row_actions` (removes Quick Edit from the feeds, because it could change a slug without validation),
-`add_meta_boxes_kkce_feed`, `wp_insert_post_data`, `save_post_kkce_feed`, `admin_notices`.
+`add_meta_boxes_kkce_feed`, `wp_insert_post_data`, `save_post_kkce_feed`, `admin_notices`, and `untrashed_post`
+(`Feed_Post_Type::disable_restored_feed()`: a feed restored from the trash starts disabled).
 `wp_insert_post_data` runs for every post type and returns at once for anything but `kkce_feed`.
 
 Rules of the editor: a field with an invalid value keeps its previous value and is reported in a notice, the
-other fields are saved; a feed can be enabled only with a slug and a source post type; a slug that is invalid,
+other fields are saved; a feed can be enabled only with a source post type and a usable slug (when the submitted
+slug is refused, the stored one is kept but checked with the same rules, because WordPress can assign a slug
+outside the editor: on restore from the trash, or from the title of a published post without one); a slug that is invalid,
 reserved or used by another feed is refused, never renamed silently (WordPress alone would add "-2", so the
 slugs it renames itself, `feed`, `rss`, `rss2`, `rdf`, `atom` and `embed`, are reserved too); the source
 post type must be a public post type, `attachment` excluded.
@@ -140,7 +146,9 @@ root. All scripts are non-interactive and can be reused by a future CI.
 The commit-msg hook also blocks AI attribution (`Co-Authored-By` trailers, "Generated with" lines) and
 first lines without an allowed prefix or of 72 characters or more. CI on GitHub Actions (`.github/workflows/ci.yml`)
 runs `composer run check` on PHP 8.3 and 8.4 and `composer audit --locked`; it must keep calling these
-Composer scripts. The integration suite and Plugin Check are not in CI yet.
+Composer scripts. Its actions are pinned to a full commit SHA with the tag in a comment
+(`KKCE_CI_Workflow_Unit_Test`): to update one, read the commit of the new tag (`git ls-remote --tags`) and change
+the SHA and the comment together. The integration suite and Plugin Check are not in CI yet.
 
 
 ## References

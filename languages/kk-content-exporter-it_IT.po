@@ -8,7 +8,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2026-11-06T22:54:45+01:00\n"
-"PO-Revision-Date: 2026-11-07T17:36:07+00:00\n"
+"PO-Revision-Date: 2026-11-08T12:04:41+00:00\n"
 "Language: it_IT\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: WP-CLI 2.12.0\n"
@@ -158,54 +158,54 @@ msgstr "Non impostato"
 msgid "Configurations of the JSON feeds."
 msgstr "Configurazioni dei feed JSON."
 
-#: includes/class-feed-post-type.php:261
+#: includes/class-feed-post-type.php:285
 msgid "Feeds"
 msgstr "Feed"
 
-#: includes/class-feed-post-type.php:262
+#: includes/class-feed-post-type.php:286
 msgid "Feed"
 msgstr "Feed"
 
-#: includes/class-feed-post-type.php:263
+#: includes/class-feed-post-type.php:287
 msgid "Content Exporter"
 msgstr "Content Exporter"
 
-#: includes/class-feed-post-type.php:264
+#: includes/class-feed-post-type.php:288
 msgid "Add New"
 msgstr "Aggiungi"
 
-#: includes/class-feed-post-type.php:265
+#: includes/class-feed-post-type.php:289
 msgid "Add New Feed"
 msgstr "Aggiungi un feed"
 
-#: includes/class-feed-post-type.php:266
+#: includes/class-feed-post-type.php:290
 msgid "Edit Feed"
 msgstr "Modifica il feed"
 
-#: includes/class-feed-post-type.php:267
+#: includes/class-feed-post-type.php:291
 msgid "New Feed"
 msgstr "Nuovo feed"
 
-#: includes/class-feed-post-type.php:268
+#: includes/class-feed-post-type.php:292
 msgid "View Feed"
 msgstr "Visualizza il feed"
 
-#: includes/class-feed-post-type.php:269
+#: includes/class-feed-post-type.php:293
 msgid "Search Feeds"
 msgstr "Cerca feed"
 
-#: includes/class-feed-post-type.php:270
+#: includes/class-feed-post-type.php:294
 msgid "No feeds found."
 msgstr "Nessun feed trovato."
 
-#: includes/class-feed-post-type.php:271
+#: includes/class-feed-post-type.php:295
 msgid "No feeds found in Trash."
 msgstr "Nessun feed nel cestino."
 
-#: includes/class-feed-post-type.php:272
+#: includes/class-feed-post-type.php:296
 msgid "All Feeds"
 msgstr "Tutti i feed"
 
-#: includes/class-plugin.php:101
-msgid "Development version: no feeds can be configured yet."
-msgstr "Versione di sviluppo: non è ancora possibile configurare feed."
+#: includes/class-plugin.php:102
+msgid "Development version: feeds can be configured, but they are not served yet."
+msgstr "Versione di sviluppo: i feed si possono configurare, ma non sono ancora esposti."

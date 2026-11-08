@@ -51,8 +51,11 @@ Some unit tests check the consistency of files rather than code: `KKCE_Release_V
 and PHPStan), `KKCE_PHPStan_Config_Unit_Test` (every PHP file analyzed, level ≥ 8, no baseline) and
 `KKCE_Agents_Docs_Unit_Test` (AI context documents and their references), `KKCE_Release_Build_Unit_Test`
 (`.distignore` and package verification), `KKCE_Composer_Scripts_Unit_Test` (scripts work on a fresh
-clone) and `KKCE_Git_Ignore_Unit_Test` (credentials, build output and private files ignored by Git).
-When one fails, a file was updated and another forgotten: fix the data, not the test.
+clone), `KKCE_Git_Ignore_Unit_Test` (credentials, build output and private files ignored by Git),
+`KKCE_CI_Workflow_Unit_Test` (GitHub Actions pinned to a commit SHA, with the tag in a comment) and
+`KKCE_Secret_Scan_Unit_Test` (runs `.githooks/check-staged-secrets.sh --stdin` through Bash on invented
+secrets and on ordinary lines; Bash is needed, as for the Git hooks). When one fails, a file was
+updated and another forgotten: fix the data, not the test.
 
 ## Folder map
 

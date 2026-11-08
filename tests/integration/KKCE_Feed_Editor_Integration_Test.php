@@ -264,6 +264,59 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A feed restored from the trash starts disabled, and it cannot be enabled again while another feed
+	 * uses its slug. WordPress gives the old slug back on restore and does not check drafts for duplicates.
+	 */
+	public function test_a_feed_restored_from_the_trash_cannot_be_active_on_a_used_slug() {
+		$first = $this->feed( 'First' );
+		$this->submit( $first, $this->fields() );
+		$_POST = array();
+		wp_trash_post( $first );
+
+		$second = $this->feed( 'Second' );
+		$this->submit( $second, $this->fields() );
+		$_POST = array();
+		wp_untrash_post( $first );
+
+		$this->assertSame( 'news', get_post_field( 'post_name', $first ), 'WordPress gives the old slug back.' );
+		$this->assertFalse( Feed_Post_Type::sanitize_active( get_post_meta( $first, '_kkce_active', true ) ), 'A restored feed starts disabled.' );
+
+		$this->submit( $first, $this->fields( array( 'per_page' => '7' ) ) );
+
+		$this->assertFalse( Feed_Post_Type::sanitize_active( get_post_meta( $first, '_kkce_active', true ) ) );
+		$this->assertTrue( Feed_Post_Type::sanitize_active( get_post_meta( $second, '_kkce_active', true ) ) );
+		$this->assertSame( 7, Feed_Post_Type::sanitize_per_page( get_post_meta( $first, '_kkce_per_page', true ) ), 'The other fields are still saved.' );
+	}
+
+	/**
+	 * A slug that WordPress generated from the title, unvalidated, cannot enable the feed.
+	 */
+	public function test_a_slug_generated_by_wordpress_cannot_enable_the_feed() {
+		$feed = $this->feed( 'Settings' );
+
+		// The slug is refused and the feed has none: WordPress generates one from the title after the filter.
+		$this->submit( $feed, $this->fields( array( 'slug' => 'feeds' ) ) );
+		$this->assertSame( 'settings', get_post_field( 'post_name', $feed ) );
+		$this->assertFalse( Feed_Post_Type::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
+
+		$this->submit( $feed, $this->fields( array( 'slug' => 'settings' ) ) );
+
+		$this->assertFalse( Feed_Post_Type::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ), 'A reserved slug never enables the feed.' );
+	}
+
+	/**
+	 * Restoring a feed from the trash does not touch the other post types.
+	 */
+	public function test_restoring_another_post_type_is_not_touched() {
+		$post = self::factory()->post->create();
+		update_post_meta( $post, '_kkce_active', '1' );
+		wp_trash_post( $post );
+		wp_untrash_post( $post );
+
+		$this->assertSame( '1', get_post_meta( $post, '_kkce_active', true ) );
+	}
+
+	/**
 	 * An empty slug is taken from the title.
 	 */
 	public function test_an_empty_slug_is_taken_from_the_title() {
@@ -296,6 +349,35 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 
 		$this->assertSame( 'authenticated', get_post_meta( $feed, '_kkce_access', true ) );
 		$this->assertSame( 20, Feed_Post_Type::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ) );
+	}
+
+	/**
+	 * A damaged stored access never opens a feed: the editor shows it as authenticated and keeps it
+	 * authenticated when the form sends an unknown value.
+	 */
+	public function test_a_damaged_access_stays_authenticated() {
+		global $wpdb;
+
+		$feed = $this->feed();
+		// Simulates a value written outside the editor: the sanitizer is bypassed on purpose.
+		$wpdb->insert(
+			$wpdb->postmeta,
+			array(
+				'post_id'    => $feed,
+				'meta_key'   => '_kkce_access', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value' => 'Authenticated', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+			)
+		);
+		wp_cache_delete( $feed, 'post_meta' );
+
+		ob_start();
+		Feed_Editor::render_meta_box( get_post( $feed ) );
+		$html = (string) ob_get_clean();
+		$this->assertMatchesRegularExpression( '/value="authenticated"[^>]*checked/', $html );
+
+		$this->submit( $feed, $this->fields( array( 'access' => 'everyone' ) ) );
+
+		$this->assertSame( 'authenticated', get_post_meta( $feed, '_kkce_access', true ) );
 	}
 
 	/**

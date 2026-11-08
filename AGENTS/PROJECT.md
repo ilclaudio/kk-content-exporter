@@ -30,7 +30,8 @@ downloads, timeouts, import logs and scheduling.
 ## Scope of version 1.0.0 (summary)
 
 - Feeds stored in the private administrative post type `kkce_feed` (not exposed in REST): title for the
-  name, post meta for mapping and options, default WordPress revisions (a full restore of the mapping is not a requirement).
+  name, post meta for mapping and options; no revisions (the post type supports only the title, and core
+  revisions do not store post meta): a restore of the configuration is not a requirement.
 - One public, read-only REST endpoint per feed: `GET /wp-json/kkce/v1/<feed-slug>`; slug unique, feed
   can be enabled or disabled; new and imported feeds start disabled.
 - Mapping rows: source, free JSON key (proposed equal to the source name), expected type

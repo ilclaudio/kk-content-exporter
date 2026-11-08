@@ -124,7 +124,7 @@ class KKCE_Feed_Post_Type_Integration_Test extends WP_UnitTestCase {
 		update_post_meta( $feed, '_kkce_per_page', '-3' );
 
 		$this->assertSame( 'bpageb', get_post_meta( $feed, '_kkce_post_type', true ) );
-		$this->assertSame( 'public', get_post_meta( $feed, '_kkce_access', true ) );
+		$this->assertSame( 'authenticated', get_post_meta( $feed, '_kkce_access', true ), 'An unknown access fails closed.' );
 		$this->assertSame( '', get_post_meta( $feed, '_kkce_active', true ) );
 		$this->assertFalse( Feed_Post_Type::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
 		$this->assertSame( '50', get_post_meta( $feed, '_kkce_per_page', true ) );

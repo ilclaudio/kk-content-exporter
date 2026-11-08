@@ -25,6 +25,7 @@ class KKCE_Plugin_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( 10, has_filter( 'plugin_row_meta', array( Plugin::class, 'filter_plugin_row_meta' ) ) );
 		$this->assertNotFalse( has_action( 'init', array( \KKCE\Feed_Post_Type::class, 'register' ) ) );
 		$this->assertNotFalse( has_action( 'init', array( \KKCE\Feed_Post_Type::class, 'register_meta' ) ) );
+		$this->assertSame( 10, has_action( 'untrashed_post', array( \KKCE\Feed_Post_Type::class, 'disable_restored_feed' ) ) );
 		$this->assertSame( 10, has_filter( 'manage_kkce_feed_posts_columns', array( \KKCE\Admin\Feed_List::class, 'columns' ) ) );
 		$this->assertSame( 10, has_action( 'manage_kkce_feed_posts_custom_column', array( \KKCE\Admin\Feed_List::class, 'render_column' ) ) );
 		$this->assertSame( 10, has_filter( 'post_row_actions', array( \KKCE\Admin\Feed_List::class, 'row_actions' ) ) );

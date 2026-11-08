@@ -155,6 +155,26 @@ final class Feed_Post_Type {
 	}
 
 	/**
+	 * Disables a feed restored from the trash. Hooked on `untrashed_post` by `Plugin::boot()`.
+	 *
+	 * While a feed is in the trash another feed can take its slug, and WordPress gives the old slug back
+	 * on restore without checking drafts for duplicates. A restored feed therefore starts disabled; the
+	 * editor enables it again only with a slug that is still valid and free.
+	 *
+	 * @param mixed $post_id ID of the restored post.
+	 * @return void
+	 */
+	public static function disable_restored_feed( $post_id ): void {
+		$post_id = (int) $post_id;
+
+		if ( $post_id < 1 || self::POST_TYPE !== get_post_type( $post_id ) ) {
+			return;
+		}
+
+		update_post_meta( $post_id, self::META_ACTIVE, false );
+	}
+
+	/**
 	 * Whether a user can edit the configuration meta of a feed.
 	 *
 	 * Used as `auth_callback` of the protected meta: it follows the capabilities of the post type.
@@ -191,13 +211,17 @@ final class Feed_Post_Type {
 	}
 
 	/**
-	 * Restricts the access to the two known values; anything else falls back to `public`.
+	 * Restricts the access to the two known values, failing closed: only the exact value `public`
+	 * opens a feed, anything else (unknown, empty, wrong case, damaged) gives `authenticated`.
+	 *
+	 * A feed without the meta is still public: WordPress returns the registered default `public`
+	 * when no value is stored, so this function only judges values that are actually present.
 	 *
 	 * @param mixed $value Raw value.
 	 * @return string `public` or `authenticated`.
 	 */
 	public static function sanitize_access( $value ): string {
-		return self::ACCESS_AUTHENTICATED === $value ? self::ACCESS_AUTHENTICATED : self::ACCESS_PUBLIC;
+		return self::ACCESS_PUBLIC === $value ? self::ACCESS_PUBLIC : self::ACCESS_AUTHENTICATED;
 	}
 
 	/**

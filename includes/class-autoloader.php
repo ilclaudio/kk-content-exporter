@@ -73,11 +73,16 @@ final class Autoloader {
 		}
 
 		$parts = explode( '\\', substr( $class_name, strlen( self::PREFIX ) ) );
-		$class = array_pop( $parts );
 
-		if ( '' === $class || 1 !== preg_match( '/\A[A-Za-z0-9_]+\z/', $class ) ) {
-			return '';
+		// Every part, not only the class name: a `..`, `.` or empty sub-namespace part would make the
+		// path leave includes/. Autoloaders are global, so the name can come from any code on the site.
+		foreach ( $parts as $part ) {
+			if ( 1 !== preg_match( '/\A[A-Za-z0-9_]+\z/', $part ) ) {
+				return '';
+			}
 		}
+
+		$class = array_pop( $parts );
 
 		$directories = array_map(
 			static fn( string $part ): string => strtolower( str_replace( '_', '-', $part ) ),
