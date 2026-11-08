@@ -4,9 +4,9 @@
 ## Project Overview
 
 KK Content Exporter is a WordPress plugin, installed on a source site, that exposes published
-content as configurable, read-only JSON feeds for an external importer. An administrator chooses a
-post type, configures one or more feeds and maps the fields of the content freely to JSON keys. The
-plugin queries WordPress directly: the post type does not need `show_in_rest`, and the native REST
+content as configurable, read-only JSON feeds for an external importer. An administrator configures
+one or more feeds; each feed reads one or more post types and maps their fields freely to JSON keys.
+The plugin queries WordPress directly: the post types do not need `show_in_rest`, and the native REST
 API is not changed.
 
 The plugin is only an exporter. The consumer (the importer) is responsible for upserts, image
@@ -34,16 +34,26 @@ downloads, timeouts, import logs and scheduling.
   revisions do not store post meta): a restore of the configuration is not a requirement.
 - One public, read-only REST endpoint per feed: `GET /wp-json/kkce/v1/<feed-slug>`; slug unique, feed
   can be enabled or disabled; new and imported feeds start disabled.
-- Mapping rows: source, free JSON key (proposed equal to the source name), expected type
-  (`auto`, string, HTML, number, boolean, date/time, URL, simple list), missing-value policy (omit by
-  default, or `null`), fixed values.
-- Sources: WordPress fields (ID, title, content, excerpt, permalink, publish/modified dates, public
-  author attributes), explicitly selected post meta, simple ACF and CMB2 fields, taxonomies and terms,
-  featured image (ID, absolute URL, alt, modified date), language (fixed per feed or Polylang).
+- Post types per feed: one or more (one is the particular case). Items of different types share the
+  response, its order and its pagination; a field with the post type of the item is always selectable.
+- Mapping rows, starting from the output: free JSON key (proposed equal to the source name), a **value
+  rule** with a declared kind, expected type (`auto`, string, HTML, number, boolean, date/time, URL,
+  simple list) and missing-value policy (omit by default, or `null`). The mapping format is versioned and
+  has one evaluation point, shared by the preview and the endpoint. Rule kinds of V1: Field (a source per
+  post type, with a fallback chain: the first value that is present wins, so `0` and `false` stay values),
+  Fixed value (also per post type), Template (text with placeholders, for concatenation), Lookup table
+  (value to output, the switch) and Condition (simple if-then-else). Rules are structures filled in by the
+  admin interface, not text to parse: there is no expression language in V1.
+- Sources: WordPress fields shared by every post type (ID, title, content, excerpt, permalink,
+  publish/modified dates, public author attributes) listed once; per post type, explicitly selected post
+  meta, simple ACF and CMB2 fields, taxonomies and terms, featured image (ID, absolute URL, alt, modified
+  date), language (fixed per feed or Polylang). Fields of different post types are never merged by name:
+  the administrator decides when they correspond. Rules can only use these selectable sources.
   Repeater, flexible content, groups, relationships and serialized structures are out of V1.
 - Response: `{ "items": [...], "pagination": {...}, "meta": {...} }`; dates in ISO 8601 UTC (date-only
   fields keep `YYYY-MM-DD`); pagination `page` / `per_page` (default 50 per feed; maximum set in the plugin settings, 100 by default, no ceiling); stable order by
-  modified date GMT and ID; incremental filter `modified_after`.
+  modified date GMT and ID; date filters `modified_after`, `modified_before` and `published_after`,
+  each of which can be turned off in the settings (a disabled filter gives HTTP 400).
 - Access: public (anonymous, published data only) or authenticated (HTTPS + Application Password of a
   technical user with the dedicated capability `kkce_read_export`).
 - Never exported: drafts, private or password-protected content, unmapped meta, sensitive keys
@@ -60,8 +70,12 @@ downloads, timeouts, import logs and scheduling.
 - Admin interface: native WordPress markup and vanilla JavaScript, no build step.
 - Multisite: network activation is not supported in V1 (single-site operation).
 
-Out of V1 (Phase 4 of the plan): taxonomy/meta filters, cache with ETag/Last-Modified, WPML, an
-endpoint outside `/wp-json/`, cursors.
+Out of V1 (Phase 6 of the plan): taxonomy/meta filters, cache with ETag/Last-Modified, WPML, an
+endpoint outside `/wp-json/`, cursors, network activation, and an Expression rule kind (a real expression
+language), which is added only for a concrete case that the other rule kinds cannot solve.
+
+Plan phases: 1 foundations (done), 2 multiple post types and the base of the rule mapping, 3 endpoints,
+4 additional rule kinds, 5 release 1.0.0, 6 later evolutions.
 
 
 ## Optional integrations (read-only)
