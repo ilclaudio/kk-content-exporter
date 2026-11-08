@@ -210,7 +210,7 @@ the operator uses.
 | **A** | `/audit-endpoint <URL>` | One feed endpoint — read-only runtime audit (HTTP, JSON structure, parameters, exposed data) | "Audit endpoint X", "Check the feed X" |
 | **B** | `/issues` | `AGENTS/ISSUES_TODO.md` — category × severity table and where to start | "Check if there are issues to fix", "Where do I start with the issues?", "I want a tabular issue summary" |
 | **C** | `/issues-triage` | `AGENTS/ISSUES_TODO.md` — interactive triage and fixes, one issue at a time | "Let's triage the issues one by one", "Dequeue the issues" |
-| **D** | `/kkce-review [scope]` | Structured, multi-session code review driven by `AGENTS/CODE_REVIEW.md` | "Start the code review", "Resume the code review", "Code review status", "Run a full review of file/folder X" |
+| **D** | `/kkce-review [scope]` | Structured code review driven by `AGENTS/CODE_REVIEW.md`, run unattended from start to end (resumable); findings go to `AGENTS/ISSUES_TODO.md`, a concise report ends the run | "Start the code review", "Resume the code review", "Code review status", "Run a full review of file/folder X" |
 
 **When the operator's request matches a row of this table, or concerns opening, triaging or closing an
 issue, read `AGENTS/TRIGGERS.md` before acting**: it holds the detailed workflow of each trigger, the

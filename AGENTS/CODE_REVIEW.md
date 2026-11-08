@@ -5,8 +5,10 @@
 Review rules for Trigger D in `AGENTS/TRIGGERS.md`. Read this file with `AGENTS/ARCHITECTURE.md`
 and `AGENTS/CODING_STANDARDS.md`. Use the applicable official WordPress skills
 (`wp-plugin-development`, `wp-rest-api`, `wp-plugin-directory-guidelines`, `wp-phpstan`). If these
-documents or a skill conflict, stop the affected work, explain the practical pros and cons, and ask the
-operator which instruction to follow.
+documents or a skill conflict, the run does not stop: apply the stricter of the conflicting rules and list the
+conflict, with the practical pros and cons, in the final report for the operator to decide. This replaces,
+for the review only, the general rule of `AGENTS/AI_BEHAVIOR.md` to stop and ask, because the review runs
+unattended (see *Unattended run*).
 
 ## Scope and coverage
 
@@ -30,7 +32,7 @@ check cannot run, record the reason; never infer a successful baseline. Distingu
 from regressions against the recorded baseline. Consolidate repetitive lint findings by root cause.
 
 Build phases from the project plan and the current inventory; split large phases into sub-batches of
-roughly 3,000 reviewable lines. Review one authorized phase at a time. A scoped review uses the same
+roughly 3,000 reviewable lines. Run the phases in order, one after the other, without asking for confirmation between them. A scoped review uses the same
 evidence rules without marking a full-run batch complete. Preserve the plan and completed phases
 recorded in the progress file; reconcile new or changed paths rather than resetting history.
 
@@ -77,6 +79,20 @@ history or a suspected regression.
 
 ## Execution and persistence
 
+### Unattended run
+
+The request `/kkce-review <scope>` authorizes the whole run: all the phases, the baseline, the append of
+the findings to `AGENTS/ISSUES_TODO.md` and the updates of `AGENTS/CODE_REVIEW_PROGRESS.md`. Never ask for
+confirmation about the scope, the order or the writes.
+
+Never stop to ask. When a check cannot run (tool, database or network unavailable), a file cannot be read,
+or an action that `AGENTS/AI_BEHAVIOR.md` forbids without confirmation would be needed (destructive
+database, WP-CLI or file operations, a non-local target, reading credentials), skip that check or file,
+record the reason as a coverage limit and continue.
+
+If the session ends before the run is complete, the progress file is the checkpoint: a resume, or a new
+`/kkce-review full`, continues with the remaining phases without asking and without resetting.
+
 Review code without changing it. Do not weaken lint rules or mutate Git state. The only permitted
 writes are appending confirmed, deduplicated findings to `AGENTS/ISSUES_TODO.md` (under the section of
 their category, with the issue template) after each phase, and updating `AGENTS/CODE_REVIEW_PROGRESS.md`
@@ -87,7 +103,7 @@ personal data in reports.
 
 Progress file: a full run keeps its state in the ignored local file `AGENTS/CODE_REVIEW_PROGRESS.md`.
 Bootstrap does not create or read it; Trigger D creates it when a full run starts and updates it at the
-end of every authorized phase and whenever a phase is skipped. If it is missing or empty, the run has not
+end of every phase and whenever a phase is skipped. If it is missing or empty, the run has not
 started unless the operator supplies a checkpoint, which takes precedence over the file. Structure:
 
 ```
@@ -109,12 +125,20 @@ never be committed.
 
 ## Output
 
-After each phase, report files read versus inspected, confirmed findings (numbered, with the issue
-template including `Files affected`), unverified questions (chat only), checks and limitations, and the
-next proposed phase. The final report includes category/severity counts for this run, the rationale of
-CRITICAL/HIGH findings, up to five recommended corrections, assumptions, and coverage reconciliation;
-keep "findings in this run" distinct from the total open entries. A full run is complete only when
-coverage is reconciled and the final report is delivered.
+Findings are not reported phase by phase in chat: each phase appends its confirmed, numbered findings to
+`AGENTS/ISSUES_TODO.md` with the issue template (including `Files affected`). One line of progress per phase
+is allowed in chat.
+
+At the end show one concise report on screen:
+- counts of the findings of this run by category and severity, distinct from the total open entries;
+- the CRITICAL and HIGH findings, one line each (title, `file:line`, why it matters);
+- up to five recommended corrections;
+- assumptions and open questions (unverified hypotheses, never filed) and the rule conflicts found;
+- the checks run with their exit status, the checks that could not run, and the coverage limits;
+- the coverage reconciliation: files read, inspected, excluded and pending, derived from the actual files.
+
+A full run is complete only when coverage is reconciled and this report is delivered. A scoped review ends
+with the same report, without the batch list.
 
 ## Project-specific plan
 

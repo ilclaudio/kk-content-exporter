@@ -113,23 +113,28 @@ corrected, skipped, deprioritized and how many remain open.
 Slash alias: `/kkce-review [scope]`
 
 `[scope]` is a file or folder path (scoped review), `full` (full run) or `status` (state of the full
-run); without a scope, ask which one. The review before a WordPress.org submission is not a scope of
+run); without a scope, run `full`. The review before a WordPress.org submission is not a scope of
 this trigger: it is the private procedure `DEV/PROCEDURES/PROC_PreSubmission_Review.md`, which reuses
 the rules of `AGENTS/CODE_REVIEW.md`.
 
+The run is unattended: the operator's request authorizes the whole run (every phase, the baseline and the
+writes below). Do not ask for confirmation between phases, before writing findings or about the scope.
+
 Mandatory workflow:
 1. Follow `AGENTS/CODE_REVIEW.md` with the project's architecture and coding standards. If rules
-   conflict, stop and ask the operator which to follow, with practical pros and cons.
+   conflict, apply the stricter one and list the conflict in the final report (see *Unattended run* in
+   `AGENTS/CODE_REVIEW.md`).
 2. Read `AGENTS/CODE_REVIEW_PROGRESS.md` when resuming or checking a full run; a checkpoint supplied in
    the conversation takes precedence. A missing or empty file means the run has not started. Never
-   invent previous progress.
-3. Determine scope and run state; for a full run propose inventory and baseline before code batches.
-4. Execute only the explicitly authorized phase; propose the next one without chaining phases.
-5. Deliver findings, coverage, limits and a checkpoint in chat; update the progress file for full runs.
+   invent previous progress. A resume continues with the remaining phases without asking.
+3. Determine scope and run state; for a full run do the inventory and the baseline before the code batches.
+4. Run all the phases of the scope in order, appending the findings of each phase to
+   `AGENTS/ISSUES_TODO.md` as soon as the phase ends and updating the progress file (full runs).
+5. End with one concise report in chat (format in *Output* of `AGENTS/CODE_REVIEW.md`).
 
-Review code without modifying plugin code. After each phase append the confirmed, deduplicated
-findings to `AGENTS/ISSUES_TODO.md` with the issue template; together with the progress file (full
-runs only) this is the only write permitted during a review. Interactive remediation belongs to Trigger C.
+Review code without modifying plugin code. Appending the confirmed, deduplicated findings to
+`AGENTS/ISSUES_TODO.md` with the issue template, and the progress file (full runs only), are the only
+writes permitted during a review, and they need no confirmation. Interactive remediation belongs to Trigger C.
 
 
 ## Issue Management
