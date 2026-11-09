@@ -46,8 +46,9 @@ downloads, timeouts, import logs and scheduling.
   admin interface, not text to parse: there is no expression language in V1.
 - Sources: WordPress fields shared by every post type (ID, title, content, excerpt, permalink,
   publish/modified dates, public author attributes) listed once; per post type, explicitly selected post
-  meta, simple ACF and CMB2 fields, taxonomies and terms, featured image (ID, absolute URL, alt, modified
-  date), language (fixed per feed or Polylang). Fields of different post types are never merged by name:
+  meta, simple ACF and CMB2 fields, taxonomies and terms (a JSON list of term names), featured image (the
+  absolute URL of the original image; ID, alt and modified date may be added later), language (fixed per feed
+  or Polylang). Fields of different post types are never merged by name:
   the administrator decides when they correspond. Rules can only use these selectable sources.
   Repeater, flexible content, groups, relationships and serialized structures are out of V1.
 - Response: `{ "items": [...], "pagination": {...}, "meta": {...} }`; dates in ISO 8601 UTC (date-only
