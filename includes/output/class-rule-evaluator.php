@@ -23,7 +23,8 @@ defined( 'ABSPATH' ) || exit;
  *
  * A sensitive source that the row does not confirm is never read, also when the mapping did not go
  * through the validator (an imported or damaged one). Values come from a function given by the caller:
- * it returns null when the source does not exist, and the providers translate their own special empty
+ * it receives the source and the options of the row (`shortcodes`, `raw`),
+ * returns null when the source does not exist, and the providers translate their own special empty
  * values into `""` or `[]` (decision of 2026-11-10). `evaluate()` gives the raw value of a row;
  * `evaluate_mapping()` converts it to the type of the row with `Normalizer`. Pure logic: no WordPress
  * function is called.
@@ -35,10 +36,12 @@ final class Rule_Evaluator {
 	/**
 	 * Value of one row for an item.
 	 *
-	 * @param array<mixed>            $row       Row of the mapping.
-	 * @param string                  $post_type Post type of the item.
-	 * @param callable(string): mixed $read     Reads a source of the item; null when it does not exist.
+	 * @param array<mixed> $row       Row of the mapping.
+	 * @param string       $post_type Post type of the item.
+	 * @param callable     $read      Reads a source of the item; null when it does not exist.
 	 * @return array{present: bool, value: mixed} Whether the row has a value, and the value.
+	 *
+	 * @phpstan-param callable(string, array<mixed>): mixed $read
 	 */
 	public static function evaluate( array $row, string $post_type, callable $read ): array {
 		return match ( $row['kind'] ?? null ) {
@@ -60,10 +63,12 @@ final class Rule_Evaluator {
 	 *
 	 * @param array<mixed>                     $mapping   Mapping (canonical form).
 	 * @param string                           $post_type Post type of the item.
-	 * @param callable(string): mixed          $read      Reads a source of the item; null when it does not exist.
+	 * @param callable                         $read      Reads a source of the item; null when it does not exist.
 	 * @param (callable(string): ?string)|null $declared Declared type of a source, null when unknown (text).
 	 * @param string                           $origin    Origin of the site, for root-relative URLs.
 	 * @return array<string, mixed>
+	 *
+	 * @phpstan-param callable(string, array<mixed>): mixed $read
 	 */
 	public static function evaluate_mapping( array $mapping, string $post_type, callable $read, ?callable $declared = null, string $origin = '' ): array {
 		$item = array();
@@ -124,10 +129,12 @@ final class Rule_Evaluator {
 	/**
 	 * Value of a `field` row.
 	 *
-	 * @param array<mixed>            $row       Row of the mapping.
-	 * @param string                  $post_type Post type of the item.
-	 * @param callable(string): mixed $read      Reads a source of the item.
+	 * @param array<mixed> $row       Row of the mapping.
+	 * @param string       $post_type Post type of the item.
+	 * @param callable     $read      Reads a source of the item.
 	 * @return array{present: bool, value: mixed}
+	 *
+	 * @phpstan-param callable(string, array<mixed>): mixed $read
 	 */
 	private static function field( array $row, string $post_type, callable $read ): array {
 		$chain = self::for_post_type( $row['sources'] ?? null, $post_type );
@@ -136,6 +143,7 @@ final class Rule_Evaluator {
 		}
 
 		$confirmed = is_array( $row['confirmed'] ?? null ) ? $row['confirmed'] : array();
+		$options   = is_array( $row['options'] ?? null ) ? $row['options'] : array();
 		$empty     = null;
 
 		foreach ( $chain as $source ) {
@@ -147,7 +155,7 @@ final class Rule_Evaluator {
 				continue;
 			}
 
-			$value = $read( $source );
+			$value = $read( $source, $options );
 			if ( null === $value ) {
 				continue;
 			}

@@ -7,6 +7,7 @@
 
 namespace KKCE\Sources;
 
+use KKCE\Output\Content_Renderer;
 use WP_Post;
 
 defined( 'ABSPATH' ) || exit;
@@ -17,8 +18,8 @@ defined( 'ABSPATH' ) || exit;
  * Only public attributes of the author are offered: ID, display name and, as a separate source that
  * needs a confirmation, the URL of the author archive. The e-mail and the login are never offered.
  * Values are read as stored, without the filters of other plugins: the title is `post_title`, the
- * excerpt is the one written by hand. Content and excerpt are the stored text until the controlled
- * rendering (blocks, optional shortcodes) is added. Dates are the GMT ones, in the database format
+ * excerpt is the one written by hand. Content and excerpt go through the controlled rendering of
+ * `Content_Renderer` (blocks, optional shortcodes, absolute URLs; `raw` gives the stored text). Dates are the GMT ones, in the database format
  * (`Y-m-d H:i:s`); the normalizer writes them in ISO 8601.
  */
 final class Core_Provider {
@@ -55,18 +56,19 @@ final class Core_Provider {
 	/**
 	 * Value of a core source for a post.
 	 *
-	 * @param WP_Post $post Post.
-	 * @param string  $id   Source identifier.
+	 * @param WP_Post      $post    Post.
+	 * @param string       $id      Source identifier.
+	 * @param array<mixed> $options Options of the mapping row (`shortcodes`, `raw` for content and excerpt).
 	 * @return mixed The value, or null when the post has none (no author, no permalink) or the identifier
 	 *               is not a core source. An empty excerpt is an empty string: a value, not a missing one.
 	 */
-	public static function value( WP_Post $post, string $id ) {
+	public static function value( WP_Post $post, string $id, array $options = array() ) {
 		return match ( $id ) {
 			'core.id'          => $post->ID,
 			'core.slug'        => $post->post_name,
 			'core.title'       => $post->post_title,
-			'core.content'     => $post->post_content,
-			'core.excerpt'     => $post->post_excerpt,
+			'core.content'     => Content_Renderer::render( $post->post_content, $options, false, self::base_url( $post ) ),
+			'core.excerpt'     => Content_Renderer::render( $post->post_excerpt, $options, true, self::base_url( $post ) ),
 			'core.permalink'   => self::text_or_null( get_permalink( $post ) ),
 			'core.shortlink'   => self::text_or_null( wp_get_shortlink( $post->ID ) ),
 			'core.date'        => self::gmt_date( $post->post_date_gmt ),
@@ -78,6 +80,16 @@ final class Core_Provider {
 			'core.type_label'  => self::type_label( $post ),
 			default            => null,
 		};
+	}
+
+	/**
+	 * Base of the relative URLs of the content: its permalink, or the home page.
+	 *
+	 * @param WP_Post $post Post.
+	 * @return string
+	 */
+	private static function base_url( WP_Post $post ): string {
+		return self::text_or_null( get_permalink( $post ) ) ?? home_url( '/' );
 	}
 
 	/**

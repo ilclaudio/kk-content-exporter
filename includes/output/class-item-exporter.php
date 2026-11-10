@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
  * The values are computed as an anonymous visitor: the current user becomes nobody for the whole item
  * and is always restored, also when the computation fails. So dynamic blocks, shortcodes and filters
  * that depend on the user give what a visitor sees, and an authenticated feed or the preview of an
- * administrator export the same data as a public feed. Every source is read at most once per item, and
+ * administrator export the same data as a public feed. Every source is read at most once per item and per set of options, and
  * the values are normalized to the types of the rows (declared types of the sources for `auto`).
  */
 final class Item_Exporter {
@@ -33,12 +33,13 @@ final class Item_Exporter {
 	public static function export( WP_Post $post, array $mapping ): array {
 		$previous = get_current_user_id();
 		$values   = array();
-		$read     = static function ( string $source ) use ( $post, &$values ) {
-			if ( ! array_key_exists( $source, $values ) ) {
-				$values[ $source ] = self::read( $post, $source );
+		$read     = static function ( string $source, array $options = array() ) use ( $post, &$values ) {
+			$key = $source . '|' . wp_json_encode( $options );
+			if ( ! array_key_exists( $key, $values ) ) {
+				$values[ $key ] = self::read( $post, $source, $options );
 			}
 
-			return $values[ $source ];
+			return $values[ $key ];
 		};
 
 		wp_set_current_user( 0 );
@@ -81,14 +82,15 @@ final class Item_Exporter {
 	/**
 	 * Value of a source for an item, from the provider of its group.
 	 *
-	 * @param WP_Post $post   Item.
-	 * @param string  $source Source identifier.
+	 * @param WP_Post      $post    Item.
+	 * @param string       $source  Source identifier.
+	 * @param array<mixed> $options Options of the mapping row.
 	 * @return mixed The value, or null when the source does not exist (its provider is not available yet,
 	 *               or it has no value for this item).
 	 */
-	private static function read( WP_Post $post, string $source ) {
+	private static function read( WP_Post $post, string $source, array $options ) {
 		return match ( explode( '.', $source, 2 )[0] ) {
-			'core'  => Core_Provider::value( $post, $source ),
+			'core'  => Core_Provider::value( $post, $source, $options ),
 			default => null,
 		};
 	}
