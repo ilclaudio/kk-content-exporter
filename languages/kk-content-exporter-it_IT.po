@@ -8,7 +8,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2026-11-06T22:54:45+01:00\n"
-"PO-Revision-Date: 2026-11-10T17:41:42+00:00\n"
+"PO-Revision-Date: 2026-11-10T18:06:59+00:00\n"
 "Language: it_IT\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: WP-CLI 2.12.0\n"
@@ -50,6 +50,7 @@ msgid "%s (not available)"
 msgstr "%s (non disponibile)"
 
 #: includes/admin/class-feed-editor.php:201
+#: includes/sources/class-core-provider.php:39
 msgid "Slug"
 msgstr "Slug"
 
@@ -313,3 +314,55 @@ msgstr "Il massimo di elementi per pagina deve essere un numero intero di almeno
 #: includes/class-settings.php:166
 msgid "A setting was not valid and the previous value was kept."
 msgstr "Un'impostazione non era valida ed è stato mantenuto il valore precedente."
+
+#: includes/sources/class-core-provider.php:38
+msgid "ID"
+msgstr "ID"
+
+#: includes/sources/class-core-provider.php:40
+msgid "Title"
+msgstr "Titolo"
+
+#: includes/sources/class-core-provider.php:41
+msgid "Content"
+msgstr "Contenuto"
+
+#: includes/sources/class-core-provider.php:42
+msgid "Excerpt"
+msgstr "Riassunto"
+
+#: includes/sources/class-core-provider.php:43
+msgid "Permalink"
+msgstr "Permalink"
+
+#: includes/sources/class-core-provider.php:44
+msgid "Short link (does not change with the slug)"
+msgstr "Link breve (non cambia con lo slug)"
+
+#: includes/sources/class-core-provider.php:45
+msgid "Publish date (UTC)"
+msgstr "Data di pubblicazione (UTC)"
+
+#: includes/sources/class-core-provider.php:46
+msgid "Last modified date (UTC)"
+msgstr "Data dell'ultima modifica (UTC)"
+
+#: includes/sources/class-core-provider.php:47
+msgid "Author ID"
+msgstr "ID dell'autore"
+
+#: includes/sources/class-core-provider.php:48
+msgid "Author display name"
+msgstr "Nome visualizzato dell'autore"
+
+#: includes/sources/class-core-provider.php:49
+msgid "Author archive URL"
+msgstr "URL dell'archivio dell'autore"
+
+#: includes/sources/class-core-provider.php:50
+msgid "Post type (slug)"
+msgstr "Tipo di contenuto (slug)"
+
+#: includes/sources/class-core-provider.php:51
+msgid "Post type (label)"
+msgstr "Tipo di contenuto (etichetta)"

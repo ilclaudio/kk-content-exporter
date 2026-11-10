@@ -24,6 +24,9 @@ feed list, the feed editor, the settings page and the uninstall cleanup: the oth
 | `includes/output/class-mapping.php` | `KKCE\Output\Mapping`: pure. Format of the mapping (version 1): vocabulary (kinds, output types, missing-value policies, source groups), limits, `decode()` of the JSON text, `suggest_key()` |
 | `includes/output/class-mapping-validator.php` | `KKCE\Output\Mapping_Validator`: pure. `validate()` lists every error of a decoded mapping (`row`, `field`, `code`), `normalize()` gives the canonical form. Refuses a sensitive source that the row does not list in `confirmed`. Does not check that a source exists (the catalog does, at save time) |
 | `includes/output/class-sensitive-keys.php` | `KKCE\Output\Sensitive_Keys`: pure. Whether a name (or the name of a source `group.name`) looks sensitive: split into words, compared with a list of words and of adjacent pairs. Judges the name, never the value |
+| `includes/sources/class-source.php` | `KKCE\Sources\Source`: pure value object describing a source (identifier `group.name`, label, post type or common, declared type, accepted options, whether it needs a confirmation) |
+| `includes/sources/class-catalog.php` | `KKCE\Sources\Catalog`: pure. Sources of a feed for its post types (common ones once, then those of each post type), `find()` of a source for a post type or `*`, `suggested_rows()` (the `type` row in feeds with two or more post types) |
+| `includes/sources/class-core-provider.php` | `KKCE\Sources\Core_Provider`: the core sources common to every post type and their values (stored title and excerpt, GMT dates, author ID, display name and archive URL only; never e-mail or login) |
 | `includes/admin/class-feed-list.php` | `KKCE\Admin\Feed_List`: columns of the `kkce_feed` list (relative endpoint address computed by `rest_url()`, source, access, status), read through the sanitizers and escaped |
 | `includes/class-settings.php` | `KKCE\Settings`: option `kkce_settings` (defaults, safe reading, processing of the form: pure; `get()` and `sanitize_option()` are the only WordPress calls) |
 | `includes/class-uninstaller.php` | `KKCE\Uninstaller`: deletes feeds (every status, with meta), the option and the capability when the setting asks for it |
@@ -49,9 +52,9 @@ feed list, the feed editor, the settings page and the uninstall cleanup: the oth
 
 `includes/admin/` holds the classes of the administration screens (the feed list, the editor and the settings page).
 `includes/output/` holds the pure logic of the output (the mapping format and its validation now; the rule
-evaluator, the normalizer and the serialization later). Planned folders (created when their first class arrives):
-`includes/rest/` (endpoints), `includes/sources/` (field providers: core, meta, ACF, CMB2, taxonomies,
-image, language).
+evaluator, the normalizer and the serialization later). `includes/sources/` holds the sources a mapping can read: the catalog and the providers (core now; meta,
+taxonomies, image, language, ACF and CMB2 later). Planned folder (created when its first class arrives):
+`includes/rest/` (endpoints).
 
 
 ## Plugin Lifecycle

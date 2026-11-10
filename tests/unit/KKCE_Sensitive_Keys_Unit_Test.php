@@ -118,5 +118,7 @@ class KKCE_Sensitive_Keys_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertFalse( Sensitive_Keys::is_sensitive_source( 'meta._price' ) );
 		$this->assertFalse( Sensitive_Keys::is_sensitive_source( 'taxonomy.category' ) );
 		$this->assertFalse( Sensitive_Keys::is_sensitive_source( 'no-group' ) );
+		$this->assertTrue( Sensitive_Keys::is_sensitive_source( 'core.author.url' ), 'The author archive URL contains the user nicename (decision of 2026-11-10).' );
+		$this->assertFalse( Sensitive_Keys::is_sensitive_source( 'core.author.name' ) );
 	}
 }
