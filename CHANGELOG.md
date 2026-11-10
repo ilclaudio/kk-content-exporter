@@ -48,6 +48,10 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
   is never stored. A source whose name looks sensitive (a password, a token, a key of a service, an e-mail
   address) must be confirmed explicitly in its row, otherwise the mapping is not stored. Not used by the
   editor or by any endpoint yet.
+- Catalog of the sources a mapping can use, with the core fields of WordPress common to every post type:
+  ID, slug, title, content, excerpt (the one written by hand), permalink, short link, publish and modified
+  dates (UTC), author ID, display name and archive URL (to confirm explicitly), post type slug and label.
+  The author e-mail and login are never offered. Italian translation of the new strings.
 
 ### Changed
 

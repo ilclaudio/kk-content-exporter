@@ -633,4 +633,15 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 		$row['confirmed'] = array();
 		$this->assertArrayNotHasKey( 'confirmed', Mapping_Validator::normalize( $this->mapping( array( $row ) ) )['rows'][0] );
 	}
+
+	/**
+	 * The author archive URL needs a confirmation like a sensitive source.
+	 */
+	public function test_the_author_url_needs_a_confirmation() {
+		$row = $this->field_row( array( 'sources' => array( '*' => array( 'core.author.url' ) ) ) );
+		$this->assertSame( array( '0:sources:sensitive' ), $this->errors( $this->mapping( array( $row ) ) ) );
+
+		$row['confirmed'] = array( 'core.author.url' );
+		$this->assertSame( array(), $this->errors( $this->mapping( array( $row ) ) ) );
+	}
 }

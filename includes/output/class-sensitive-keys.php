@@ -63,6 +63,12 @@ final class Sensitive_Keys {
 	);
 
 	/**
+	 * Sources that need a confirmation whatever their name: the URL of the author archive contains the
+	 * `user_nicename` of the author, which is the login unless it was changed (decision of 2026-11-10).
+	 */
+	public const ALWAYS_CONFIRM = array( 'core.author.url' );
+
+	/**
 	 * Whether a name looks sensitive.
 	 *
 	 * @param string $name Name of a field (a meta key, the name of an ACF or CMB2 field).
@@ -86,12 +92,17 @@ final class Sensitive_Keys {
 	}
 
 	/**
-	 * Whether a source identifier (`group.name`) has a sensitive name. The group is not judged.
+	 * Whether a source identifier (`group.name`) needs a confirmation: its name is sensitive, or it is one
+	 * of `ALWAYS_CONFIRM`. The group is not judged.
 	 *
 	 * @param string $source Source identifier.
 	 * @return bool False for an identifier without a group.
 	 */
 	public static function is_sensitive_source( string $source ): bool {
+		if ( in_array( $source, self::ALWAYS_CONFIRM, true ) ) {
+			return true;
+		}
+
 		$parts = explode( '.', $source, 2 );
 
 		return 2 === count( $parts ) && self::is_sensitive( $parts[1] );
