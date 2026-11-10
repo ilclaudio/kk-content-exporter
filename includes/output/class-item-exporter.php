@@ -16,8 +16,9 @@ defined( 'ABSPATH' ) || exit;
  * Computes the exported object of one item: the link between the rules (`Rule_Evaluator`) and WordPress.
  *
  * The values are computed as an anonymous visitor: the current user becomes nobody for the whole item
- * and is always restored, also when the computation fails. So dynamic blocks, shortcodes and filters
- * that depend on the user give what a visitor sees, and an authenticated feed or the preview of an
+ * and is always restored, also when the computation fails. Dynamic blocks, shortcodes and filters
+ * run with the target post and its loop globals; the previous post context is restored in `finally`.
+ * Those that depend on the user give what a visitor sees, and an authenticated feed or the preview of an
  * administrator export the same data as a public feed. Every source is read at most once per item and per set of options, and
  * the values are normalized to the types of the rows (declared types of the sources for `auto`).
  */
@@ -31,9 +32,11 @@ final class Item_Exporter {
 	 * @return array<string, mixed>
 	 */
 	public static function export( WP_Post $post, array $mapping ): array {
-		$previous = get_current_user_id();
-		$values   = array();
-		$read     = static function ( string $source, array $options = array() ) use ( $post, &$values ) {
+		$context_names = array( 'post', 'id', 'authordata', 'currentday', 'currentmonth', 'page', 'pages', 'multipage', 'more', 'numpages' );
+		$context       = array_intersect_key( $GLOBALS, array_flip( $context_names ) );
+		$previous      = get_current_user_id();
+		$values        = array();
+		$read          = static function ( string $source, array $options = array() ) use ( $post, &$values ) {
 			$key = $source . '|' . wp_json_encode( $options );
 			if ( ! array_key_exists( $key, $values ) ) {
 				$values[ $key ] = self::read( $post, $source, $options );
@@ -45,8 +48,18 @@ final class Item_Exporter {
 		wp_set_current_user( 0 );
 
 		try {
+			$GLOBALS['post'] = $post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Block context and template tags require the target post; restored in finally.
+			setup_postdata( $post );
+
 			return Rule_Evaluator::evaluate_mapping( $mapping, $post->post_type, $read, self::declared_types(), self::origin() );
 		} finally {
+			// Restore the exact previous loop state, including unset globals and explicit nulls.
+			foreach ( $context_names as $kkce_context_name ) {
+				unset( $GLOBALS[ $kkce_context_name ] );
+				if ( array_key_exists( $kkce_context_name, $context ) ) {
+					$GLOBALS[ $kkce_context_name ] = $context[ $kkce_context_name ]; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Restores only the saved WordPress loop globals, not plugin globals.
+				}
+			}
 			wp_set_current_user( $previous );
 		}
 	}

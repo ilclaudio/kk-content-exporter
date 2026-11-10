@@ -136,6 +136,79 @@ class KKCE_Content_Renderer_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Commas inside URLs are not candidate separators; relative candidates still become absolute.
+	 */
+	public function test_srcset_preserves_commas_inside_urls() {
+		foreach ( array(
+			'data:image/png;base64,AAAA 1x, /large.png 2x' => 'data:image/png;base64,AAAA 1x, https://example.org/large.png 2x',
+			'data:image/png;base64,AAAA, /large.png 2x' => 'data:image/png;base64,AAAA, https://example.org/large.png 2x',
+			'/image,a.png 1x, https://cdn.test/b,c.png 2x' => 'https://example.org/image,a.png 1x, https://cdn.test/b,c.png 2x',
+			'/small.png, /large.png 2x' => 'https://example.org/small.png, https://example.org/large.png 2x',
+		) as $input => $expected ) {
+			$html = Url_Absolutizer::absolutize( '<img srcset="' . $input . '">', self::BASE );
+			$this->assertStringContainsString( 'srcset="' . $expected . '"', $html );
+		}
+	}
+
+	/**
+	 * HTTP is blocked for RSS blocks and opted-in shortcodes, and filters are restored afterwards.
+	 */
+	public function test_rendering_blocks_http_and_restores_filters() {
+		$seen = array();
+		$observe = static function ( $pre ) use ( &$seen ) {
+			$seen[] = $pre instanceof WP_Error ? $pre->get_error_code() : 'not_blocked';
+			return new WP_Error( 'test_transport_guard' );
+		};
+		$install_observer = static function ( $args ) use ( $observe ) {
+			add_filter( 'pre_http_request', $observe, PHP_INT_MAX );
+			return $args;
+		};
+		$before = isset( $GLOBALS['wp_filter']['pre_http_request'] ) ? clone $GLOBALS['wp_filter']['pre_http_request'] : null;
+		add_filter( 'http_request_args', $install_observer );
+		add_shortcode( 'kkce_http', static function () {
+			wp_remote_get( 'https://example.org/shortcode-test' );
+			return 'done';
+		} );
+		try {
+			Content_Renderer::render( '<!-- wp:rss {"feedURL":"https://example.org/kkce-uncached-feed"} /-->', array(), false, self::BASE );
+			remove_filter( 'pre_http_request', $observe, PHP_INT_MAX );
+			Content_Renderer::render( '[kkce_http]', array( 'shortcodes' => true ), false, self::BASE );
+		} finally {
+			remove_filter( 'pre_http_request', $observe, PHP_INT_MAX );
+			remove_filter( 'http_request_args', $install_observer );
+			remove_shortcode( 'kkce_http' );
+		}
+		$this->assertSame( array( 'kkce_http_blocked', 'kkce_http_blocked' ), $seen );
+		$this->assertEquals( $before, $GLOBALS['wp_filter']['pre_http_request'] ?? null );
+	}
+
+	/**
+	 * Nested renders and exceptions must not leak or prematurely remove an HTTP guard.
+	 */
+	public function test_http_guard_survives_nested_render_and_is_removed_after_error() {
+		$before = isset( $GLOBALS['wp_filter']['pre_http_request'] ) ? clone $GLOBALS['wp_filter']['pre_http_request'] : null;
+		$guard = static fn() => new WP_Error( 'test_transport_guard' );
+		add_filter( 'pre_http_request', $guard );
+		add_shortcode( 'kkce_nested', function () {
+			Content_Renderer::render( 'Nested', array(), false, self::BASE );
+			$result = wp_remote_get( 'https://example.org/nested' );
+			$this->assertInstanceOf( WP_Error::class, $result );
+			$this->assertSame( 'kkce_http_blocked', $result->get_error_code() );
+			throw new RuntimeException( 'Rendering failed.' );
+		} );
+		try {
+			Content_Renderer::render( '[kkce_nested]', array( 'shortcodes' => true ), false, self::BASE );
+			$this->fail( 'The exception must propagate.' );
+		} catch ( RuntimeException $error ) {
+			$this->assertSame( 'Rendering failed.', $error->getMessage() );
+		} finally {
+			remove_shortcode( 'kkce_nested' );
+			remove_filter( 'pre_http_request', $guard );
+		}
+		$this->assertEquals( $before, $GLOBALS['wp_filter']['pre_http_request'] ?? null );
+	}
+
+	/**
 	 * No external request is made: embeds are not resolved, also with the shortcodes on.
 	 */
 	public function test_no_external_request_is_made() {

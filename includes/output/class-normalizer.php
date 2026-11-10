@@ -160,7 +160,9 @@ final class Normalizer {
 	private static function strip_tags( string $html ): string {
 		$text = (string) preg_replace( '@<(script|style)[^>]*?>.*?</\1>@si', '', $html );
 
-		return (string) preg_replace( '/<[^>]*>/', '', $text );
+		// A tag starts with a letter, not whitespace or a comparison operand. Quoted attributes may
+		// themselves contain `>`; comments are removed as a whole.
+		return (string) preg_replace( '~<!--[\s\S]*?(?:-->|$)|</?[a-z][a-z0-9:-]*(?=[\s/>])(?:[^\s\'"<>]|\s|"[^"]*"|\'[^\']*\')*>~i', '', $text );
 	}
 
 	/**
@@ -202,12 +204,16 @@ final class Normalizer {
 			return array( $integer );
 		}
 
-		$number = (float) $text;
 		if ( ctype_digit( ltrim( $text, '+-' ) ) ) {
-			// An integer written with leading zeros ("007"): FILTER_VALIDATE_INT refuses it.
-			return array( (int) $text );
+			// Validate again without leading zeros; a cast would clamp an out-of-range integer.
+			$digits  = ltrim( ltrim( $text, '+-' ), '0' );
+			$signed  = ( str_starts_with( $text, '-' ) ? '-' : '' ) . ( '' === $digits ? '0' : $digits );
+			$integer = filter_var( $signed, FILTER_VALIDATE_INT );
+
+			return false === $integer ? null : array( $integer );
 		}
 
+		$number = (float) $text;
 		return is_finite( $number ) ? array( $number ) : null;
 	}
 
@@ -248,7 +254,7 @@ final class Normalizer {
 			return array( ( new DateTimeImmutable( '@' . $value ) )->setTimezone( $utc )->format( 'Y-m-d\TH:i:s\Z' ) );
 		}
 
-		if ( ! is_string( $value ) ) {
+		if ( ! is_string( $value ) || str_contains( $value, "\0" ) ) {
 			return null;
 		}
 

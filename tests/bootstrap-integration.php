@@ -59,8 +59,24 @@ require_once $kkce_tests_dir . '/includes/functions.php';
  * @return void
  */
 function kkce_tests_load_plugin() {
+	add_filter( 'upload_dir', 'kkce_tests_upload_dir' );
 	require KKCE_TEST_PLUGIN_DIR . '/kk-content-exporter.php';
 }
 tests_add_filter( 'muplugins_loaded', 'kkce_tests_load_plugin' );
+
+/**
+ * Keeps all test uploads inside the repository, without writing to wordpress-develop.
+ *
+ * @param array<string, mixed> $uploads Upload directory configuration.
+ * @return array<string, mixed>
+ */
+function kkce_tests_upload_dir( array $uploads ): array {
+	$directory = KKCE_TEST_PLUGIN_DIR . '/.phpunit.cache/integration-uploads';
+	wp_mkdir_p( $directory );
+	$uploads['basedir'] = $directory;
+	$uploads['path']    = $directory . $uploads['subdir'];
+
+	return $uploads;
+}
 
 require $kkce_tests_dir . '/includes/bootstrap.php';

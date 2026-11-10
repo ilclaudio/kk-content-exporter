@@ -21,10 +21,23 @@ class KKCE_Secret_Scan_Unit_Test extends KKCE_Unit_Test_Case {
 	 * @return array{0: int, 1: string} Exit code and standard error.
 	 */
 	private function scan( string $line ): array {
-		// Relative path, run from the plugin root: on Windows `bash` can be the WSL one, which does not
-		// understand `C:/...` paths.
+		$bash = getenv( 'KKCE_TEST_BASH' );
+		if ( false === $bash || '' === $bash ) {
+			$bash = 'bash';
+			if ( 'Windows' === PHP_OS_FAMILY ) {
+				foreach ( array( getenv( 'ProgramFiles' ), getenv( 'ProgramFiles(x86)' ), getenv( 'LOCALAPPDATA' ) . '/Programs' ) as $directory ) {
+					$candidate = $directory . '/Git/bin/bash.exe';
+					if ( is_file( $candidate ) ) {
+						$bash = $candidate;
+						break;
+					}
+				}
+			}
+		}
+
+		// Relative script path also works when Bash uses POSIX paths on Windows.
 		$process = proc_open(
-			array( 'bash', '.githooks/check-staged-secrets.sh', '--stdin' ),
+			array( $bash, '.githooks/check-staged-secrets.sh', '--stdin' ),
 			array(
 				0 => array( 'pipe', 'r' ),
 				1 => array( 'pipe', 'w' ),

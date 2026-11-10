@@ -75,6 +75,38 @@ class KKCE_Normalizer_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
+	 * Literal comparison signs survive alongside real tags and quoted tag attributes.
+	 */
+	public function test_literal_comparisons_are_preserved() {
+		$this->assertSame( 'Use x < y and z > 0', $this->out( 'Use x < y and z > 0', 'string' ) );
+		$this->assertSame( 'x < 3; 4 > 2', $this->out( '<b title="a > b">x < 3</b>; 4 > 2', 'string' ) );
+		$this->assertSame( 'Safe', $this->out( '<script>hidden</script><!-- comment --><style>hidden</style>Safe', 'string' ) );
+	}
+
+	/**
+	 * Integer text outside the platform range is refused, never silently clamped.
+	 */
+	public function test_integer_bounds_and_leading_zeros() {
+		foreach ( array( (string) PHP_INT_MAX . '0', (string) PHP_INT_MIN . '0', '9223372036854775808', '-9223372036854775809' ) as $value ) {
+			$this->assertSame( '<not_convertible>', $this->out( $value, 'number' ) );
+		}
+		foreach ( array( PHP_INT_MAX, PHP_INT_MIN, 0, 7, -7 ) as $value ) {
+			$this->assertSame( $value, $this->out( (string) $value, 'number' ) );
+			$text = $value < 0 ? '-000' . substr( (string) $value, 1 ) : '+000' . $value;
+			$this->assertSame( $value, $this->out( $text, 'number' ) );
+		}
+	}
+
+	/**
+	 * Null bytes anywhere in a date cause a conversion failure, not an exception or truncation.
+	 */
+	public function test_dates_with_null_bytes_are_not_convertible() {
+		foreach ( array( "2026-07\0-01", "\02026-07-01", "2026-07-01\0" ) as $value ) {
+			$this->assertSame( '<not_convertible>', $this->out( $value, 'datetime' ) );
+		}
+	}
+
+	/**
 	 * HTML: text and numbers as they are; booleans and lists refused.
 	 */
 	public function test_html() {
