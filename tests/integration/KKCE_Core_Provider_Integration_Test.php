@@ -71,7 +71,9 @@ class KKCE_Core_Provider_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( 'christmas-concert', Core_Provider::value( $post, 'core.slug' ) );
 		$this->assertSame( $post->post_title, Core_Provider::value( $post, 'core.title' ), 'The stored title, without the filters of the theme.' );
 		$this->assertStringContainsString( 'Concert', (string) Core_Provider::value( $post, 'core.title' ) );
-		$this->assertSame( $post->post_content, Core_Provider::value( $post, 'core.content' ), 'The stored content until the renderer of step 7.' );
+		$this->assertSame( $post->post_content, Core_Provider::value( $post, 'core.content', array( 'raw' => true ) ), 'The raw variant is the stored content.' );
+		$this->assertMatchesRegularExpression( '#<p[^>]*>Hello#', (string) Core_Provider::value( $post, 'core.content' ) );
+		$this->assertStringNotContainsString( '<!--', (string) Core_Provider::value( $post, 'core.content' ), 'The rendered content has no block comments.' );
 		$this->assertSame( 'A short summary', Core_Provider::value( $post, 'core.excerpt' ) );
 		$this->assertSame( get_permalink( $post ), Core_Provider::value( $post, 'core.permalink' ) );
 		$this->assertStringEndsWith( '/christmas-concert/', (string) Core_Provider::value( $post, 'core.permalink' ) );

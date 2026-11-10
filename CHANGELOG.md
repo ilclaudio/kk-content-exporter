@@ -60,6 +60,10 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
   decoded), HTML, number, boolean, date in UTC ISO 8601 (dates without time kept as `YYYY-MM-DD`), absolute
   http or https URL, list. With the `auto` type a key keeps the same JSON type for every item. A value that
   cannot be converted is left out (or `null`, as the row says).
+- Content and excerpt are exported as clean HTML: blocks rendered without their comments, paragraphs for
+  content written with the classic editor, relative links and images made absolute. Shortcodes run only
+  when the row asks for it (otherwise they are removed), embeds are not resolved (no request to external
+  sites), and a raw variant gives the stored text. Other plugins' content filters are not run.
 
 ### Changed
 
