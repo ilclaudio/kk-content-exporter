@@ -18,7 +18,8 @@ defined( 'ABSPATH' ) || exit;
  * The values are computed as an anonymous visitor: the current user becomes nobody for the whole item
  * and is always restored, also when the computation fails. So dynamic blocks, shortcodes and filters
  * that depend on the user give what a visitor sees, and an authenticated feed or the preview of an
- * administrator export the same data as a public feed. Every source is read at most once per item.
+ * administrator export the same data as a public feed. Every source is read at most once per item, and
+ * the values are normalized to the types of the rows (declared types of the sources for `auto`).
  */
 final class Item_Exporter {
 
@@ -43,10 +44,38 @@ final class Item_Exporter {
 		wp_set_current_user( 0 );
 
 		try {
-			return Rule_Evaluator::evaluate_mapping( $mapping, $post->post_type, $read );
+			return Rule_Evaluator::evaluate_mapping( $mapping, $post->post_type, $read, self::declared_types(), self::origin() );
 		} finally {
 			wp_set_current_user( $previous );
 		}
+	}
+
+	/**
+	 * Declared type of the known sources, for the rows with the type `auto`.
+	 *
+	 * @return callable(string): ?string Gives null for a source of unknown type (it counts as text).
+	 */
+	private static function declared_types(): callable {
+		$types = array();
+		foreach ( Core_Provider::sources() as $source ) {
+			$types[ $source->id ] = $source->type;
+		}
+
+		return static fn( string $source ): ?string => $types[ $source ] ?? null;
+	}
+
+	/**
+	 * Origin of the site (scheme, host and port of the home URL), to make root-relative URLs absolute.
+	 *
+	 * @return string Empty when the home URL cannot be read.
+	 */
+	private static function origin(): string {
+		$parts = wp_parse_url( home_url() );
+		if ( ! is_array( $parts ) || ! isset( $parts['scheme'], $parts['host'] ) ) {
+			return '';
+		}
+
+		return $parts['scheme'] . '://' . $parts['host'] . ( isset( $parts['port'] ) ? ':' . $parts['port'] : '' );
 	}
 
 	/**

@@ -204,4 +204,49 @@ class KKCE_Item_Exporter_Integration_Test extends WP_UnitTestCase {
 
 		$this->assertSame( 'T', Item_Exporter::export( $post, $this->mapping( array( $row ) ) )['name'] );
 	}
+
+	/**
+	 * Values come out normalized to the declared types of the core sources: the ID as a number, the dates
+	 * in UTC ISO 8601, the title as plain text even when WordPress stored entities.
+	 */
+	public function test_values_are_normalized() {
+		$post = get_post(
+			self::factory()->post->create(
+				array(
+					'post_status'   => 'publish',
+					'post_title'    => 'Concert & <em>more</em>',
+					'post_date'     => '2026-07-01 10:30:00',
+					'post_date_gmt' => '2026-07-01 08:30:00',
+				)
+			)
+		);
+		$row  = static fn( string $key, string $source, string $type = 'auto' ): array => array(
+			'key'     => $key,
+			'kind'    => 'field',
+			'type'    => $type,
+			'missing' => 'omit',
+			'sources' => array( '*' => array( $source ) ),
+		);
+
+		$item = Item_Exporter::export(
+			$post,
+			array(
+				'version' => 1,
+				'rows'    => array(
+					$row( 'title', 'core.title' ),
+					$row( 'title_html', 'core.title', 'html' ),
+					$row( 'date', 'core.date' ),
+					$row( 'post_id', 'core.id' ),
+					$row( 'link', 'core.permalink' ),
+				),
+			)
+		);
+
+		$this->assertSame( 'Concert & more', $item['title'] );
+		$this->assertSame( $post->post_title, $item['title_html'] );
+		$this->assertSame( '2026-07-01T08:30:00Z', $item['date'] );
+		$this->assertSame( $post->ID, $item['post_id'] );
+		$this->assertSame( get_permalink( $post ), $item['link'] );
+	}
 }
+

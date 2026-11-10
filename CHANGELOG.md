@@ -56,6 +56,10 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
   wins, and `0` or `false` are values) and `fixed`, and export of an item as an anonymous visitor, so a
   preview or an authenticated feed never shows what only a logged-in user sees. Not used by any screen or
   endpoint yet.
+- Normalization of the exported values to the type of their row: plain text (tags removed, entities
+  decoded), HTML, number, boolean, date in UTC ISO 8601 (dates without time kept as `YYYY-MM-DD`), absolute
+  http or https URL, list. With the `auto` type a key keeps the same JSON type for every item. A value that
+  cannot be converted is left out (or `null`, as the row says).
 
 ### Changed
 
