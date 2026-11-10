@@ -45,7 +45,9 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
   The editor warns before leaving the page with unsaved changes in the feed settings.
 - Format of the mapping of a feed (versioned JSON: output key, rule kind `field` or `fixed`, expected type,
   missing-value policy) with its validation and the hidden meta `_kkce_mapping`. A mapping that is not valid
-  is never stored. Not used by the editor or by any endpoint yet.
+  is never stored. A source whose name looks sensitive (a password, a token, a key of a service, an e-mail
+  address) must be confirmed explicitly in its row, otherwise the mapping is not stored. Not used by the
+  editor or by any endpoint yet.
 
 ### Changed
 

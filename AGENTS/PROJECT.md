@@ -57,8 +57,9 @@ downloads, timeouts, import logs and scheduling.
   each of which can be turned off in the settings (a disabled filter gives HTTP 400).
 - Access: public (anonymous, published data only) or authenticated (HTTPS + Application Password of a
   technical user with the dedicated capability `kkce_read_export`).
-- Never exported: drafts, private or password-protected content, unmapped meta, sensitive keys
-  (passwords, tokens, sessions, capabilities), author e-mail or login. The plugin never writes to
+- Never exported: drafts, private or password-protected content, unmapped meta, author e-mail or login.
+  Sources whose name looks sensitive (passwords, tokens, keys of services, sessions, capabilities, e-mail,
+  login) are exported only after an explicit confirmation of the administrator for that source. The plugin never writes to
   source content and makes no external request.
 - Source post types: public ones only (`public => true`), `attachment` excluded.
 - Settings page (Settings API), submenu "Settings" of the Content Exporter menu, option `kkce_settings`:

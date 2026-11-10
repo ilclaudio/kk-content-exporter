@@ -81,8 +81,11 @@ WordPress.org Plugin Directory guidelines and the project conventions below.
   - query only `publish` status, exclude password-protected posts (`has_password => false`), also for
     authenticated requests;
   - export only the mapped fields, never the whole meta set;
-  - block sensitive keys (passwords, tokens, keys, secrets, sessions, capabilities, user levels,
-    e-mail, login) at mapping time and again at output time;
+  - sensitive sources (names that look like passwords, tokens, keys of services, secrets, sessions,
+    capabilities, user levels, e-mail, login; `Output\Sensitive_Keys`) are exported only with an explicit
+    confirmation of the administrator, source by source, checked when the mapping is saved and again at
+    output time; an imported mapping never carries confirmations (decision of 2026-11-10, replacing the
+    plain block);
   - author: only selected public attributes (display name, ID, URL), never e-mail or login;
   - no write to source content; the endpoints are read-only.
 - **SQL**: prefer `WP_Query` / meta and term APIs; for dynamic SQL use `$wpdb->prepare()`.
