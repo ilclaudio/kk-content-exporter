@@ -24,8 +24,9 @@ defined( 'ABSPATH' ) || exit;
  * A sensitive source that the row does not confirm is never read, also when the mapping did not go
  * through the validator (an imported or damaged one). Values come from a function given by the caller:
  * it returns null when the source does not exist, and the providers translate their own special empty
- * values into `""` or `[]` (decision of 2026-11-10). Values are not converted here: the expected types
- * are applied by the normalizer. Pure logic: no WordPress function is called.
+ * values into `""` or `[]` (decision of 2026-11-10). `evaluate()` gives the raw value of a row;
+ * `evaluate_mapping()` converts it to the type of the row with `Normalizer`. Pure logic: no WordPress
+ * function is called.
  *
  * @phpstan-type RuleResult array{present: bool, value: mixed}
  */
@@ -52,12 +53,19 @@ final class Rule_Evaluator {
 	 * and the `null` policy; the rows without a value and the `omit` policy are left out. The order of the
 	 * rows is kept.
 	 *
-	 * @param array<mixed>            $mapping   Mapping (canonical form).
-	 * @param string                  $post_type Post type of the item.
-	 * @param callable(string): mixed $read      Reads a source of the item; null when it does not exist.
+	 * Every value is normalized to the type of its row (`Normalizer`). With `auto`, a `field` row takes the
+	 * declared type shared by all its sources (every chain), otherwise text, so a key has the same JSON type
+	 * for every item; a `fixed` row takes the JSON type of its values. A value that cannot be converted
+	 * counts as missing.
+	 *
+	 * @param array<mixed>                     $mapping   Mapping (canonical form).
+	 * @param string                           $post_type Post type of the item.
+	 * @param callable(string): mixed          $read      Reads a source of the item; null when it does not exist.
+	 * @param (callable(string): ?string)|null $declared Declared type of a source, null when unknown (text).
+	 * @param string                           $origin    Origin of the site, for root-relative URLs.
 	 * @return array<string, mixed>
 	 */
-	public static function evaluate_mapping( array $mapping, string $post_type, callable $read ): array {
+	public static function evaluate_mapping( array $mapping, string $post_type, callable $read, ?callable $declared = null, string $origin = '' ): array {
 		$item = array();
 
 		foreach ( (array) ( $mapping['rows'] ?? array() ) as $row ) {
@@ -67,6 +75,10 @@ final class Rule_Evaluator {
 
 			$result = self::evaluate( $row, $post_type, $read );
 			if ( $result['present'] ) {
+				$result = Normalizer::normalize( $result['value'], self::row_type( $row, $declared ), $origin );
+			}
+
+			if ( $result['present'] ) {
 				$item[ $row['key'] ] = $result['value'];
 			} elseif ( 'null' === ( $row['missing'] ?? 'omit' ) ) {
 				$item[ $row['key'] ] = null;
@@ -74,6 +86,39 @@ final class Rule_Evaluator {
 		}
 
 		return $item;
+	}
+
+	/**
+	 * Output type of a row, with `auto` resolved.
+	 *
+	 * @param array<mixed>                     $row      Row of the mapping.
+	 * @param (callable(string): ?string)|null $declared Declared type of a source.
+	 * @return string
+	 */
+	private static function row_type( array $row, ?callable $declared ): string {
+		$type = is_string( $row['type'] ?? null ) ? $row['type'] : 'auto';
+		if ( 'auto' !== $type ) {
+			return $type;
+		}
+
+		$types = array();
+		if ( 'fixed' === ( $row['kind'] ?? null ) ) {
+			foreach ( (array) ( $row['values'] ?? array() ) as $value ) {
+				$types[] = Normalizer::type_of_value( $value );
+			}
+
+			return Normalizer::common_type( $types );
+		}
+
+		foreach ( (array) ( $row['sources'] ?? array() ) as $chain ) {
+			foreach ( (array) $chain as $source ) {
+				if ( is_string( $source ) ) {
+					$types[] = null === $declared ? null : $declared( $source );
+				}
+			}
+		}
+
+		return Normalizer::common_type( $types );
 	}
 
 	/**

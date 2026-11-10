@@ -236,7 +236,7 @@ class KKCE_Rule_Evaluator_Unit_Test extends KKCE_Unit_Test_Case {
 				'lang'    => 'it',
 				'zero'    => 0,
 			),
-			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $this->reader( array( 'core.title' => 'T', 'meta.zero' => 0 ) ) )
+			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $this->reader( array( 'core.title' => 'T', 'meta.zero' => 0 ) ), $this->declared( array( 'core.title' => 'string', 'meta.zero' => 'number' ) ) )
 		);
 	}
 
@@ -249,5 +249,117 @@ class KKCE_Rule_Evaluator_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( array(), Rule_Evaluator::evaluate_mapping( array( 'version' => 1, 'rows' => array() ), 'post', $reader ) );
 		$this->assertSame( array(), Rule_Evaluator::evaluate_mapping( array( 'version' => 1 ), 'post', $reader ) );
 		$this->assertSame( array(), Rule_Evaluator::evaluate_mapping( array( 'version' => 1, 'rows' => array( 'x', array( 'kind' => 'fixed' ) ) ), 'post', $reader ) );
+	}
+
+	/**
+	 * A function that gives the declared type of a source.
+	 *
+	 * @param array<string, string> $types Source => declared type.
+	 * @return callable(string): ?string
+	 */
+	private function declared( array $types ): callable {
+		return static fn( string $source ): ?string => $types[ $source ] ?? null;
+	}
+
+	/**
+	 * Values are normalized to the type of the row: `auto` takes the common declared type of every source
+	 * of the row (all the chains), otherwise text; an explicit type wins.
+	 */
+	public function test_values_are_normalized_to_the_type_of_the_row() {
+		$reader   = $this->reader( array( 'core.date' => '2026-07-01 08:30:00', 'core.title' => 'A &amp; B', 'core.id' => 7 ) );
+		$declared = $this->declared( array( 'core.date' => 'datetime', 'core.title' => 'string', 'core.id' => 'number' ) );
+		$mapping  = array(
+			'version' => 1,
+			'rows'    => array(
+				$this->field( array( 'core.date' ), array( 'key' => 'date' ) ),
+				$this->field( array( 'core.title' ), array( 'key' => 'title' ) ),
+				$this->field( array(), array( 'key' => 'mixed', 'sources' => array( '*' => array( 'core.id' ), 'event' => array( 'core.date' ) ) ) ),
+				$this->field( array( 'core.id' ), array( 'key' => 'id_text', 'type' => 'string' ) ),
+				$this->field( array( 'meta.unknown', 'core.id' ), array( 'key' => 'unknown_source' ) ),
+			),
+		);
+
+		$this->assertSame(
+			array(
+				'date'           => '2026-07-01T08:30:00Z',
+				'title'          => 'A & B',
+				'mixed'          => '7',
+				'id_text'        => '7',
+				'unknown_source' => '7',
+			),
+			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $reader, $declared )
+		);
+	}
+
+	/**
+	 * A value that cannot be converted counts as missing: the policy of the row applies.
+	 */
+	public function test_a_value_that_cannot_be_converted_counts_as_missing() {
+		$mapping = array(
+			'version' => 1,
+			'rows'    => array(
+				$this->field( array( 'meta.price' ), array( 'key' => 'price', 'type' => 'number' ) ),
+				$this->field( array( 'meta.price' ), array( 'key' => 'price_or_null', 'type' => 'number', 'missing' => 'null' ) ),
+				$this->field( array( 'meta.empty' ), array( 'key' => 'empty_number', 'type' => 'number', 'missing' => 'null' ) ),
+				$this->field( array( 'meta.empty' ), array( 'key' => 'empty_text', 'type' => 'string' ) ),
+			),
+		);
+
+		$this->assertSame(
+			array(
+				'price_or_null' => null,
+				'empty_number'  => null,
+				'empty_text'    => '',
+			),
+			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $this->reader( array( 'meta.price' => '15,50', 'meta.empty' => '' ) ) )
+		);
+	}
+
+	/**
+	 * A fixed value with `auto` keeps its JSON type; with an explicit type it is converted.
+	 */
+	public function test_fixed_values_are_normalized() {
+		$row = static fn( string $key, $value, string $type ): array => array(
+			'key'     => $key,
+			'kind'    => 'fixed',
+			'type'    => $type,
+			'missing' => 'omit',
+			'values'  => array( '*' => $value ),
+		);
+		$mapping = array(
+			'version' => 1,
+			'rows'    => array(
+				$row( 'a', 0, 'auto' ),
+				$row( 'b', false, 'auto' ),
+				$row( 'c', 'it', 'auto' ),
+				$row( 'd', '1', 'boolean' ),
+				$row( 'e', 'x', 'number' ),
+			),
+		);
+
+		$this->assertSame(
+			array(
+				'a' => 0,
+				'b' => false,
+				'c' => 'it',
+				'd' => true,
+			),
+			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $this->reader( array() ) )
+		);
+	}
+
+	/**
+	 * Root-relative URLs are made absolute with the origin given by the caller.
+	 */
+	public function test_urls_use_the_origin_of_the_site() {
+		$mapping = array(
+			'version' => 1,
+			'rows'    => array( $this->field( array( 'meta.image' ), array( 'key' => 'image', 'type' => 'url' ) ) ),
+		);
+
+		$this->assertSame(
+			array( 'image' => 'https://example.org/a.jpg' ),
+			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $this->reader( array( 'meta.image' => '/a.jpg' ) ), null, 'https://example.org' )
+		);
 	}
 }
