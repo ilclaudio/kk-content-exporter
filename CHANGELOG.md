@@ -52,6 +52,10 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
   ID, slug, title, content, excerpt (the one written by hand), permalink, short link, publish and modified
   dates (UTC), author ID, display name and archive URL (to confirm explicitly), post type slug and label.
   The author e-mail and login are never offered. Italian translation of the new strings.
+- Evaluation of the mapping rules `field` (a chain of sources per post type; the first source with a value
+  wins, and `0` or `false` are values) and `fixed`, and export of an item as an anonymous visitor, so a
+  preview or an authenticated feed never shows what only a logged-in user sees. Not used by any screen or
+  endpoint yet.
 
 ### Changed
 
