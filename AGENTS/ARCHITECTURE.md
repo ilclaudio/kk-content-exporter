@@ -138,7 +138,7 @@ global maximum of the settings (a feed that already exceeds a lowered maximum ke
 reports it at every save until it is lowered).
 
 Settings page: the warnings are shown on the page only, not on every admin screen. The REST check runs the
-core filter `rest_authentication_errors` as an anonymous user (the only `phpcs:ignore` of the project, on that
+core filter `rest_authentication_errors` as an anonymous user (a scoped `phpcs:ignore` on that
 line: invoking a core hook is intentional) and no request is made; the Application Passwords check asks
 `wp_is_application_passwords_available()` and looks at enabled feeds only (first 100).
 
@@ -147,6 +147,26 @@ Planned: REST `GET kkce/v1/<feed-slug>` (read-only, public or authenticated) reg
 WP-CLI commands are planned for V1. The admin preview and the mapping editor (Phase 2) will need an
 admin-only REST or AJAX call: document it here when it is added.
 
+
+### Export rendering scope
+
+`Item_Exporter` temporarily establishes the exported post and the loop globals populated by
+`setup_postdata()`, alongside the anonymous user. It restores the exact previous values and unset
+state in `finally`, including after a rendering exception. The scoped PHPCS suppression on the
+assignment of `$GLOBALS['post']` is intentional: WordPress block context and template tags require
+that global, and `setup_postdata()` alone does not set it. A second line-scoped suppression permits
+restoring the saved WordPress loop globals: their names belong to core and cannot be prefixed.
+
+`Content_Renderer` short-circuits WordPress HTTP API calls with `pre_http_request` throughout block,
+shortcode and URL rendering. Each call uses its own temporary callback, removed in `finally`, so
+nested rendering keeps the outer guard. This covers HTTP API requests from dynamic blocks as well
+as opted-in shortcodes; arbitrary third-party PHP that bypasses the WordPress HTTP API is outside
+this guard. `Url_Absolutizer` reads srcset URLs up to ASCII whitespace and keeps internal commas,
+including those in data URLs.
+
+`Normalizer` preserves literal comparisons in plain text, refuses integer text outside the PHP
+integer range (including values with leading zeros), and refuses null bytes before parsing dates.
+These invalid numbers and dates follow the mapping row's missing-value policy.
 
 ## Technology Stack
 

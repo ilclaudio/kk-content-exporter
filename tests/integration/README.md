@@ -65,6 +65,9 @@ Exit code `0` when everything passes, `1` otherwise. If a requirement is missing
 once with a message saying what is missing. Each test runs in a transaction that is rolled back, so a
 single test does not depend on the others and leaves no data behind.
 
+Test uploads are redirected to `.phpunit.cache/integration-uploads/` inside this repository. The
+bootstrap creates the directory; the framework does not need a writable uploads folder in its checkout.
+
 ## What it covers
 
 | File | What it checks |

@@ -13,6 +13,96 @@ use KKCE\Output\Item_Exporter;
 class KKCE_Item_Exporter_Integration_Test extends WP_UnitTestCase {
 
 	/**
+	 * Blocks and shortcodes see the exported post, even with a different or absent global post.
+	 */
+	public function test_rendered_values_use_the_target_post_context() {
+		$target = get_post( self::factory()->post->create( array( 'post_status' => 'publish', 'post_content' => '<!-- wp:kkce-test/context /-->[kkce_context]' ) ) );
+		$other  = get_post( self::factory()->post->create() );
+		$names = array( 'post', 'id', 'authordata', 'currentday', 'currentmonth', 'page', 'pages', 'multipage', 'more', 'numpages' );
+		$saved = array_intersect_key( $GLOBALS, array_flip( $names ) );
+		register_block_type( 'kkce-test/context', array(
+			'uses_context' => array( 'postId', 'postType' ),
+			'render_callback' => static fn( $attributes, $content, $block ) => 'block:' . ( $block->context['postId'] ?? 'missing' ) . ':' . ( $block->context['postType'] ?? 'missing' ) . ';',
+		) );
+		add_shortcode( 'kkce_context', static fn() => 'shortcode:' . get_the_ID() . ':' . $GLOBALS['id'] );
+		$mapping = $this->mapping( array( array(
+			'key' => 'body', 'kind' => 'field', 'type' => 'html', 'missing' => 'omit',
+			'sources' => array( '*' => array( 'core.content' ) ), 'options' => array( 'shortcodes' => true ),
+		) ) );
+		try {
+			foreach ( array( 'other', 'absent', 'null' ) as $mode ) {
+				$GLOBALS['post'] = $other;
+				setup_postdata( $other );
+				if ( 'absent' === $mode ) {
+					unset( $GLOBALS['post'] );
+				} elseif ( 'null' === $mode ) {
+					$GLOBALS['post'] = null;
+				}
+				$before = array_intersect_key( $GLOBALS, array_flip( $names ) );
+				$item = Item_Exporter::export( $target, $mapping );
+				$this->assertStringContainsString( 'block:' . $target->ID . ':post;', $item['body'] );
+				$this->assertStringContainsString( 'shortcode:' . $target->ID . ':' . $target->ID, $item['body'] );
+				$after = array_intersect_key( $GLOBALS, array_flip( $names ) );
+				ksort( $before );
+				ksort( $after );
+				$this->assertSame( $before, $after );
+			}
+		} finally {
+			unregister_block_type( 'kkce-test/context' );
+			remove_shortcode( 'kkce_context' );
+			foreach ( $names as $name ) {
+				unset( $GLOBALS[ $name ] );
+				if ( array_key_exists( $name, $saved ) ) {
+					$GLOBALS[ $name ] = $saved[ $name ];
+				}
+			}
+		}
+	}
+
+	/**
+	 * The post and loop globals are restored when a rendered shortcode throws.
+	 */
+	public function test_post_context_is_restored_after_rendering_error() {
+		$target = get_post( self::factory()->post->create( array( 'post_status' => 'publish', 'post_content' => '[kkce_failure]' ) ) );
+		$before = $GLOBALS['post'] ?? null;
+		$previous_id = $GLOBALS['id'] ?? null;
+		add_shortcode( 'kkce_failure', static function () {
+			$GLOBALS['id'] = -1;
+			throw new RuntimeException( 'Context failure.' );
+		} );
+		try {
+			Item_Exporter::export( $target, $this->mapping( array( array(
+				'key' => 'body', 'kind' => 'field', 'type' => 'html', 'missing' => 'omit',
+				'sources' => array( '*' => array( 'core.content' ) ), 'options' => array( 'shortcodes' => true ),
+			) ) ) );
+			$this->fail( 'The exception must propagate.' );
+		} catch ( RuntimeException $error ) {
+			$this->assertSame( 'Context failure.', $error->getMessage() );
+		} finally {
+			remove_shortcode( 'kkce_failure' );
+		}
+		$this->assertSame( $before, $GLOBALS['post'] ?? null );
+		$this->assertSame( $previous_id, $GLOBALS['id'] ?? null );
+	}
+
+	/**
+	 * An accepted fixed date with a null byte applies the missing policy without aborting other rows.
+	 */
+	public function test_invalid_fixed_date_applies_missing_policy() {
+		$post = get_post( self::factory()->post->create() );
+		$rows = array();
+		foreach ( array( 'omit', 'null' ) as $policy ) {
+			$rows[] = array( 'key' => $policy, 'kind' => 'fixed', 'type' => 'datetime', 'missing' => $policy, 'values' => array( '*' => "2026-07\0-01" ) );
+		}
+		$mapping = $this->mapping( $rows );
+		$this->assertSame( array(), KKCE\Output\Mapping_Validator::validate( $mapping ) );
+		$item = Item_Exporter::export( $post, $mapping );
+		$this->assertArrayNotHasKey( 'omit', $item );
+		$this->assertNull( $item['null'] );
+		$this->assertSame( $post->ID, $item['id'] );
+	}
+
+	/**
 	 * Mapping used by the tests: title, a chain per post type, a fixed value, the author archive URL.
 	 *
 	 * @param array<int, array<string, mixed>> $extra Rows to add.

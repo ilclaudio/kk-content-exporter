@@ -7,6 +7,8 @@
 
 namespace KKCE\Output;
 
+use WP_Error;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -20,6 +22,7 @@ defined( 'ABSPATH' ) || exit;
  * - shortcodes run only with the option `shortcodes`; without it the registered ones are removed and
  *   unknown ones stay as text;
  * - no embed is resolved: oEmbed would ask the HTML to the site of the video, an external request;
+ * - WordPress HTTP API requests are blocked throughout rendering, including dynamic blocks and shortcodes;
  * - relative URLs become absolute (`Url_Absolutizer`);
  * - with the option `raw` the stored text is returned untouched.
  * Typographic quotes (`wptexturize()`) and the attributes added for the page (`wp_filter_content_tags()`)
@@ -41,16 +44,24 @@ final class Content_Renderer {
 			return $text;
 		}
 
-		if ( has_blocks( $text ) ) {
-			$html = do_blocks( $text );
-		} elseif ( $is_excerpt ) {
-			$html = $text;
-		} else {
-			$html = shortcode_unautop( wpautop( $text ) );
+		// A unique callback for each render keeps an outer guard in place during nested rendering.
+		$block_http = static fn(): WP_Error => new WP_Error( 'kkce_http_blocked' );
+		add_filter( 'pre_http_request', $block_http, PHP_INT_MAX );
+
+		try {
+			if ( has_blocks( $text ) ) {
+				$html = do_blocks( $text );
+			} elseif ( $is_excerpt ) {
+				$html = $text;
+			} else {
+				$html = shortcode_unautop( wpautop( $text ) );
+			}
+
+			$html = true === ( $options['shortcodes'] ?? false ) ? do_shortcode( $html ) : strip_shortcodes( $html );
+
+			return Url_Absolutizer::absolutize( $html, $base );
+		} finally {
+			remove_filter( 'pre_http_request', $block_http, PHP_INT_MAX );
 		}
-
-		$html = true === ( $options['shortcodes'] ?? false ) ? do_shortcode( $html ) : strip_shortcodes( $html );
-
-		return Url_Absolutizer::absolutize( $html, $base );
 	}
 }

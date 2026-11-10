@@ -77,6 +77,21 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
   covered by a test.
 - Development tooling: the GitHub Actions of the CI are pinned to commit SHAs.
 
+### Fixed
+
+- Exported blocks and shortcodes use the current item's post context, with the previous user and loop
+  globals restored even when rendering fails.
+- Plain text keeps literal comparison signs; integer text outside the PHP integer range and dates
+  containing null bytes follow the mapping row's missing-value policy.
+- Image `srcset` URLs keep embedded commas, including data URLs, while relative candidates become absolute.
+- Scanner tests prefer Git Bash on Windows and accept a `KKCE_TEST_BASH` executable override.
+- Integration tests keep uploads in the repository cache instead of the WordPress framework checkout.
+
+### Security
+
+- Block WordPress HTTP API requests throughout content rendering, including dynamic blocks and opted-in
+  shortcodes, and remove the temporary guard even when rendering fails.
+
 ## [0.0.1] - 2026-11-06
 
 ### Added

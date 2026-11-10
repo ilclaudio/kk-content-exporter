@@ -57,6 +57,10 @@ clone), `KKCE_Git_Ignore_Unit_Test` (credentials, build output and private files
 secrets and on ordinary lines; Bash is needed, as for the Git hooks). When one fails, a file was
 updated and another forgotten: fix the data, not the test.
 
+On Windows, scanner tests prefer Git Bash in the standard system or per-user installation folders
+over an unqualified `bash` that may launch WSL. Set `KKCE_TEST_BASH` to the full Bash executable path
+for a custom installation (PowerShell: `$env:KKCE_TEST_BASH = 'D:/Tools/Git/bin/bash.exe'`).
+
 ## Folder map
 
 | Path | Content |

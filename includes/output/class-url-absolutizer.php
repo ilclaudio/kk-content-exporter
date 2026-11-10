@@ -70,14 +70,42 @@ final class Url_Absolutizer {
 	private static function absolutize_srcset( string $srcset, string $base ): string {
 		$candidates = array();
 
-		foreach ( explode( ',', $srcset ) as $candidate ) {
-			$parts = preg_split( '/\s+/', trim( $candidate ), 2 );
-			if ( ! is_array( $parts ) || '' === $parts[0] ) {
-				continue;
+		$length   = strlen( $srcset );
+		$position = 0;
+		while ( $position < $length ) {
+			$position += strspn( $srcset, " \t\n\r\f,", $position );
+			$start     = $position;
+			$position += strcspn( $srcset, " \t\n\r\f", $position );
+			$url       = substr( $srcset, $start, $position - $start );
+			if ( '' === $url ) {
+				break;
 			}
 
-			$url          = self::is_relative( $parts[0] ) ? WP_Http::make_absolute_url( $parts[0], $base ) : $parts[0];
-			$candidates[] = isset( $parts[1] ) ? $url . ' ' . $parts[1] : $url;
+			// HTML consumes a URL up to ASCII whitespace. Only trailing commas end a bare candidate;
+			// commas within the URL (including data payloads) belong to the URL.
+			$descriptor = '';
+			if ( str_ends_with( $url, ',' ) ) {
+				$url = rtrim( $url, ',' );
+			} else {
+				$start = $position;
+				$depth = 0;
+				while ( $position < $length ) {
+					$character = $srcset[ $position ];
+					if ( ',' === $character && 0 === $depth ) {
+						break;
+					}
+					if ( '(' === $character ) {
+						++$depth;
+					} elseif ( ')' === $character && $depth > 0 ) {
+						--$depth;
+					}
+					++$position;
+				}
+				$descriptor = trim( substr( $srcset, $start, $position - $start ), " \t\n\r\f" );
+			}
+
+			$url          = self::is_relative( $url ) ? WP_Http::make_absolute_url( $url, $base ) : $url;
+			$candidates[] = '' !== $descriptor ? $url . ' ' . $descriptor : $url;
 		}
 
 		return implode( ', ', $candidates );
