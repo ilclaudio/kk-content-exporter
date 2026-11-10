@@ -6,6 +6,7 @@
  */
 
 use KKCE\Admin\Settings_Page;
+use KKCE\Feed_Meta;
 use KKCE\Feed_Post_Type;
 use KKCE\Settings;
 
@@ -27,7 +28,7 @@ class KKCE_Settings_Page_Integration_Test extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		Feed_Post_Type::register_meta();
+		Feed_Meta::register();
 		Settings_Page::register_settings();
 		$this->admin = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $this->admin );

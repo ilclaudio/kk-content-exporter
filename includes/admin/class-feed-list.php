@@ -7,28 +7,30 @@
 
 namespace KKCE\Admin;
 
+use KKCE\Feed_Meta;
 use KKCE\Feed_Post_Type;
+use KKCE\Plugin;
 use WP_Post;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Shows the configuration of every feed in the `kkce_feed` list: slug, source post type, access
- * and status.
+ * Shows the configuration of every feed in the `kkce_feed` list: endpoint address, source post types,
+ * access and status.
  *
  * The filters used here fire only on the list screen of the post type, so the hooks cost nothing
- * elsewhere. Values are read through the sanitizers of `Feed_Post_Type`, so a corrupted stored value
- * shows the safe default, and everything printed is escaped.
+ * elsewhere. Values are read through the sanitizers and readers of `Feed_Meta`, so a corrupted stored
+ * value shows the safe default, and everything printed is escaped.
  */
 final class Feed_List {
 
 	/**
-	 * Column key: slug of the feed (last segment of its endpoint URL).
+	 * Column key: relative address of the endpoint of the feed.
 	 */
-	public const COLUMN_SLUG = 'kkce_slug';
+	public const COLUMN_ENDPOINT = 'kkce_endpoint';
 
 	/**
-	 * Column key: post type the feed reads from.
+	 * Column key: post types the feed reads from.
 	 */
 	public const COLUMN_SOURCE = 'kkce_source';
 
@@ -60,10 +62,10 @@ final class Feed_List {
 			}
 		}
 
-		$result[ self::COLUMN_SLUG ]   = __( 'Slug', 'kk-content-exporter' );
-		$result[ self::COLUMN_SOURCE ] = __( 'Source', 'kk-content-exporter' );
-		$result[ self::COLUMN_ACCESS ] = __( 'Access', 'kk-content-exporter' );
-		$result[ self::COLUMN_STATUS ] = __( 'Status', 'kk-content-exporter' );
+		$result[ self::COLUMN_ENDPOINT ] = __( 'Endpoint', 'kk-content-exporter' );
+		$result[ self::COLUMN_SOURCE ]   = __( 'Source', 'kk-content-exporter' );
+		$result[ self::COLUMN_ACCESS ]   = __( 'Access', 'kk-content-exporter' );
+		$result[ self::COLUMN_STATUS ]   = __( 'Status', 'kk-content-exporter' );
 
 		return $result;
 	}
@@ -103,38 +105,70 @@ final class Feed_List {
 		$post_id = (int) $post_id;
 
 		switch ( $column ) {
-			case self::COLUMN_SLUG:
-				$slug = get_post_field( 'post_name', $post_id );
-				self::print_text( is_string( $slug ) ? $slug : '' );
+			case self::COLUMN_ENDPOINT:
+				self::print_endpoint( $post_id );
 				break;
 			case self::COLUMN_SOURCE:
-				self::print_text( self::source_label( get_post_meta( $post_id, Feed_Post_Type::META_POST_TYPE, true ) ) );
+				self::print_text( self::source_label( Feed_Meta::post_types( $post_id ) ) );
 				break;
 			case self::COLUMN_ACCESS:
-				self::print_text( self::access_label( get_post_meta( $post_id, Feed_Post_Type::META_ACCESS, true ) ) );
+				self::print_text( self::access_label( get_post_meta( $post_id, Feed_Meta::META_ACCESS, true ) ) );
 				break;
 			case self::COLUMN_STATUS:
-				self::print_text( self::status_label( get_post_meta( $post_id, Feed_Post_Type::META_ACTIVE, true ) ) );
+				self::print_text( self::status_label( get_post_meta( $post_id, Feed_Meta::META_ACTIVE, true ) ) );
 				break;
 		}
 	}
 
 	/**
-	 * Label of the source post type: its name when it exists, otherwise its key.
+	 * Labels of the source post types, joined by the list separator of the site language (a comma in
+	 * English): the name of each post type when it exists, otherwise its key.
 	 *
-	 * @param mixed $value Stored post type key.
+	 * @param string[] $keys Sanitized post type keys.
 	 * @return string Empty when no source is set.
+	 *
+	 * @phpstan-param list<string> $keys
 	 */
-	private static function source_label( $value ): string {
-		$key = Feed_Post_Type::sanitize_post_type( $value );
+	private static function source_label( array $keys ): string {
+		$labels = array();
 
-		if ( '' === $key ) {
-			return '';
+		foreach ( $keys as $key ) {
+			$type     = get_post_type_object( $key );
+			$labels[] = null === $type ? $key : $type->label;
 		}
 
-		$type = get_post_type_object( $key );
+		return implode( wp_get_list_item_separator(), $labels );
+	}
 
-		return null === $type ? $key : $type->label;
+	/**
+	 * Prints the relative address of the endpoint of a feed, with the absolute one in the title attribute.
+	 *
+	 * The address comes from `Plugin::feed_url()`, so it follows the permalink settings and the prefix of
+	 * the REST API of the site (`/wp-json/kkce/v1/news` or `/?rest_route=/kkce/v1/news`). A feed without a
+	 * slug, or with one that cannot serve a feed (WordPress can assign one outside the editor), shows the
+	 * empty marker instead of an address that would not work.
+	 *
+	 * @param int $post_id ID of the feed.
+	 * @return void
+	 */
+	private static function print_endpoint( int $post_id ): void {
+		$slug = get_post_field( 'post_name', $post_id );
+		$url  = is_string( $slug ) ? Plugin::feed_url( $slug ) : '';
+
+		if ( '' === $url ) {
+			self::print_text( '' );
+			return;
+		}
+
+		$parts = wp_parse_url( $url );
+		$path  = is_array( $parts ) && isset( $parts['path'] ) ? $parts['path'] : '/';
+		$query = is_array( $parts ) && isset( $parts['query'] ) ? '?' . $parts['query'] : '';
+
+		printf(
+			'<span title="%1$s"><code>%2$s</code></span>',
+			esc_attr( $url ),
+			esc_html( $path . $query )
+		);
 	}
 
 	/**
@@ -144,7 +178,7 @@ final class Feed_List {
 	 * @return string
 	 */
 	private static function access_label( $value ): string {
-		return Feed_Post_Type::ACCESS_AUTHENTICATED === Feed_Post_Type::sanitize_access( $value )
+		return Feed_Meta::ACCESS_AUTHENTICATED === Feed_Meta::sanitize_access( $value )
 			? __( 'Authenticated', 'kk-content-exporter' )
 			: __( 'Public', 'kk-content-exporter' );
 	}
@@ -156,7 +190,7 @@ final class Feed_List {
 	 * @return string
 	 */
 	private static function status_label( $value ): string {
-		return Feed_Post_Type::sanitize_active( $value )
+		return Feed_Meta::sanitize_active( $value )
 			? __( 'Active', 'kk-content-exporter' )
 			: __( 'Disabled', 'kk-content-exporter' );
 	}

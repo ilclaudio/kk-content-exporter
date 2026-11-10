@@ -7,6 +7,7 @@
 
 namespace KKCE\Admin;
 
+use KKCE\Feed_Meta;
 use KKCE\Feed_Post_Type;
 use KKCE\Settings;
 use WP_Error;
@@ -266,11 +267,11 @@ final class Settings_Page {
 		);
 
 		foreach ( $feeds as $feed_id ) {
-			if ( ! Feed_Post_Type::sanitize_active( get_post_meta( $feed_id, Feed_Post_Type::META_ACTIVE, true ) ) ) {
+			if ( ! Feed_Meta::sanitize_active( get_post_meta( $feed_id, Feed_Meta::META_ACTIVE, true ) ) ) {
 				continue;
 			}
 
-			if ( $require_auth || Feed_Post_Type::ACCESS_AUTHENTICATED === Feed_Post_Type::sanitize_access( get_post_meta( $feed_id, Feed_Post_Type::META_ACCESS, true ) ) ) {
+			if ( $require_auth || Feed_Meta::ACCESS_AUTHENTICATED === Feed_Meta::sanitize_access( get_post_meta( $feed_id, Feed_Meta::META_ACCESS, true ) ) ) {
 				return true;
 			}
 		}

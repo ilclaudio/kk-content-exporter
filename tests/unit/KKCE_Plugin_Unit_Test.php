@@ -24,7 +24,7 @@ class KKCE_Plugin_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( 10, has_action( 'init', array( Plugin::class, 'load_textdomain' ) ) );
 		$this->assertSame( 10, has_filter( 'plugin_row_meta', array( Plugin::class, 'filter_plugin_row_meta' ) ) );
 		$this->assertNotFalse( has_action( 'init', array( \KKCE\Feed_Post_Type::class, 'register' ) ) );
-		$this->assertNotFalse( has_action( 'init', array( \KKCE\Feed_Post_Type::class, 'register_meta' ) ) );
+		$this->assertNotFalse( has_action( 'init', array( \KKCE\Feed_Meta::class, 'register' ) ) );
 		$this->assertSame( 10, has_action( 'untrashed_post', array( \KKCE\Feed_Post_Type::class, 'disable_restored_feed' ) ) );
 		$this->assertSame( 10, has_action( 'admin_menu', array( \KKCE\Admin\Settings_Page::class, 'add_menu' ) ) );
 		$this->assertSame( 10, has_action( 'admin_init', array( \KKCE\Admin\Settings_Page::class, 'register_settings' ) ) );
@@ -35,6 +35,7 @@ class KKCE_Plugin_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( 10, has_filter( 'wp_insert_post_data', array( \KKCE\Admin\Feed_Editor::class, 'filter_post_data' ) ) );
 		$this->assertSame( 10, has_action( 'save_post_kkce_feed', array( \KKCE\Admin\Feed_Editor::class, 'save' ) ) );
 		$this->assertSame( 10, has_action( 'admin_notices', array( \KKCE\Admin\Feed_Editor::class, 'render_notices' ) ) );
+		$this->assertSame( 10, has_action( 'admin_enqueue_scripts', array( \KKCE\Admin\Feed_Editor::class, 'enqueue_assets' ) ) );
 	}
 
 	/**

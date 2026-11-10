@@ -194,34 +194,75 @@ class KKCE_Feed_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
-	 * The source post type must be in the list given by the caller.
+	 * One or more source post types, all in the list given by the caller, are valid; duplicates are
+	 * not an error.
+	 *
+	 * @dataProvider valid_post_types_provider
+	 *
+	 * @param array<mixed> $values Submitted post types.
 	 */
-	public function test_validate_post_type_uses_the_allow_list() {
-		$allowed = array( 'post', 'page', 'product' );
-
-		$this->assertSame( Feed_Validator::VALID, Feed_Validator::validate_post_type( 'product', $allowed ) );
-		$this->assertSame( Feed_Validator::ERROR_NOT_ALLOWED, Feed_Validator::validate_post_type( 'attachment', $allowed ) );
-		$this->assertSame( Feed_Validator::ERROR_NOT_ALLOWED, Feed_Validator::validate_post_type( 'Product', $allowed ) );
-		$this->assertSame( Feed_Validator::ERROR_NOT_ALLOWED, Feed_Validator::validate_post_type( 'post ', $allowed ) );
+	public function test_validate_post_types_accepts_lists_of_allowed_types( array $values ) {
+		$this->assertSame( Feed_Validator::VALID, Feed_Validator::validate_post_types( $values, array( 'post', 'page', 'product' ) ) );
 	}
 
 	/**
-	 * An empty or non-string post type is refused; an empty allow-list refuses everything.
+	 * Data for test_validate_post_types_accepts_lists_of_allowed_types().
+	 *
+	 * @return array<string, array{0: array<mixed>}>
 	 */
-	public function test_validate_post_type_rejects_empty_and_non_strings() {
-		$allowed = array( 'post' );
-
-		$this->assertSame( Feed_Validator::ERROR_EMPTY, Feed_Validator::validate_post_type( '', $allowed ) );
-		$this->assertSame( Feed_Validator::ERROR_NOT_ALLOWED, Feed_Validator::validate_post_type( null, $allowed ) );
-		$this->assertSame( Feed_Validator::ERROR_NOT_ALLOWED, Feed_Validator::validate_post_type( array( 'post' ), $allowed ) );
-		$this->assertSame( Feed_Validator::ERROR_NOT_ALLOWED, Feed_Validator::validate_post_type( 'post', array() ) );
+	public function valid_post_types_provider(): array {
+		return array(
+			'one'        => array( array( 'product' ) ),
+			'several'    => array( array( 'post', 'page', 'product' ) ),
+			'duplicates' => array( array( 'post', 'page', 'post' ) ),
+			'keyed'      => array( array( 'a' => 'post', 'b' => 'page' ) ),
+		);
 	}
 
 	/**
-	 * A numeric-looking post type is compared as a string, never loosely.
+	 * An empty list is reported as empty.
 	 */
-	public function test_validate_post_type_compares_strictly() {
-		$this->assertSame( Feed_Validator::ERROR_NOT_ALLOWED, Feed_Validator::validate_post_type( '0', array( 'post' ) ) );
-		$this->assertSame( Feed_Validator::ERROR_NOT_ALLOWED, Feed_Validator::validate_post_type( 'post', array( 0 ) ) );
+	public function test_validate_post_types_reports_an_empty_list() {
+		$this->assertSame( Feed_Validator::ERROR_EMPTY, Feed_Validator::validate_post_types( array(), array( 'post' ) ) );
+	}
+
+	/**
+	 * A list is refused as a whole when one of its values is not allowed, not a string or empty, and a
+	 * value that is not a list is refused.
+	 *
+	 * @dataProvider invalid_post_types_provider
+	 *
+	 * @param mixed $values Submitted post types.
+	 */
+	public function test_validate_post_types_refuses_bad_values( $values ) {
+		$this->assertSame( Feed_Validator::ERROR_NOT_ALLOWED, Feed_Validator::validate_post_types( $values, array( 'post', 'page', 'product' ) ) );
+	}
+
+	/**
+	 * Data for test_validate_post_types_refuses_bad_values().
+	 *
+	 * @return array<string, array{0: mixed}>
+	 */
+	public function invalid_post_types_provider(): array {
+		return array(
+			'one not allowed'   => array( array( 'post', 'attachment' ) ),
+			'wrong case'        => array( array( 'Product' ) ),
+			'trailing space'    => array( array( 'post ' ) ),
+			'empty string'      => array( array( 'post', '' ) ),
+			'null element'      => array( array( null ) ),
+			'integer element'   => array( array( 0 ) ),
+			'nested list'       => array( array( array( 'post' ) ) ),
+			'string not a list' => array( 'post' ),
+			'null'              => array( null ),
+		);
+	}
+
+	/**
+	 * An empty allow-list refuses everything, and values are compared as strings, never loosely.
+	 */
+	public function test_validate_post_types_compares_strictly() {
+		$this->assertSame( Feed_Validator::ERROR_NOT_ALLOWED, Feed_Validator::validate_post_types( array( 'post' ), array() ) );
+		$this->assertSame( Feed_Validator::ERROR_NOT_ALLOWED, Feed_Validator::validate_post_types( array( '0' ), array( 'post' ) ) );
+		$this->assertSame( Feed_Validator::ERROR_NOT_ALLOWED, Feed_Validator::validate_post_types( array( 'post' ), array( 0 ) ) );
 	}
 }

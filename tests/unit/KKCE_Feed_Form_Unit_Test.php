@@ -21,11 +21,11 @@ class KKCE_Feed_Form_Unit_Test extends KKCE_Unit_Test_Case {
 	private function input( array $override = array() ): array {
 		return array_merge(
 			array(
-				'slug'      => 'news',
-				'post_type' => 'page',
-				'access'    => 'authenticated',
-				'active'    => true,
-				'per_page'  => '20',
+				'slug'       => 'news',
+				'post_types' => array( 'page' ),
+				'access'     => 'authenticated',
+				'active'     => true,
+				'per_page'   => '20',
 			),
 			$override
 		);
@@ -40,16 +40,15 @@ class KKCE_Feed_Form_Unit_Test extends KKCE_Unit_Test_Case {
 	private function context( array $override = array() ): array {
 		return array_merge(
 			array(
-				'suggested_slug'     => 'my-title',
-				'slug_is_taken'      => static fn( string $slug ): bool => 'taken' === $slug,
+				'slug_is_taken'=> static fn( string $slug ): bool => 'taken' === $slug,
 				'allowed_post_types' => array( 'post', 'page' ),
 				'max_per_page'       => 100,
 				'current'            => array(
-					'slug'      => 'old-slug',
-					'post_type' => 'post',
-					'access'    => 'public',
-					'active'    => false,
-					'per_page'  => 50,
+					'slug'       => 'old-slug',
+					'post_types' => array( 'post' ),
+					'access'     => 'public',
+					'active'     => false,
+					'per_page'   => 50,
 				),
 			),
 			$override
@@ -65,34 +64,42 @@ class KKCE_Feed_Form_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( array(), $result['errors'] );
 		$this->assertSame(
 			array(
-				'slug'      => 'news',
-				'post_type' => 'page',
-				'access'    => 'authenticated',
-				'active'    => true,
-				'per_page'  => 20,
+				'slug'       => 'news',
+				'post_types' => array( 'page' ),
+				'access'     => 'authenticated',
+				'active'     => true,
+				'per_page'   => 20,
 			),
 			$result['values']
 		);
 	}
 
 	/**
-	 * An empty slug is replaced by the one suggested from the title.
+	 * The slug is required: an empty slug (also made of spaces) is an error, never taken from the
+	 * title, and keeps the current slug; the other fields are still saved.
+	 *
+	 * @dataProvider empty_slug_provider
+	 *
+	 * @param string $slug Submitted slug.
 	 */
-	public function test_empty_slug_uses_the_suggested_slug() {
-		$result = Feed_Form::process( $this->input( array( 'slug' => '  ' ) ), $this->context() );
-
-		$this->assertSame( 'my-title', $result['values']['slug'] );
-		$this->assertArrayNotHasKey( 'slug', $result['errors'] );
-	}
-
-	/**
-	 * An empty slug with nothing to suggest is an error and keeps the current slug.
-	 */
-	public function test_empty_slug_without_suggestion_is_an_error() {
-		$result = Feed_Form::process( $this->input( array( 'slug' => '' ) ), $this->context( array( 'suggested_slug' => '' ) ) );
+	public function test_empty_slug_is_an_error_and_keeps_the_current_slug( string $slug ) {
+		$result = Feed_Form::process( $this->input( array( 'slug' => $slug ) ), $this->context() );
 
 		$this->assertSame( 'empty', $result['errors']['slug'] );
 		$this->assertSame( 'old-slug', $result['values']['slug'] );
+		$this->assertSame( 20, $result['values']['per_page'], 'The other fields are still saved.' );
+	}
+
+	/**
+	 * Data for test_empty_slug_is_an_error_and_keeps_the_current_slug().
+	 *
+	 * @return array<string, array{0: string}>
+	 */
+	public function empty_slug_provider(): array {
+		return array(
+			'empty'  => array( '' ),
+			'spaces' => array( '   ' ),
+		);
 	}
 
 	/**
@@ -140,47 +147,102 @@ class KKCE_Feed_Form_Unit_Test extends KKCE_Unit_Test_Case {
 			)
 		);
 
-		Feed_Form::process( $this->input( array( 'slug' => '' ) ), $context );
+		Feed_Form::process( $this->input( array( 'slug' => 'fresh' ) ), $context );
 
-		$this->assertSame( array( 'my-title' ), $asked );
+		$this->assertSame( array( 'fresh' ), $asked );
 	}
 
 	/**
-	 * A post type outside the allow-list keeps the current one and reports the error.
-	 *
-	 * @dataProvider bad_post_type_provider
-	 *
-	 * @param string $post_type Submitted post type.
+	 * Several allowed post types are saved, in the submitted order, and the feed can be active.
 	 */
-	public function test_bad_post_type_keeps_the_current_one( string $post_type ) {
-		$result = Feed_Form::process( $this->input( array( 'post_type' => $post_type ) ), $this->context() );
+	public function test_several_post_types_are_saved_and_the_feed_can_be_active() {
+		$result = Feed_Form::process( $this->input( array( 'post_types' => array( 'page', 'post' ) ) ), $this->context() );
 
-		$this->assertSame( 'not_allowed', $result['errors']['post_type'] );
-		$this->assertSame( 'post', $result['values']['post_type'] );
+		$this->assertSame( array( 'page', 'post' ), $result['values']['post_types'] );
+		$this->assertArrayNotHasKey( 'post_types', $result['errors'] );
+		$this->assertTrue( $result['values']['active'] );
 	}
 
 	/**
-	 * Data for test_bad_post_type_keeps_the_current_one().
-	 *
-	 * @return array<string, array{0: string}>
+	 * A post type submitted twice is saved once, with no error.
 	 */
-	public function bad_post_type_provider(): array {
+	public function test_duplicate_post_types_are_saved_once() {
+		$result = Feed_Form::process( $this->input( array( 'post_types' => array( 'page', 'post', 'page' ) ) ), $this->context() );
+
+		$this->assertSame( array( 'page', 'post' ), $result['values']['post_types'] );
+		$this->assertArrayNotHasKey( 'post_types', $result['errors'] );
+	}
+
+	/**
+	 * A list with a post type outside the allow-list, or a value that is not a list, keeps the whole
+	 * current list and reports the error; the other fields are still saved.
+	 *
+	 * @dataProvider bad_post_types_provider
+	 *
+	 * @param mixed $post_types Submitted post types.
+	 */
+	public function test_bad_post_types_keep_the_current_list( $post_types ) {
+		$result = Feed_Form::process( $this->input( array( 'post_types' => $post_types ) ), $this->context() );
+
+		$this->assertSame( 'not_allowed', $result['errors']['post_types'] );
+		$this->assertSame( array( 'post' ), $result['values']['post_types'] );
+		$this->assertSame( 20, $result['values']['per_page'], 'The other fields are still saved.' );
+	}
+
+	/**
+	 * Data for test_bad_post_types_keep_the_current_list().
+	 *
+	 * @return array<string, array{0: mixed}>
+	 */
+	public function bad_post_types_provider(): array {
 		return array(
-			'attachment'  => array( 'attachment' ),
-			'feed type'   => array( 'kkce_feed' ),
-			'unknown'     => array( 'nothing' ),
-			'wrong case'  => array( 'Page' ),
+			'attachment'        => array( array( 'attachment' ) ),
+			'feed type'         => array( array( 'kkce_feed' ) ),
+			'unknown'           => array( array( 'nothing' ) ),
+			'wrong case'        => array( array( 'Page' ) ),
+			'one bad among good' => array( array( 'page', 'attachment' ) ),
+			'empty value'       => array( array( 'page', '' ) ),
+			'string not a list' => array( 'page' ),
 		);
 	}
 
 	/**
-	 * An empty post type means "not set": it is saved empty, with no error, and the feed cannot be active.
+	 * With a refused list, the feed stays active only if the current list is not empty.
 	 */
-	public function test_empty_post_type_clears_the_source_and_disables_the_feed() {
-		$result = Feed_Form::process( $this->input( array( 'post_type' => '' ) ), $this->context() );
+	public function test_a_refused_list_with_an_empty_current_list_disables_the_feed() {
+		$context                          = $this->context();
+		$context['current']['post_types'] = array();
 
-		$this->assertSame( '', $result['values']['post_type'] );
-		$this->assertArrayNotHasKey( 'post_type', $result['errors'] );
+		$result = Feed_Form::process( $this->input( array( 'post_types' => array( 'attachment' ) ) ), $context );
+
+		$this->assertSame( array(), $result['values']['post_types'] );
+		$this->assertFalse( $result['values']['active'] );
+		$this->assertSame( 'incomplete', $result['errors']['active'] );
+	}
+
+	/**
+	 * At least one post type is required: an empty list is an error and keeps the current list; the
+	 * other fields are still saved.
+	 */
+	public function test_no_post_type_is_an_error_and_keeps_the_current_list() {
+		$result = Feed_Form::process( $this->input( array( 'post_types' => array(), 'per_page' => '30' ) ), $this->context() );
+
+		$this->assertSame( 'empty', $result['errors']['post_types'] );
+		$this->assertSame( array( 'post' ), $result['values']['post_types'] );
+		$this->assertSame( 30, $result['values']['per_page'], 'The other fields are still saved.' );
+	}
+
+	/**
+	 * A new feed saved without post types has none and cannot be active.
+	 */
+	public function test_a_new_feed_without_post_types_cannot_be_active() {
+		$context                          = $this->context();
+		$context['current']['post_types'] = array();
+
+		$result = Feed_Form::process( $this->input( array( 'post_types' => array() ) ), $context );
+
+		$this->assertSame( 'empty', $result['errors']['post_types'] );
+		$this->assertSame( array(), $result['values']['post_types'] );
 		$this->assertFalse( $result['values']['active'] );
 		$this->assertSame( 'incomplete', $result['errors']['active'] );
 	}
@@ -255,7 +317,7 @@ class KKCE_Feed_Form_Unit_Test extends KKCE_Unit_Test_Case {
 	 * The feed is not activated while the slug is missing, and the error says why.
 	 */
 	public function test_a_feed_without_slug_cannot_be_active() {
-		$context                    = $this->context( array( 'suggested_slug' => '' ) );
+		$context                    = $this->context();
 		$context['current']['slug'] = '';
 
 		$result = Feed_Form::process( $this->input( array( 'slug' => '' ) ), $context );

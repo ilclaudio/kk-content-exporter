@@ -5,6 +5,7 @@
  * @package KKCE
  */
 
+use KKCE\Feed_Meta;
 use KKCE\Feed_Post_Type;
 
 /**
@@ -18,7 +19,7 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		Feed_Post_Type::register_meta();
+		Feed_Meta::register();
 	}
 
 	/**
@@ -73,7 +74,7 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 		);
 
 		$this->assertSame(
-			array( 'cb', 'title', 'kkce_slug', 'kkce_source', 'kkce_access', 'kkce_status' ),
+			array( 'cb', 'title', 'kkce_endpoint', 'kkce_source', 'kkce_access', 'kkce_status' ),
 			array_keys( $columns )
 		);
 	}
@@ -82,6 +83,7 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 	 * A configured feed shows its slug, source, access and status.
 	 */
 	public function test_a_configured_feed_is_described_in_the_columns() {
+		$this->set_permalink_structure( '/%postname%/' );
 		$id = $this->feed(
 			array(
 				'_kkce_post_type' => 'page',
@@ -90,7 +92,7 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assertSame( 'news', $this->cell( 'kkce_slug', $id ) );
+		$this->assertStringContainsString( '<code>/wp-json/kkce/v1/news</code>', $this->cell( 'kkce_endpoint', $id ) );
 		$this->assertSame( esc_html( get_post_type_object( 'page' )->label ), $this->cell( 'kkce_source', $id ) );
 		$this->assertSame( 'Authenticated', $this->cell( 'kkce_access', $id ) );
 		$this->assertSame( 'Active', $this->cell( 'kkce_status', $id ) );
@@ -119,7 +121,21 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assertStringContainsString( 'Not set', $this->cell( 'kkce_slug', $id ) );
+		$this->assertStringContainsString( 'Not set', $this->cell( 'kkce_endpoint', $id ) );
+	}
+
+	/**
+	 * A feed with several post types lists their labels, separated by commas, in the saved order.
+	 */
+	public function test_several_post_types_are_listed_in_the_source_column() {
+		$id = $this->feed();
+		add_post_meta( $id, '_kkce_post_type', 'page' );
+		add_post_meta( $id, '_kkce_post_type', 'removed-type' );
+		add_post_meta( $id, '_kkce_post_type', 'post' );
+
+		$expected = esc_html( get_post_type_object( 'page' )->label . ', removed-type, ' . get_post_type_object( 'post' )->label );
+
+		$this->assertSame( $expected, $this->cell( 'kkce_source', $id ) );
 	}
 
 	/**
@@ -153,19 +169,60 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A slug stored with markup is escaped when printed (the slug is not sanitized by the plugin).
+	 * The endpoint column shows the relative address, with the absolute one in the title attribute.
 	 */
-	public function test_a_slug_with_markup_is_escaped() {
+	public function test_the_endpoint_is_the_relative_address_with_the_absolute_one_in_the_title() {
+		$this->set_permalink_structure( '/%postname%/' );
+		$id = $this->feed();
+
+		$output = $this->cell( 'kkce_endpoint', $id );
+
+		$this->assertSame( '<span title="' . esc_attr( rest_url( 'kkce/v1/news' ) ) . '"><code>/wp-json/kkce/v1/news</code></span>', $output );
+	}
+
+	/**
+	 * With plain permalinks the relative address keeps the `rest_route` query argument.
+	 */
+	public function test_the_endpoint_follows_plain_permalinks() {
+		$this->set_permalink_structure( '' );
+		$id = $this->feed();
+
+		$this->assertStringContainsString( '<code>/index.php?rest_route=/kkce/v1/news</code>', $this->cell( 'kkce_endpoint', $id ) );
+	}
+
+	/**
+	 * A slug that cannot serve a feed (markup, reserved) shows no address, only the empty marker, and
+	 * nothing unescaped.
+	 *
+	 * @dataProvider unusable_slug_provider
+	 *
+	 * @param string $slug Stored slug.
+	 */
+	public function test_an_unusable_slug_shows_no_address( string $slug ) {
 		global $wpdb;
 
 		$id = $this->feed();
-		$wpdb->update( $wpdb->posts, array( 'post_name' => '<script>alert(1)</script>' ), array( 'ID' => $id ) );
+		$wpdb->update( $wpdb->posts, array( 'post_name' => $slug ), array( 'ID' => $id ) );
 		clean_post_cache( $id );
 
-		$output = $this->cell( 'kkce_slug', $id );
+		$output = $this->cell( 'kkce_endpoint', $id );
 
+		$this->assertStringContainsString( 'Not set', $output );
+		$this->assertStringNotContainsString( '<code>', $output );
 		$this->assertStringNotContainsString( '<script>', $output );
-		$this->assertSame( '&lt;script&gt;alert(1)&lt;/script&gt;', $output );
+	}
+
+	/**
+	 * Data for test_an_unusable_slug_shows_no_address().
+	 *
+	 * @return array<string, array{0: string}>
+	 */
+	public function unusable_slug_provider(): array {
+		return array(
+			'markup'   => array( '<script>alert(1)</script>' ),
+			'reserved' => array( 'feeds' ),
+			'format'   => array( 'Bad Slug' ),
+		);
 	}
 
 	/**
