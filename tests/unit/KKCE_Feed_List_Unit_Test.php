@@ -25,7 +25,7 @@ class KKCE_Feed_List_Unit_Test extends KKCE_Unit_Test_Case {
 		);
 
 		$this->assertSame(
-			array( 'cb', 'title', 'kkce_slug', 'kkce_source', 'kkce_access', 'kkce_status' ),
+			array( 'cb', 'title', 'kkce_endpoint', 'kkce_source', 'kkce_access', 'kkce_status' ),
 			array_keys( $columns )
 		);
 		$this->assertSame( '<input type="checkbox" />', $columns['cb'] );

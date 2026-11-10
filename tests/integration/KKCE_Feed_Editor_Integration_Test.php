@@ -6,6 +6,7 @@
  */
 
 use KKCE\Admin\Feed_Editor;
+use KKCE\Feed_Meta;
 use KKCE\Feed_Post_Type;
 
 /**
@@ -26,7 +27,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		Feed_Post_Type::register_meta();
+		Feed_Meta::register();
 		$this->admin = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $this->admin );
 	}
@@ -35,6 +36,8 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	 * Cleans the request and the admin screen.
 	 */
 	public function tear_down() {
+		wp_dequeue_script( 'kkce-feed-editor' );
+		wp_deregister_script( 'kkce-feed-editor' );
 		$_POST = array();
 		unset( $GLOBALS['post'] );
 		$GLOBALS['current_screen'] = null;
@@ -63,7 +66,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	 * the feed is saved.
 	 *
 	 * @param int                   $feed_id Feed ID.
-	 * @param array<string, string> $fields  Values of the `kkce_feed` fields.
+	 * @param array<string, mixed>  $fields  Values of the `kkce_feed` fields.
 	 * @param array<string, mixed>  $options Keys: `nonce_for` (feed ID of the nonce, 0 for none), `title`.
 	 */
 	private function submit( int $feed_id, array $fields, array $options = array() ): void {
@@ -88,17 +91,17 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	/**
 	 * Valid fields.
 	 *
-	 * @param array<string, string> $override Values to change.
-	 * @return array<string, string>
+	 * @param array<string, mixed> $override Values to change.
+	 * @return array<string, mixed>
 	 */
 	private function fields( array $override = array() ): array {
 		return array_merge(
 			array(
-				'slug'      => 'news',
-				'post_type' => 'page',
-				'access'    => 'authenticated',
-				'active'    => '1',
-				'per_page'  => '20',
+				'slug'       => 'news',
+				'post_types' => array( 'page' ),
+				'access'     => 'authenticated',
+				'active'     => '1',
+				'per_page'   => '20',
 			),
 			$override
 		);
@@ -113,10 +116,10 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->submit( $feed, $this->fields() );
 
 		$this->assertSame( 'news', get_post_field( 'post_name', $feed ) );
-		$this->assertSame( 'page', get_post_meta( $feed, '_kkce_post_type', true ) );
+		$this->assertSame( array( 'page' ), Feed_Meta::post_types( $feed ) );
 		$this->assertSame( 'authenticated', get_post_meta( $feed, '_kkce_access', true ) );
-		$this->assertTrue( Feed_Post_Type::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
-		$this->assertSame( 20, Feed_Post_Type::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ) );
+		$this->assertTrue( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
+		$this->assertSame( 20, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ) );
 	}
 
 	/**
@@ -129,7 +132,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 
 		$this->submit( $feed, $fields );
 
-		$this->assertFalse( Feed_Post_Type::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
+		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
 		$this->assertSame( 'news', get_post_field( 'post_name', $feed ) );
 	}
 
@@ -141,7 +144,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 
 		$this->submit( $feed, $this->fields(), array( 'nonce_for' => 0 ) );
 
-		$this->assertSame( '', get_post_meta( $feed, '_kkce_post_type', true ) );
+		$this->assertSame( array(), Feed_Meta::post_types( $feed ) );
 		$this->assertSame( 'public', get_post_meta( $feed, '_kkce_access', true ) );
 		$this->assertNotSame( 'news', get_post_field( 'post_name', $feed ) );
 	}
@@ -155,7 +158,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 
 		$this->submit( $feed, $this->fields(), array( 'nonce_for' => $other ) );
 
-		$this->assertSame( '', get_post_meta( $feed, '_kkce_post_type', true ) );
+		$this->assertSame( array(), Feed_Meta::post_types( $feed ) );
 		$this->assertNotSame( 'news', get_post_field( 'post_name', $feed ) );
 	}
 
@@ -169,7 +172,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 
 		$this->submit( $feed, $this->fields() );
 
-		$this->assertSame( '', get_post_meta( $feed, '_kkce_post_type', true ) );
+		$this->assertSame( array(), Feed_Meta::post_types( $feed ) );
 		$this->assertSame( 'public', get_post_meta( $feed, '_kkce_access', true ) );
 		$this->assertNotSame( 'news', get_post_field( 'post_name', $feed ) );
 	}
@@ -184,10 +187,10 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	public function test_a_source_outside_the_allow_list_is_refused( string $post_type ) {
 		$feed = $this->feed();
 
-		$this->submit( $feed, $this->fields( array( 'post_type' => $post_type ) ) );
+		$this->submit( $feed, $this->fields( array( 'post_types' => array( $post_type ) ) ) );
 
-		$this->assertSame( '', get_post_meta( $feed, '_kkce_post_type', true ) );
-		$this->assertFalse( Feed_Post_Type::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
+		$this->assertSame( array(), Feed_Meta::post_types( $feed ) );
+		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
 		$this->assertSame( 'news', get_post_field( 'post_name', $feed ), 'The valid fields are still saved.' );
 	}
 
@@ -217,7 +220,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 
 		$this->assertSame( 'news', get_post_field( 'post_name', $first ) );
 		$this->assertNotSame( 'news', get_post_field( 'post_name', $second ) );
-		$this->assertSame( 7, Feed_Post_Type::sanitize_per_page( get_post_meta( $second, '_kkce_per_page', true ) ) );
+		$this->assertSame( 7, Feed_Meta::sanitize_per_page( get_post_meta( $second, '_kkce_per_page', true ) ) );
 	}
 
 	/**
@@ -230,7 +233,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->submit( $feed, $this->fields( array( 'per_page' => '30' ) ) );
 
 		$this->assertSame( 'news', get_post_field( 'post_name', $feed ) );
-		$this->assertSame( 30, Feed_Post_Type::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ) );
+		$this->assertSame( 30, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ) );
 	}
 
 	/**
@@ -246,7 +249,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->submit( $feed, $this->fields( array( 'slug' => $slug ) ) );
 
 		$this->assertNotSame( $slug, get_post_field( 'post_name', $feed ) );
-		$this->assertFalse( Feed_Post_Type::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
+		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
 	}
 
 	/**
@@ -279,13 +282,13 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		wp_untrash_post( $first );
 
 		$this->assertSame( 'news', get_post_field( 'post_name', $first ), 'WordPress gives the old slug back.' );
-		$this->assertFalse( Feed_Post_Type::sanitize_active( get_post_meta( $first, '_kkce_active', true ) ), 'A restored feed starts disabled.' );
+		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $first, '_kkce_active', true ) ), 'A restored feed starts disabled.' );
 
 		$this->submit( $first, $this->fields( array( 'per_page' => '7' ) ) );
 
-		$this->assertFalse( Feed_Post_Type::sanitize_active( get_post_meta( $first, '_kkce_active', true ) ) );
-		$this->assertTrue( Feed_Post_Type::sanitize_active( get_post_meta( $second, '_kkce_active', true ) ) );
-		$this->assertSame( 7, Feed_Post_Type::sanitize_per_page( get_post_meta( $first, '_kkce_per_page', true ) ), 'The other fields are still saved.' );
+		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $first, '_kkce_active', true ) ) );
+		$this->assertTrue( Feed_Meta::sanitize_active( get_post_meta( $second, '_kkce_active', true ) ) );
+		$this->assertSame( 7, Feed_Meta::sanitize_per_page( get_post_meta( $first, '_kkce_per_page', true ) ), 'The other fields are still saved.' );
 	}
 
 	/**
@@ -297,11 +300,11 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		// The slug is refused and the feed has none: WordPress generates one from the title after the filter.
 		$this->submit( $feed, $this->fields( array( 'slug' => 'feeds' ) ) );
 		$this->assertSame( 'settings', get_post_field( 'post_name', $feed ) );
-		$this->assertFalse( Feed_Post_Type::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
+		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
 
 		$this->submit( $feed, $this->fields( array( 'slug' => 'settings' ) ) );
 
-		$this->assertFalse( Feed_Post_Type::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ), 'A reserved slug never enables the feed.' );
+		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ), 'A reserved slug never enables the feed.' );
 	}
 
 	/**
@@ -317,14 +320,36 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An empty slug is taken from the title.
+	 * The slug is required: an empty slug is reported and never taken from the title by the editor; the
+	 * feed stays disabled and the other fields are saved.
 	 */
-	public function test_an_empty_slug_is_taken_from_the_title() {
+	public function test_an_empty_slug_is_an_error() {
 		$feed = $this->feed( 'Latest News' );
+		$this->submit( $feed, $this->fields() );
 
-		$this->submit( $feed, $this->fields( array( 'slug' => '' ) ) );
+		$this->submit( $feed, $this->fields( array( 'slug' => '', 'per_page' => '7' ) ) );
 
-		$this->assertSame( 'latest-news', get_post_field( 'post_name', $feed ) );
+		$this->assertSame( 'news', get_post_field( 'post_name', $feed ), 'The saved slug is kept.' );
+		$this->assertSame( 7, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ) );
+		$this->assertSame( 'empty', get_transient( 'kkce_feed_errors_' . $this->admin . '_' . $feed )['slug'] );
+	}
+
+	/**
+	 * A new feed saved without slug and without post types is saved disabled, with both errors.
+	 */
+	public function test_a_new_feed_without_slug_and_post_types_reports_both() {
+		$feed   = $this->feed( 'Latest News' );
+		$fields = $this->fields( array( 'slug' => '' ) );
+		unset( $fields['post_types'] );
+
+		$this->submit( $feed, $fields );
+
+		$errors = get_transient( 'kkce_feed_errors_' . $this->admin . '_' . $feed );
+		$this->assertSame( 'empty', $errors['slug'] );
+		$this->assertSame( 'empty', $errors['post_types'] );
+		$this->assertSame( 'incomplete', $errors['active'] );
+		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
+		$this->assertSame( array(), Feed_Meta::post_types( $feed ) );
 	}
 
 	/**
@@ -333,9 +358,9 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	public function test_a_feed_without_source_cannot_be_enabled() {
 		$feed = $this->feed();
 
-		$this->submit( $feed, $this->fields( array( 'post_type' => '' ) ) );
+		$this->submit( $feed, $this->fields( array( 'post_types' => array() ) ) );
 
-		$this->assertFalse( Feed_Post_Type::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
+		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
 	}
 
 	/**
@@ -348,7 +373,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->submit( $feed, $this->fields( array( 'access' => 'everyone', 'per_page' => '-4' ) ) );
 
 		$this->assertSame( 'authenticated', get_post_meta( $feed, '_kkce_access', true ) );
-		$this->assertSame( 20, Feed_Post_Type::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ) );
+		$this->assertSame( 20, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ) );
 	}
 
 	/**
@@ -387,17 +412,17 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		update_option( \KKCE\Settings::OPTION, array( 'enabled' => '1', 'max_per_page' => '30' ) );
 		$feed = $this->feed();
 		$this->submit( $feed, $this->fields( array( 'per_page' => '30' ) ) );
-		$this->assertSame( 30, Feed_Post_Type::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ), 'The maximum itself is accepted.' );
+		$this->assertSame( 30, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ), 'The maximum itself is accepted.' );
 
 		$this->submit( $feed, $this->fields( array( 'per_page' => '31', 'access' => 'public' ) ) );
 
-		$this->assertSame( 30, Feed_Post_Type::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ), 'The previous value is kept.' );
+		$this->assertSame( 30, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ), 'The previous value is kept.' );
 		$this->assertSame( 'public', get_post_meta( $feed, '_kkce_access', true ), 'The other fields are still saved.' );
 
 		update_option( \KKCE\Settings::OPTION, array( 'enabled' => '1', 'max_per_page' => '500' ) );
 		$this->submit( $feed, $this->fields( array( 'per_page' => '200' ) ) );
 
-		$this->assertSame( 200, Feed_Post_Type::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ), 'A higher maximum allows it.' );
+		$this->assertSame( 200, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ), 'A higher maximum allows it.' );
 	}
 
 	/**
@@ -492,7 +517,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 			)
 		);
 		$feed = $this->feed();
-		$this->submit( $feed, $this->fields( array( 'post_type' => 'page' ) ) );
+		$this->submit( $feed, $this->fields( array( 'post_types' => array( 'page' ) ) ) );
 
 		ob_start();
 		Feed_Editor::render_meta_box( get_post( $feed ) );
@@ -501,7 +526,8 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'name="kkce_feed_nonce"', $html );
 		$this->assertStringContainsString( 'name="kkce_feed[slug]"', $html );
 		$this->assertStringContainsString( 'value="news"', $html );
-		$this->assertMatchesRegularExpression( '/<option value="page"[^>]*selected/', $html );
+		$this->assertMatchesRegularExpression( '/name="kkce_feed\[post_types\]\[\]" value="page"[^>]*checked/', $html );
+		$this->assertDoesNotMatchRegularExpression( '/name="kkce_feed\[post_types\]\[\]" value="post"[^>]*checked/', $html );
 		$this->assertMatchesRegularExpression( '/value="authenticated"[^>]*checked/', $html );
 		$this->assertMatchesRegularExpression( '/name="kkce_feed\[active\]"[^>]*checked/', $html );
 		$this->assertStringContainsString( 'value="20"', $html );
@@ -526,6 +552,314 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->assertMatchesRegularExpression( '/value="public"[^>]*checked/', $html );
 		$this->assertDoesNotMatchRegularExpression( '/name="kkce_feed\[active\]"[^>]*checked/', $html );
 		$this->assertStringContainsString( 'value="50"', $html );
-		$this->assertDoesNotMatchRegularExpression( '/<option value="[a-z]+"[^>]*selected/', $html );
+		$this->assertDoesNotMatchRegularExpression( '/name="kkce_feed\[post_types\]\[\]"[^>]*checked/', $html );
+	}
+
+	/**
+	 * Several source post types are saved, one meta row each, and read back as a list.
+	 */
+	public function test_several_post_types_are_saved_one_row_each() {
+		$feed = $this->feed();
+
+		$this->submit( $feed, $this->fields( array( 'post_types' => array( 'page', 'post' ) ) ) );
+
+		$this->assertSame( array( 'page', 'post' ), get_post_meta( $feed, '_kkce_post_type', false ) );
+		$this->assertSame( array( 'page', 'post' ), Feed_Meta::post_types( $feed ) );
+		$this->assertTrue( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
+	}
+
+	/**
+	 * Saving again rewrites the rows: a removed post type leaves no row behind, a duplicate is saved once.
+	 */
+	public function test_saving_again_rewrites_the_rows() {
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields( array( 'post_types' => array( 'page', 'post' ) ) ) );
+
+		$this->submit( $feed, $this->fields( array( 'post_types' => array( 'post', 'post' ) ) ) );
+
+		$this->assertSame( array( 'post' ), get_post_meta( $feed, '_kkce_post_type', false ) );
+	}
+
+	/**
+	 * A list with one forbidden post type is refused as a whole and the previous list is kept.
+	 */
+	public function test_a_list_with_a_forbidden_post_type_keeps_the_previous_list() {
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields( array( 'post_types' => array( 'page', 'post' ) ) ) );
+
+		$this->submit( $feed, $this->fields( array( 'post_types' => array( 'page', 'attachment' ), 'per_page' => '7' ) ) );
+
+		$this->assertSame( array( 'page', 'post' ), get_post_meta( $feed, '_kkce_post_type', false ) );
+		$this->assertSame( 7, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ), 'The other fields are still saved.' );
+	}
+
+	/**
+	 * A value that is not a list (a tampered request) is refused and the previous list is kept.
+	 */
+	public function test_a_post_type_value_that_is_not_a_list_is_refused() {
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields() );
+
+		$this->submit( $feed, $this->fields( array( 'post_types' => 'post' ) ) );
+
+		$this->assertSame( array( 'page' ), Feed_Meta::post_types( $feed ) );
+	}
+
+	/**
+	 * At least one post type is required: unchecking every post type is reported and keeps the saved list.
+	 */
+	public function test_unchecking_every_post_type_keeps_the_saved_list() {
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields() );
+		$fields = $this->fields();
+		unset( $fields['post_types'] );
+
+		$this->submit( $feed, $fields );
+
+		$this->assertSame( array( 'page' ), get_post_meta( $feed, '_kkce_post_type', false ) );
+		$this->assertSame( 'empty', get_transient( 'kkce_feed_errors_' . $this->admin . '_' . $feed )['post_types'] );
+	}
+
+	/**
+	 * The box shows every saved post type checked, each checkbox with its own label.
+	 */
+	public function test_the_meta_box_checks_every_saved_post_type() {
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields( array( 'post_types' => array( 'page', 'post' ) ) ) );
+
+		ob_start();
+		Feed_Editor::render_meta_box( get_post( $feed ) );
+		$html = (string) ob_get_clean();
+
+		$this->assertMatchesRegularExpression( '/name="kkce_feed\[post_types\]\[\]" value="page"[^>]*checked/', $html );
+		$this->assertMatchesRegularExpression( '/name="kkce_feed\[post_types\]\[\]" value="post"[^>]*checked/', $html );
+		$this->assertStringContainsString( '<legend', $html );
+		$this->assertMatchesRegularExpression( '/<label[^>]*>\s*<input type="checkbox"[^>]*value="page"/', $html );
+	}
+
+	/**
+	 * Prints the settings box of a feed and returns the HTML.
+	 *
+	 * @param int $feed_id Feed ID.
+	 * @return string
+	 */
+	private function box( int $feed_id ): string {
+		ob_start();
+		Feed_Editor::render_meta_box( get_post( $feed_id ) );
+
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * The slug field is marked as required, without the HTML attribute that would block saving a draft.
+	 */
+	public function test_the_slug_field_is_marked_as_required() {
+		$html = $this->box( $this->feed() );
+
+		$this->assertMatchesRegularExpression( '/<input[^>]*id="kkce-feed-slug"[^>]*aria-required="true"/', $html );
+		$this->assertDoesNotMatchRegularExpression( '/<input[^>]*id="kkce-feed-slug"[^>]*\srequired[\s>=]/', $html );
+		$this->assertStringContainsString( '(required)', $html );
+	}
+
+	/**
+	 * With pretty permalinks the box shows the address of the saved feed under `/wp-json/`, escaped.
+	 */
+	public function test_the_box_shows_the_address_of_the_feed() {
+		$this->set_permalink_structure( '/%postname%/' );
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields() );
+
+		$html = $this->box( $feed );
+
+		$this->assertStringContainsString( '/wp-json/kkce/v1/news', rest_url( 'kkce/v1/news' ) );
+		$this->assertStringContainsString( '<code>' . esc_html( rest_url( 'kkce/v1/news' ) ) . '</code>', $html );
+		$this->assertStringContainsString( 'data-template="' . esc_attr( rest_url( 'kkce/v1/__kkce_slug__' ) ) . '"', $html );
+		$this->assertMatchesRegularExpression( '/<output[^>]*id="kkce-feed-url"[^>]*for="kkce-feed-slug"/', $html );
+		$this->assertMatchesRegularExpression( '/<input[^>]*id="kkce-feed-slug"[^>]*aria-describedby="[^"]*kkce-feed-url-help/', $html );
+	}
+
+	/**
+	 * With plain permalinks the address uses the `rest_route` query argument.
+	 */
+	public function test_the_address_follows_plain_permalinks() {
+		$this->set_permalink_structure( '' );
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields() );
+
+		$html = $this->box( $feed );
+
+		$this->assertStringContainsString( 'rest_route=/kkce/v1/news', $html );
+		$this->assertStringContainsString( 'data-template="' . esc_attr( rest_url( 'kkce/v1/__kkce_slug__' ) ) . '"', $html );
+	}
+
+	/**
+	 * The script receives the slug rules of the validator: pattern, maximum length and reserved slugs.
+	 */
+	public function test_the_box_passes_the_slug_rules_to_the_script() {
+		$html = $this->box( $this->feed() );
+
+		$this->assertStringContainsString( 'data-pattern="' . esc_attr( \KKCE\Feed_Validator::SLUG_PATTERN ) . '"', $html );
+		$this->assertStringContainsString( 'data-max-length="64"', $html );
+		$this->assertStringContainsString( 'data-reserved="' . esc_attr( implode( ',', \KKCE\Feed_Validator::RESERVED_SLUGS ) ) . '"', $html );
+	}
+
+	/**
+	 * A feed without slug shows no address, only the message that asks for one.
+	 */
+	public function test_a_feed_without_slug_shows_no_address() {
+		$html = $this->box( $this->feed() );
+
+		$this->assertStringNotContainsString( 'kkce/v1/', preg_replace( '/data-template="[^"]*"/', '', $html ) );
+		$this->assertMatchesRegularExpression( '/<span data-kkce-message="empty">/', $html );
+		$this->assertMatchesRegularExpression( '/<span data-kkce-message="format" hidden>/', $html );
+	}
+
+	/**
+	 * A saved slug that cannot be used (generated by WordPress from the title) shows its error, not an address.
+	 */
+	public function test_a_reserved_saved_slug_shows_its_error() {
+		$feed = $this->feed( 'Settings' );
+		$this->submit( $feed, $this->fields( array( 'slug' => 'feeds' ) ) );
+		$this->assertSame( 'settings', get_post_field( 'post_name', $feed ) );
+
+		$html = $this->box( $feed );
+
+		$this->assertMatchesRegularExpression( '/<span data-kkce-message="reserved">/', $html );
+		$this->assertStringNotContainsString( '<code>', $html );
+	}
+
+	/**
+	 * The script of the editor is loaded on the screens that edit or create a feed, in the footer, with
+	 * the version of the plugin.
+	 *
+	 * @dataProvider feed_screen_provider
+	 *
+	 * @param string $hook_suffix Admin page.
+	 */
+	public function test_the_script_is_loaded_on_the_feed_screens( string $hook_suffix ) {
+		set_current_screen( 'kkce_feed' );
+
+		Feed_Editor::enqueue_assets( $hook_suffix );
+
+		$script = wp_scripts()->registered['kkce-feed-editor'] ?? null;
+		$this->assertTrue( wp_script_is( 'kkce-feed-editor', 'enqueued' ) );
+		$this->assertNotNull( $script );
+		$this->assertSame( plugins_url( 'assets/js/feed-editor.js', KKCE_PLUGIN_FILE ), $script->src );
+		$this->assertSame( KKCE_VERSION, $script->ver );
+		$this->assertSame( 1, wp_scripts()->get_data( 'kkce-feed-editor', 'group' ), 'Loaded in the footer.' );
+		$this->assertFileExists( KKCE_PLUGIN_DIR . 'assets/js/feed-editor.js' );
+	}
+
+	/**
+	 * Data for test_the_script_is_loaded_on_the_feed_screens().
+	 *
+	 * @return array<string, array{0: string}>
+	 */
+	public function feed_screen_provider(): array {
+		return array(
+			'edit'   => array( 'post.php' ),
+			'create' => array( 'post-new.php' ),
+		);
+	}
+
+	/**
+	 * The script is not loaded elsewhere: the editor of other post types, the list of the feeds, the
+	 * settings page.
+	 *
+	 * @dataProvider other_screen_provider
+	 *
+	 * @param string $screen      Screen ID.
+	 * @param string $hook_suffix Admin page.
+	 */
+	public function test_the_script_is_not_loaded_elsewhere( string $screen, string $hook_suffix ) {
+		set_current_screen( $screen );
+
+		Feed_Editor::enqueue_assets( $hook_suffix );
+
+		$this->assertFalse( wp_script_is( 'kkce-feed-editor', 'enqueued' ) );
+	}
+
+	/**
+	 * Data for test_the_script_is_not_loaded_elsewhere().
+	 *
+	 * @return array<string, array{0: string, 1: string}>
+	 */
+	public function other_screen_provider(): array {
+		return array(
+			'post editor'   => array( 'post', 'post.php' ),
+			'page creation' => array( 'page', 'post-new.php' ),
+			'feed list'     => array( 'edit-kkce_feed', 'edit.php' ),
+			'settings'      => array( 'kkce_feed_page_kkce-settings', 'kkce_feed_page_kkce-settings' ),
+		);
+	}
+
+	/**
+	 * A saved source post type that is no longer selectable (its plugin deactivated, or no longer public)
+	 * stays checked and marked as not available, and is kept when the feed is saved again: it is removed
+	 * only when the administrator unchecks it.
+	 */
+	public function test_a_saved_post_type_that_is_no_longer_selectable_is_kept() {
+		register_post_type( 'kkce_gone', array( 'public' => true, 'label' => 'Gone' ) );
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields( array( 'post_types' => array( 'post', 'kkce_gone' ) ) ) );
+		unregister_post_type( 'kkce_gone' );
+
+		$html = $this->box( $feed );
+		$this->assertMatchesRegularExpression( '/name="kkce_feed\[post_types\]\[\]" value="kkce_gone"[^>]*checked/', $html );
+		$this->assertStringContainsString( 'not available', $html );
+
+		$this->submit( $feed, $this->fields( array( 'post_types' => array( 'post', 'kkce_gone' ), 'per_page' => '7' ) ) );
+		$this->assertSame( array( 'post', 'kkce_gone' ), Feed_Meta::post_types( $feed ), 'Kept while it is checked.' );
+		$this->assertSame( 7, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ) );
+
+		$this->submit( $feed, $this->fields( array( 'post_types' => array( 'post' ) ) ) );
+		$this->assertSame( array( 'post' ), Feed_Meta::post_types( $feed ), 'Removed when unchecked.' );
+	}
+
+	/**
+	 * A post type that is not selectable and was not saved for the feed is still refused.
+	 */
+	public function test_an_unavailable_post_type_that_was_not_saved_is_refused() {
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields( array( 'post_types' => array( 'post' ) ) ) );
+
+		$this->submit( $feed, $this->fields( array( 'post_types' => array( 'post', 'kkce_never' ) ) ) );
+
+		$this->assertSame( array( 'post' ), Feed_Meta::post_types( $feed ) );
+		$this->assertSame( 'not_allowed', get_transient( 'kkce_feed_errors_' . $this->admin . '_' . $feed )['post_types'] );
+	}
+
+	/**
+	 * Saving cleans the rows of the post types: empty rows of the first version and duplicates are
+	 * rewritten even when the clean list does not change.
+	 */
+	public function test_saving_cleans_leftover_post_type_rows() {
+		$feed = $this->feed();
+		add_post_meta( $feed, '_kkce_post_type', '' );
+		add_post_meta( $feed, '_kkce_post_type', 'page' );
+		add_post_meta( $feed, '_kkce_post_type', 'page' );
+
+		$this->submit( $feed, $this->fields( array( 'post_types' => array( 'page' ) ) ) );
+
+		$this->assertSame( array( 'page' ), get_post_meta( $feed, '_kkce_post_type', false ) );
+	}
+
+	/**
+	 * The script gets a template of the address, with a placeholder for the slug, so an address with a
+	 * query string (added by a language plugin, for example) is built as the server builds it.
+	 */
+	public function test_the_address_template_keeps_a_query_string() {
+		$this->set_permalink_structure( '/%postname%/' );
+		$add_lang = static fn( $url ) => add_query_arg( 'lang', 'it', $url );
+		add_filter( 'rest_url', $add_lang );
+
+		$html = $this->box( $this->feed() );
+
+		$this->assertStringContainsString( 'data-placeholder="__kkce_slug__"', $html );
+		$this->assertStringContainsString( 'data-template="' . esc_attr( rest_url( 'kkce/v1/__kkce_slug__' ) ) . '"', $html );
+		$this->assertSame( \KKCE\Plugin::feed_url( 'news' ), str_replace( '__kkce_slug__', 'news', rest_url( 'kkce/v1/__kkce_slug__' ) ) );
+		$this->assertStringEndsWith( '/kkce/v1/news?lang=it', \KKCE\Plugin::feed_url( 'news' ) );
+
+		remove_filter( 'rest_url', $add_lang );
 	}
 }

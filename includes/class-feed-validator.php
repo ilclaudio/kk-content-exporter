@@ -78,6 +78,14 @@ final class Feed_Validator {
 	public const SLUG_MAX_LENGTH = 64;
 
 	/**
+	 * Format of a slug: lowercase letters and digits, single dashes between them.
+	 *
+	 * Written without delimiters and anchors, in a syntax that PHP (PCRE) and JavaScript read the same
+	 * way, so that the editor script checks the same rule while the slug is typed.
+	 */
+	public const SLUG_PATTERN = '[a-z0-9]+(?:-[a-z0-9]+)*';
+
+	/**
 	 * Slugs that a feed cannot use.
 	 *
 	 * The first group keeps room for fixed routes under `kkce/v1` that the plugin may add later without
@@ -118,7 +126,7 @@ final class Feed_Validator {
 			return self::ERROR_EMPTY;
 		}
 
-		if ( ! is_string( $slug ) || 1 !== preg_match( '/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/', $slug ) ) {
+		if ( ! is_string( $slug ) || 1 !== preg_match( '/\A(?:' . self::SLUG_PATTERN . ')\z/', $slug ) ) {
 			return self::ERROR_FORMAT;
 		}
 
@@ -173,7 +181,7 @@ final class Feed_Validator {
 	 * @return string `self::VALID` or an error code.
 	 */
 	public static function validate_access( $value ): string {
-		if ( Feed_Post_Type::ACCESS_PUBLIC === $value || Feed_Post_Type::ACCESS_AUTHENTICATED === $value ) {
+		if ( Feed_Meta::ACCESS_PUBLIC === $value || Feed_Meta::ACCESS_AUTHENTICATED === $value ) {
 			return self::VALID;
 		}
 
@@ -181,22 +189,30 @@ final class Feed_Validator {
 	}
 
 	/**
-	 * Validates the source post type against the list of selectable post types.
+	 * Validates the source post types against the list of selectable post types.
 	 *
-	 * The list (public post types, `attachment` excluded) is built by the caller, because reading it
-	 * needs WordPress.
+	 * The list is refused as a whole when it is not an array or when one of its values is not a
+	 * selectable post type (compared strictly, never normalized); duplicates are not an error, the
+	 * caller removes them. The selectable list (public post types, `attachment` excluded) is built by
+	 * the caller, because reading it needs WordPress.
 	 *
-	 * @param mixed        $value   Post type entered by the administrator.
+	 * @param mixed        $values  Post types entered by the administrator.
 	 * @param array<mixed> $allowed Post types that can be selected.
 	 * @return string `self::VALID` or an error code.
 	 */
-	public static function validate_post_type( $value, array $allowed ): string {
-		if ( '' === $value ) {
+	public static function validate_post_types( $values, array $allowed ): string {
+		if ( ! is_array( $values ) ) {
+			return self::ERROR_NOT_ALLOWED;
+		}
+
+		if ( array() === $values ) {
 			return self::ERROR_EMPTY;
 		}
 
-		if ( ! is_string( $value ) || ! in_array( $value, $allowed, true ) ) {
-			return self::ERROR_NOT_ALLOWED;
+		foreach ( $values as $value ) {
+			if ( ! is_string( $value ) || ! in_array( $value, $allowed, true ) ) {
+				return self::ERROR_NOT_ALLOWED;
+			}
 		}
 
 		return self::VALID;

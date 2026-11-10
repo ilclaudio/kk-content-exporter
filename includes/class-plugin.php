@@ -28,6 +28,30 @@ final class Plugin {
 	public const READ_EXPORT_CAPABILITY = 'kkce_read_export';
 
 	/**
+	 * REST namespace of the feeds: a feed answers at `<rest url>/kkce/v1/<slug>`.
+	 */
+	public const REST_NAMESPACE = 'kkce/v1';
+
+	/**
+	 * Address of the endpoint of a feed, computed by WordPress.
+	 *
+	 * The only place that builds the address of a feed: the editor, the list of the feeds and the
+	 * endpoints use it. `rest_url()` follows the permalink settings (`/wp-json/...` or
+	 * `/index.php?rest_route=...`), the REST prefix and the filters of other plugins.
+	 *
+	 * @param string $slug Slug of the feed.
+	 * @return string The address, or an empty string when the slug cannot serve a feed (empty, malformed,
+	 *                too long or reserved). Whether another feed uses it is not checked here.
+	 */
+	public static function feed_url( string $slug ): string {
+		if ( Feed_Validator::VALID !== Feed_Validator::validate_slug( $slug, array() ) ) {
+			return '';
+		}
+
+		return rest_url( self::REST_NAMESPACE . '/' . $slug );
+	}
+
+	/**
 	 * Whether the hooks have already been registered.
 	 *
 	 * @var bool
@@ -47,7 +71,7 @@ final class Plugin {
 
 		add_action( 'init', array( self::class, 'load_textdomain' ) );
 		add_action( 'init', array( Feed_Post_Type::class, 'register' ) );
-		add_action( 'init', array( Feed_Post_Type::class, 'register_meta' ) );
+		add_action( 'init', array( Feed_Meta::class, 'register' ) );
 		add_action( 'untrashed_post', array( Feed_Post_Type::class, 'disable_restored_feed' ) );
 		add_action( 'admin_menu', array( Admin\Settings_Page::class, 'add_menu' ) );
 		add_action( 'admin_init', array( Admin\Settings_Page::class, 'register_settings' ) );
@@ -58,6 +82,7 @@ final class Plugin {
 		add_filter( 'wp_insert_post_data', array( Admin\Feed_Editor::class, 'filter_post_data' ), 10, 2 );
 		add_action( 'save_post_' . Feed_Post_Type::POST_TYPE, array( Admin\Feed_Editor::class, 'save' ) );
 		add_action( 'admin_notices', array( Admin\Feed_Editor::class, 'render_notices' ) );
+		add_action( 'admin_enqueue_scripts', array( Admin\Feed_Editor::class, 'enqueue_assets' ) );
 		add_filter( 'plugin_row_meta', array( self::class, 'filter_plugin_row_meta' ), 10, 2 );
 	}
 

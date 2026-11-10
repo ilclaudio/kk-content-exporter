@@ -5,6 +5,7 @@
  * @package KKCE
  */
 
+use KKCE\Feed_Meta;
 use KKCE\Feed_Post_Type;
 use KKCE\Plugin;
 use KKCE\Settings;
@@ -43,7 +44,7 @@ class KKCE_Uninstaller_Integration_Test extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		Feed_Post_Type::register_meta();
+		Feed_Meta::register();
 		Plugin::activate();
 
 		$this->feeds = array();
@@ -51,6 +52,8 @@ class KKCE_Uninstaller_Integration_Test extends WP_UnitTestCase {
 			$id = self::factory()->post->create( array( 'post_type' => 'kkce_feed', 'post_status' => $status ) );
 			update_post_meta( $id, '_kkce_access', 'authenticated' );
 			update_post_meta( $id, '_kkce_per_page', 20 );
+			add_post_meta( $id, '_kkce_post_type', 'post' );
+			add_post_meta( $id, '_kkce_post_type', 'page' );
 			$this->feeds[] = $id;
 		}
 		$trashed = self::factory()->post->create( array( 'post_type' => 'kkce_feed', 'post_status' => 'publish' ) );
@@ -169,6 +172,7 @@ class KKCE_Uninstaller_Integration_Test extends WP_UnitTestCase {
 	public function test_everything_is_removed_when_the_setting_is_on() {
 		update_option( Settings::OPTION, array( 'enabled' => '1', 'remove_data' => '1' ) );
 		$this->assertTrue( $this->something_is_left(), 'The test starts with data on the site.' );
+		$this->assertCount( 2, get_post_meta( $this->feeds[0], '_kkce_post_type', false ), 'A feed starts with two post type rows.' );
 
 		Uninstaller::run();
 

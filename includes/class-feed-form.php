@@ -13,21 +13,25 @@ defined( 'ABSPATH' ) || exit;
  * Decides, for every field of the feed editor, which value is saved and which error is reported.
  *
  * Pure logic: it calls no WordPress function. The editor reads the request, builds the context
- * (suggested slug, allowed post types, current values, a callback that tells whether a slug is used
- * by another feed) and saves the result.
+ * (allowed post types, current values, a callback that tells whether a slug is used by another feed)
+ * and saves the result.
  *
  * Rules:
  * - a field with an invalid value keeps its current value and reports an error; the other fields are
  *   still saved;
+ * - the slug and at least one source post type are required: an empty slug is an error, never taken
+ *   from the title, because the slug is the public address of the feed and must be chosen explicitly;
  * - the access is never guessed: an unknown value keeps the current access;
- * - a feed can be active only if it has a usable slug and a source post type, otherwise it is saved
- *   disabled. When the submitted slug is refused, the stored slug is kept (never renamed) but it is
- *   checked with the same rules: a stored slug that is malformed, reserved or used by another feed
- *   cannot serve an active feed.
+ * - the source post types are a list: duplicates are saved once; a list with one post type that is
+ *   not selectable is refused as a whole and the current list is kept;
+ * - a feed can be active only if it has a usable slug and at least one source post type, otherwise it
+ *   is saved disabled. When the submitted slug is refused, the stored slug is kept (never renamed) but
+ *   it is checked with the same rules: a stored slug that is malformed, reserved or used by another
+ *   feed cannot serve an active feed.
  *
- * @phpstan-type FormInput array{slug: string, post_type: string, access: string, active: bool, per_page: string}
- * @phpstan-type FormValues array{slug: string, post_type: string, access: string, active: bool, per_page: int}
- * @phpstan-type FormContext array{suggested_slug: string, slug_is_taken: callable(string): bool, allowed_post_types: list<string>, max_per_page: int, current: FormValues}
+ * @phpstan-type FormInput array{slug: string, post_types: mixed, access: string, active: bool, per_page: string}
+ * @phpstan-type FormValues array{slug: string, post_types: list<string>, access: string, active: bool, per_page: int}
+ * @phpstan-type FormContext array{slug_is_taken: callable(string): bool, allowed_post_types: list<string>, max_per_page: int, current: FormValues}
  */
 final class Feed_Form {
 
@@ -40,9 +44,9 @@ final class Feed_Form {
 	 * Processes the submitted values.
 	 *
 	 * @param array<string, mixed> $input   Submitted values.
-	 * @param array<string, mixed> $context Suggested slug, a callback that tells whether a slug is used by
-	 *                                      another feed, the selectable post types, the global maximum of
-	 *                                      items per page and the current values.
+	 * @param array<string, mixed> $context A callback that tells whether a slug is used by another feed,
+	 *                                      the selectable post types, the global maximum of items per
+	 *                                      page and the current values.
 	 * @return array<string, mixed> Values to save (`values`), and the error code of every refused field (`errors`).
 	 *
 	 * @phpstan-param FormInput   $input
@@ -55,9 +59,6 @@ final class Feed_Form {
 		$errors  = array();
 
 		$slug = trim( $input['slug'] );
-		if ( '' === $slug ) {
-			$slug = $context['suggested_slug'];
-		}
 		$code = Feed_Validator::validate_slug( $slug, array() );
 		if ( Feed_Validator::VALID === $code && $context['slug_is_taken']( $slug ) ) {
 			$code = Feed_Validator::ERROR_TAKEN;
@@ -70,15 +71,11 @@ final class Feed_Form {
 			$slug_usable    = self::is_usable_slug( $current['slug'], $context['slug_is_taken'] );
 		}
 
-		if ( '' === $input['post_type'] ) {
-			$values['post_type'] = '';
+		$code = Feed_Validator::validate_post_types( $input['post_types'], $context['allowed_post_types'] );
+		if ( Feed_Validator::VALID === $code && is_array( $input['post_types'] ) ) {
+			$values['post_types'] = array_values( array_unique( $input['post_types'] ) );
 		} else {
-			$code = Feed_Validator::validate_post_type( $input['post_type'], $context['allowed_post_types'] );
-			if ( Feed_Validator::VALID === $code ) {
-				$values['post_type'] = $input['post_type'];
-			} else {
-				$errors['post_type'] = $code;
-			}
+			$errors['post_types'] = $code;
 		}
 
 		$code = Feed_Validator::validate_access( $input['access'] );
@@ -90,14 +87,14 @@ final class Feed_Form {
 
 		$code = Feed_Validator::validate_per_page( $input['per_page'], $context['max_per_page'] );
 		if ( Feed_Validator::VALID === $code ) {
-			$values['per_page'] = Feed_Post_Type::sanitize_per_page( $input['per_page'] );
+			$values['per_page'] = Feed_Meta::sanitize_per_page( $input['per_page'] );
 		} else {
 			$errors['per_page'] = $code;
 		}
 
 		$values['active'] = false;
 		if ( $input['active'] ) {
-			if ( $slug_usable && '' !== $values['post_type'] ) {
+			if ( $slug_usable && array() !== $values['post_types'] ) {
 				$values['active'] = true;
 			} else {
 				$errors['active'] = self::ERROR_INCOMPLETE;

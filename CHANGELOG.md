@@ -34,9 +34,25 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
   site without Application Passwords. Italian translation of the new strings.
 - Uninstall: when the setting is on, deleting the plugin removes the feeds with their settings, the plugin
   settings and the capability `kkce_read_export`; otherwise nothing is removed.
+- A feed reads one or more post types: the editor shows one checkbox per public post type, and the list of
+  the feeds shows all of them. A list with a post type that is not available is refused as a whole and the
+  previous one is kept; a feed can be enabled only with at least one post type. Feeds saved with a single
+  post type keep working. A saved post type that is no longer available (for example its plugin was
+  deactivated) stays checked, marked as not available, and is kept until it is unchecked. Italian
+  translation of the new strings.
+- The editor of a feed shows the full address of the feed under the slug field and updates it while the slug
+  is typed (it follows the permalink settings of the site); a slug that cannot be used is reported at once.
+  The editor warns before leaving the page with unsaved changes in the feed settings.
+- Format of the mapping of a feed (versioned JSON: output key, rule kind `field` or `fixed`, expected type,
+  missing-value policy) with its validation and the hidden meta `_kkce_mapping`. A mapping that is not valid
+  is never stored. Not used by the editor or by any endpoint yet.
 
 ### Changed
 
+- The list of the feeds shows the relative address of the endpoint (for example `/wp-json/kkce/v1/news`, the
+  absolute one in the tooltip) instead of the slug, and no address for a feed without a usable slug.
+- The slug and at least one source post type of a feed are required: an empty slug is no longer taken from
+  the title, it is reported and the feed stays disabled.
 - The class autoloader accepts only plain identifiers in every part of a class name.
 - Development tooling: PHPStan now runs at level 8 (was 6).
 - Development tooling: the secret scan of the pre-commit hook recognizes more credential formats and is

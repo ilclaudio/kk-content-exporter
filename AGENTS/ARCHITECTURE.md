@@ -18,15 +18,19 @@ feed list, the feed editor, the settings page and the uninstall cleanup: the oth
 | `uninstall.php` | Uninstall routine (guarded by `WP_UNINSTALL_PLUGIN`): loads the autoloader and calls `KKCE\Uninstaller::run()` |
 | `includes/` | First-party classes of the `KKCE` namespace (`class-*.php`) |
 | `includes/class-autoloader.php` | `KKCE\Autoloader`: maps `KKCE\<Sub>\<Class_Name>` to `includes/<sub>/class-<class-name>.php` |
-| `includes/class-plugin.php` | `KKCE\Plugin`: registers the hooks, loads the text domain |
-| `includes/class-feed-post-type.php` | `KKCE\Feed_Post_Type`: registers the private post type `kkce_feed` (administrators only, no REST), the keys and the sanitizers of its configuration meta (`_kkce_post_type`, `_kkce_access`, `_kkce_active`, `_kkce_per_page`) |
-| `includes/admin/class-feed-list.php` | `KKCE\Admin\Feed_List`: columns of the `kkce_feed` list (slug, source, access, status), read through the sanitizers and escaped |
+| `includes/class-plugin.php` | `KKCE\Plugin`: registers the hooks, loads the text domain; `Plugin::REST_NAMESPACE` (`kkce/v1`) and `Plugin::feed_url()`, the only place that builds the address of a feed (empty for a slug that cannot serve a feed) |
+| `includes/class-feed-post-type.php` | `KKCE\Feed_Post_Type`: registers the private post type `kkce_feed` (administrators only, no REST), its capabilities (all mapped to `manage_options`) and disables a feed restored from the trash |
+| `includes/class-feed-meta.php` | `KKCE\Feed_Meta`: keys, registration (`register()`, on `init`) and sanitizers of the configuration meta of a feed (`_kkce_post_type`, multiple, one row per source post type; `_kkce_mapping`, JSON text; `_kkce_access`, `_kkce_active`, `_kkce_per_page`), the readers `post_types()` and `mapping()` and `save_mapping()` (goes through `wp_slash()`) |
+| `includes/output/class-mapping.php` | `KKCE\Output\Mapping`: pure. Format of the mapping (version 1): vocabulary (kinds, output types, missing-value policies, source groups), limits, `decode()` of the JSON text, `suggest_key()` |
+| `includes/output/class-mapping-validator.php` | `KKCE\Output\Mapping_Validator`: pure. `validate()` lists every error of a decoded mapping (`row`, `field`, `code`), `normalize()` gives the canonical form. Does not check that a source exists (the catalog does, at save time) |
+| `includes/admin/class-feed-list.php` | `KKCE\Admin\Feed_List`: columns of the `kkce_feed` list (relative endpoint address computed by `rest_url()`, source, access, status), read through the sanitizers and escaped |
 | `includes/class-settings.php` | `KKCE\Settings`: option `kkce_settings` (defaults, safe reading, processing of the form: pure; `get()` and `sanitize_option()` are the only WordPress calls) |
 | `includes/class-uninstaller.php` | `KKCE\Uninstaller`: deletes feeds (every status, with meta), the option and the capability when the setting asks for it |
 | `includes/admin/class-settings-page.php` | `KKCE\Admin\Settings_Page`: submenu page built with the Settings API, and the diagnostics |
-| `includes/admin/class-feed-editor.php` | `KKCE\Admin\Feed_Editor`: the "Feed settings" meta box of the `kkce_feed` editor and its saving (nonce per feed, `edit_post` capability, slug set through `wp_insert_post_data`, meta written on `save_post_kkce_feed`, errors shown once in a notice) |
+| `includes/admin/class-feed-editor.php` | `KKCE\Admin\Feed_Editor`: the "Feed settings" meta box of the `kkce_feed` editor and its saving (nonce per feed, `edit_post` capability, slug set through `wp_insert_post_data`, meta written on `save_post_kkce_feed`, errors shown once in a notice), the live address of the feed under the slug field, and the loading of `assets/js/feed-editor.js` |
+| `assets/js/feed-editor.js` | Vanilla JavaScript of the feed editor, loaded only on the edit and create screens of `kkce_feed` (handle `kkce-feed-editor`, footer, version `KKCE_VERSION`): updates the address of the feed while the slug is typed (slug rules and messages printed by the server in the box, nothing duplicated) and asks for confirmation before leaving with unsaved changes in the box. Progressive enhancement: the box works without it. Shipped in the release ZIP and required by `kkce_release_missing_files()` |
 | `includes/class-feed-form.php` | `KKCE\Feed_Form`: pure processing of the submitted editor values (which value is saved, which error is reported) |
-| `includes/class-feed-validator.php` | `KKCE\Feed_Validator`: pure validation (no WordPress call) of the slug, the items per page and the source post type; returns error codes, the editor writes the messages |
+| `includes/class-feed-validator.php` | `KKCE\Feed_Validator`: pure validation (no WordPress call) of the slug, the items per page, the access and the list of source post types; returns error codes, the editor writes the messages |
 | `languages/` | `kk-content-exporter.pot`, `kk-content-exporter-it_IT.po` / `.mo` |
 | `readme.txt` | WordPress.org readme (Stable tag, requirements, changelog) |
 | `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md` | Repository documentation |
@@ -42,10 +46,11 @@ feed list, the feed editor, the settings page and the uninstall cleanup: the oth
 | `AGENTS/`, `AGENTS.md`, `CLAUDE.md` | AI collaboration context |
 | `DEV/` | Symlink to private working material; ignored by Git, never shipped |
 
-`includes/admin/` holds the classes of the administration screens (the feed list now, the editor and the settings
-page next). Planned folders (created when their first class arrives):
+`includes/admin/` holds the classes of the administration screens (the feed list, the editor and the settings page).
+`includes/output/` holds the pure logic of the output (the mapping format and its validation now; the rule
+evaluator, the normalizer and the serialization later). Planned folders (created when their first class arrives):
 `includes/rest/` (endpoints), `includes/sources/` (field providers: core, meta, ACF, CMB2, taxonomies,
-image, language), `includes/output/` (normalization and serialization).
+image, language).
 
 
 ## Plugin Lifecycle
@@ -56,9 +61,17 @@ image, language), `includes/output/` (normalization and serialization).
 2. **Boot** (`plugins_loaded`): `Plugin::boot()` only registers hooks and is idempotent. No
    translatable string is evaluated before `init` (WordPress 6.7+ reports translations loaded too early).
 3. **Init** (`init`): `Plugin::load_textdomain()` loads the bundled translations. The post type `kkce_feed` is registered by
-   `Feed_Post_Type::register()` and its configuration meta by `Feed_Post_Type::register_meta()` (both on `init`).
+   `Feed_Post_Type::register()` and its configuration meta by `Feed_Meta::register()` (both on `init`).
    WordPress returns stored meta as strings (`'1'` or `''` for the flag, `'20'` for the number): readers convert
-   them with `sanitize_active()` and `sanitize_per_page()`. `sanitize_access()` fails closed: only the exact value
+   them with `sanitize_active()` and `sanitize_per_page()`. The source post types are a multiple meta
+   (`single => false`, no default, no serialization, so feeds can be found by post type with a `meta_query`):
+   read them with `Feed_Meta::post_types()`, which gives a clean list without empty values or duplicates
+   (a feed saved with one row gives a list of one); the editor deletes and rewrites the rows when the list changes.
+   The mapping is the meta `_kkce_mapping`, a JSON text with a version (format in `Output\Mapping`). The sanitizer
+   checks it with `Output\Mapping_Validator` and stores the canonical form, or an empty string when it is not valid
+   (a sanitizer cannot refuse a value; the editor reports the errors before saving); `Feed_Meta::mapping()` checks it again
+   on every read, so a damaged stored value gives an empty mapping. WordPress removes the backslashes of a meta value:
+   write it with `Feed_Meta::save_mapping()`, which goes through `wp_slash()`. The text is ASCII only (`wp_json_encode()`). `sanitize_access()` fails closed: only the exact value
    `public` opens a feed, any other stored value gives `authenticated` (a feed without the meta gets the registered
    default `public`). REST routes (on `rest_api_init`) will be registered from here.
 4. **Activation** (`Plugin::activate()`): grants the capability `kkce_read_export` (`Plugin::READ_EXPORT_CAPABILITY`)
@@ -99,17 +112,19 @@ No public endpoint, shortcode, cron job or WP-CLI command yet, and the plugin of
 Admin hooks used (all in `Plugin::boot()`): `manage_kkce_feed_posts_columns`, `manage_kkce_feed_posts_custom_column`,
 `post_row_actions` (removes Quick Edit from the feeds, because it could change a slug without validation),
 `add_meta_boxes_kkce_feed`, `wp_insert_post_data`, `save_post_kkce_feed`, `admin_notices`, `untrashed_post`,
-`admin_menu` and `admin_init` (the settings page)
+`admin_enqueue_scripts` (`Feed_Editor::enqueue_assets()`), `admin_menu` and `admin_init` (the settings page)
 (`Feed_Post_Type::disable_restored_feed()`: a feed restored from the trash starts disabled).
 `wp_insert_post_data` runs for every post type and returns at once for anything but `kkce_feed`.
 
 Rules of the editor: a field with an invalid value keeps its previous value and is reported in a notice, the
-other fields are saved; a feed can be enabled only with a source post type and a usable slug (when the submitted
+other fields are saved; the slug and at least one source post type are required (an empty slug is an error, never taken from the title: it is the public address of the feed; the box marks both as required with visible text and `aria-required`, never the HTML `required`, which would block saving a draft); a feed can be enabled only with them and a usable slug (when the submitted
 slug is refused, the stored one is kept but checked with the same rules, because WordPress can assign a slug
 outside the editor: on restore from the trash, or from the title of a published post without one); a slug that is invalid,
 reserved or used by another feed is refused, never renamed silently (WordPress alone would add "-2", so the
-slugs it renames itself, `feed`, `rss`, `rss2`, `rdf`, `atom` and `embed`, are reserved too); the source
-post type must be a public post type, `attachment` excluded; the items per page of a feed cannot exceed the
+slugs it renames itself, `feed`, `rss`, `rss2`, `rdf`, `atom` and `embed`, are reserved too); every source
+post type must be a public post type, `attachment` excluded (a list with one that is not is refused as a whole and
+the previous list is kept; duplicates are saved once), or one already saved for the feed: a saved post type that is no
+longer selectable (its plugin deactivated) stays checked with the note "not available" and is kept until it is unchecked; the items per page of a feed cannot exceed the
 global maximum of the settings (a feed that already exceeds a lowered maximum keeps its value, and the editor
 reports it at every save until it is lowered).
 
