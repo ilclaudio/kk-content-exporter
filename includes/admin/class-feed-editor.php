@@ -212,6 +212,7 @@ final class Feed_Editor {
 
 		wp_nonce_field( self::NONCE_ACTION . $post->ID, self::NONCE_FIELD );
 		?>
+		<p class="description kkce-box-intro"><?php esc_html_e( 'A feed is a read-only JSON address that an external program (for example an importer on another site) reads to copy your published content. Here you choose its address, the post types it exports, who can read it, how many items each page contains and whether it is enabled. What each item contains is chosen in the "Mapping" box below.', 'kk-content-exporter' ); ?></p>
 		<table class="form-table" role="presentation">
 			<tbody>
 				<tr>

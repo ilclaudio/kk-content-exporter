@@ -74,6 +74,8 @@ final class Mapping_Box {
 			'mapping'        => Feed_Meta::mapping( $post->ID ),
 			'catalog'        => Admin_Routes::describe_catalog( Feed_Meta::post_types( $post->ID ) ),
 			'catalogPath'    => '/' . Admin_Routes::NAMESPACE . '/catalog',
+			'previewPath'    => '/' . Admin_Routes::NAMESPACE . '/preview',
+			'itemsPath'      => '/' . Admin_Routes::NAMESPACE . '/items',
 			'field'          => Feed_Editor::FIELD . '[mapping]',
 			'maxRows'        => Mapping::MAX_ROWS,
 			'keyMaxLength'   => Mapping::KEY_MAX_LENGTH,
@@ -82,9 +84,19 @@ final class Mapping_Box {
 			'valueMaxLength' => Mapping_Validator::VALUE_MAX_LENGTH,
 		);
 		?>
+		<p class="description kkce-box-intro"><?php esc_html_e( 'The mapping decides what each item of the feed contains: every row adds one key to the JSON of every item, with the value it reads from the content or a fixed value. Every item has all the keys, in the order of the rows; a key without a value is written with null, so the program that reads the feed always finds the same keys.', 'kk-content-exporter' ); ?></p>
 		<?php // Removed when the feed editor saves the mapping (step 11 of the plan). ?>
 		<div class="notice notice-warning inline kkce-mapping-unsaved"><p><?php esc_html_e( 'The mapping is not saved yet: in this development version the rows built here are lost when the feed is updated or the page is left.', 'kk-content-exporter' ); ?></p></div>
-		<p class="description"><?php esc_html_e( 'Each row writes one key in every exported item: choose the key, the field it reads and how the value is written. A key without a value is written with null, so every item has the same keys.', 'kk-content-exporter' ); ?></p>
+		<details class="kkce-mapping-help">
+			<summary><?php esc_html_e( 'How the rows work', 'kk-content-exporter' ); ?></summary>
+			<ul>
+				<li><?php esc_html_e( 'JSON key: the name of the key in every item, for example "title". It is proposed from the field you choose, and you can change it.', 'kk-content-exporter' ); ?></li>
+				<li><?php esc_html_e( 'Rule "Field": the value is read from a field of the content. With "Add fallback" another field is used when the first one is empty; with "Different for" a post type can read other fields.', 'kk-content-exporter' ); ?></li>
+				<li><?php esc_html_e( 'Rule "Fixed value": every item gets the same text, for example the name of the site; with "Different for" a post type can get another one.', 'kk-content-exporter' ); ?></li>
+				<li><?php esc_html_e( 'Output type: how the value is written in the JSON (text, HTML, number, true or false, date and time, URL, list). "Automatic" uses the type of the field.', 'kk-content-exporter' ); ?></li>
+				<li><?php esc_html_e( 'Preview: as soon as there is a row, the JSON of a published item of each checked post type appears beside the rules and changes while you edit them.', 'kk-content-exporter' ); ?></li>
+			</ul>
+		</details>
 		<div id="kkce-feed-mapping" class="kkce-mapping" data-kkce-mapping="<?php echo esc_attr( (string) wp_json_encode( $data ) ); ?>"></div>
 		<noscript>
 			<p><?php esc_html_e( 'The mapping editor needs JavaScript. Without it, saving the feed keeps the saved mapping unchanged.', 'kk-content-exporter' ); ?></p>

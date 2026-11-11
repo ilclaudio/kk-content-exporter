@@ -116,6 +116,8 @@ class KKCE_Mapping_Box_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( array( 'gone' ), $data['catalog']['unavailable'] );
 		$this->assertSame( array( 'post' => 'Posts', 'page' => 'Pages' ), $data['catalog']['labels'] );
 		$this->assertSame( '/kkce-admin/v1/catalog', $data['catalogPath'] );
+		$this->assertSame( '/kkce-admin/v1/preview', $data['previewPath'] );
+		$this->assertSame( '/kkce-admin/v1/items', $data['itemsPath'] );
 		$this->assertSame( 'kkce_feed[mapping]', $data['field'] );
 		$this->assertSame( 100, $data['maxRows'] );
 		$this->assertSame( 64, $data['keyMaxLength'] );
@@ -267,4 +269,15 @@ class KKCE_Mapping_Box_Integration_Test extends WP_UnitTestCase {
 		$this->assertNotSame( array( 'Add row' ), $messages['Add row'] );
 	}
 
+
+	/**
+	 * The mapping box explains what the mapping is, and how the rows work in a section that can be opened.
+	 */
+	public function test_the_box_explains_the_mapping() {
+		$html = $this->box( $this->feed() );
+
+		$this->assertMatchesRegularExpression( '#<p class="description kkce-box-intro">[^<]+</p>#', $html );
+		$this->assertMatchesRegularExpression( '#<details class="kkce-mapping-help">\s*<summary>[^<]+</summary>\s*<ul>(\s*<li>.+?</li>){5}\s*</ul>\s*</details>#s', $html );
+		$this->assertLessThan( strpos( $html, 'id="kkce-feed-mapping"' ), strpos( $html, 'kkce-mapping-help' ), 'The explanation comes before the rows.' );
+	}
 }

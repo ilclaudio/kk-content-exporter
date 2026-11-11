@@ -102,6 +102,19 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * GET request to the list of the recent items.
+	 *
+	 * @param array<string, mixed> $params Query parameters.
+	 * @return WP_REST_Response
+	 */
+	private function items( array $params ): WP_REST_Response {
+		$request = new WP_REST_Request( 'GET', '/' . Admin_Routes::NAMESPACE . '/items' );
+		$request->set_query_params( $params );
+
+		return rest_do_request( $request );
+	}
+
+	/**
 	 * A mapping with the ID and the title of every item.
 	 *
 	 * @return string
@@ -121,6 +134,9 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 
 		$this->assertArrayHasKey( '/kkce-admin/v1/catalog', $routes );
 		$this->assertArrayHasKey( '/kkce-admin/v1/preview', $routes );
+		$this->assertArrayHasKey( '/kkce-admin/v1/items', $routes );
+		$this->assertSame( array( 'GET' => true ), $routes['/kkce-admin/v1/items'][0]['methods'] );
+		$this->assertFalse( $routes['/kkce-admin/v1/items'][0]['show_in_index'] );
 		$this->assertSame( array( 'GET' => true ), $routes['/kkce-admin/v1/catalog'][0]['methods'] );
 		$this->assertSame( array( 'POST' => true ), $routes['/kkce-admin/v1/preview'][0]['methods'] );
 		$this->assertFalse( $routes['/kkce-admin/v1/catalog'][0]['show_in_index'] );
@@ -368,5 +384,75 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 		$this->preview( array( 'mapping' => $this->id_and_title(), 'post_types' => array( 'post' ), 'post_id' => $post_id ) );
 
 		$this->assertSame( self::$admin, get_current_user_id() );
+	}
+
+	/**
+	 * The list of the recent items answers only to the users who can edit feeds.
+	 */
+	public function test_items_need_the_capability_of_the_feeds() {
+		wp_set_current_user( 0 );
+		$this->assertSame( 401, $this->items( array( 'post_type' => 'post' ) )->get_status() );
+
+		wp_set_current_user( self::$editor );
+		$this->assertSame( 403, $this->items( array( 'post_type' => 'post' ) )->get_status() );
+	}
+
+	/**
+	 * The recent items are the latest modified published items without a password of that post type, at
+	 * most 20, with their ID, stored title and modified date.
+	 */
+	public function test_items_are_the_latest_public_items_of_the_post_type() {
+		wp_set_current_user( self::$admin );
+		$ids = array();
+		for ( $i = 1; $i <= 22; $i++ ) {
+			$ids[ $i ] = self::factory()->post->create( array( 'post_status' => 'publish', 'post_title' => 'Item ' . $i ) );
+			$this->set_modified( $ids[ $i ], sprintf( '2026-01-%02d 10:00:00', $i ) );
+		}
+		$hidden = array(
+			self::factory()->post->create( array( 'post_status' => 'draft' ) ),
+			self::factory()->post->create( array( 'post_status' => 'private' ) ),
+			self::factory()->post->create( array( 'post_status' => 'publish', 'post_password' => 'secret' ) ),
+			self::factory()->post->create( array( 'post_status' => 'publish', 'post_type' => 'page' ) ),
+		);
+		foreach ( $hidden as $post_id ) {
+			$this->set_modified( $post_id, '2026-02-01 10:00:00' );
+		}
+
+		$response = $this->items( array( 'post_type' => 'post' ) );
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertCount( 20, $data['items'] );
+		$this->assertSame( $ids[22], $data['items'][0]['id'] );
+		$this->assertSame( $ids[3], $data['items'][19]['id'] );
+		$this->assertSame( array( 'id' => $ids[22], 'title' => 'Item 22', 'modified' => '2026-01-22T10:00:00Z' ), $data['items'][0] );
+		$this->assertSame( array(), array_intersect( $hidden, array_column( $data['items'], 'id' ) ) );
+	}
+
+	/**
+	 * A missing, malformed or not selectable post type is refused with 400.
+	 */
+	public function test_items_refuse_a_post_type_that_cannot_be_exported() {
+		wp_set_current_user( self::$admin );
+
+		$this->assertSame( 400, $this->items( array() )->get_status() );
+		$this->assertSame( 400, $this->items( array( 'post_type' => 'Bad Type' ) )->get_status() );
+		foreach ( array( 'attachment', 'kkce_feed', 'nope' ) as $post_type ) {
+			$response = $this->items( array( 'post_type' => $post_type ) );
+			$this->assertSame( 400, $response->get_status(), $post_type );
+			$this->assertSame( 'kkce_no_post_types', $response->get_data()['code'], $post_type );
+		}
+	}
+
+	/**
+	 * A post type without published items gives an empty list.
+	 */
+	public function test_items_of_an_empty_post_type_are_an_empty_list() {
+		wp_set_current_user( self::$admin );
+
+		$response = $this->items( array( 'post_type' => 'page' ) );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array(), $response->get_data()['items'] );
 	}
 }

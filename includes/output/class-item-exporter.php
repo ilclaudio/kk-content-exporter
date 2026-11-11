@@ -57,6 +57,8 @@ final class Item_Exporter {
 			foreach ( $context_names as $kkce_context_name ) {
 				unset( $GLOBALS[ $kkce_context_name ] );
 				if ( array_key_exists( $kkce_context_name, $context ) ) {
+					// These names belong to WordPress's loop globals and must retain their core names.
+					// PHPCS flags the dynamic assignment, although the loop variable is already prefixed.
 					$GLOBALS[ $kkce_context_name ] = $context[ $kkce_context_name ]; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Restores only the saved WordPress loop globals, not plugin globals.
 				}
 			}
