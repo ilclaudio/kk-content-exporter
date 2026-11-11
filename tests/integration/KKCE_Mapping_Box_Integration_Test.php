@@ -123,6 +123,7 @@ class KKCE_Mapping_Box_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( 64, $data['keyMaxLength'] );
 		$this->assertSame( KKCE\Output\Mapping_Validator::MAX_CHAIN, $data['maxChain'] );
 		$this->assertSame( KKCE\Output\Mapping_Validator::VALUE_MAX_LENGTH, $data['valueMaxLength'] );
+		$this->assertSame( KKCE\Output\Template::MAX_LENGTH, $data['templateMaxLength'] );
 	}
 
 	/**
@@ -277,7 +278,7 @@ class KKCE_Mapping_Box_Integration_Test extends WP_UnitTestCase {
 		$html = $this->box( $this->feed() );
 
 		$this->assertMatchesRegularExpression( '#<p class="description kkce-box-intro">[^<]+</p>#', $html );
-		$this->assertMatchesRegularExpression( '#<details class="kkce-mapping-help">\s*<summary>[^<]+</summary>\s*<ul>(\s*<li>.+?</li>){5}\s*</ul>\s*</details>#s', $html );
+		$this->assertMatchesRegularExpression( '#<details class="kkce-mapping-help">\s*<summary>[^<]+</summary>\s*<ul>(\s*<li>.+?</li>){6}\s*</ul>\s*</details>#s', $html );
 		$this->assertLessThan( strpos( $html, 'id="kkce-feed-mapping"' ), strpos( $html, 'kkce-mapping-help' ), 'The explanation comes before the rows.' );
 	}
 }

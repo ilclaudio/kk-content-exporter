@@ -78,6 +78,10 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
   are fallbacks), can use a different chain for a single post type, or writes a fixed value (also different
   per post type). Content and excerpt offer "Run the shortcodes" and "Raw content" with their warnings, and
   fields that need a confirmation show a warning.
+- Rule "Template" in the mapping: a text that joins fields and words, with the fields between braces
+  (`{core.title} – {meta.place}`), fallbacks inside a placeholder (`{a|b|"text"}`), a different template per
+  post type, plain text or HTML output, and an "Insert field" button. A key whose placeholders all have no
+  value is written with null.
 - The "Feed settings" and "Mapping" boxes explain what they are for; the second one also explains how the
   rows work.
 - Live preview in the "Mapping" box, shown as soon as there is a row: the JSON of one item for each checked post type, computed with the rules

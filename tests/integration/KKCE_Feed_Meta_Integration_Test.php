@@ -223,7 +223,7 @@ class KKCE_Feed_Meta_Integration_Test extends WP_UnitTestCase {
 		return array(
 			'damaged json'    => array( '{"version":1,"rows":[' ),
 			'unknown version' => array( '{"version":2,"rows":[]}' ),
-			'unknown kind'    => array( '{"version":1,"rows":[{"key":"a","kind":"template"}]}' ),
+			'unknown kind'    => array( '{"version":1,"rows":[{"key":"a","kind":"expression"}]}' ),
 			'bad key'         => array( '{"version":1,"rows":[{"key":"a b","kind":"fixed","values":{"*":1}}]}' ),
 		);
 	}

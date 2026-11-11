@@ -69,8 +69,9 @@ final class Mapping_Validator {
 	 * Fields of each kind of row, after the common ones, in canonical order.
 	 */
 	private const KIND_FIELDS = array(
-		'field' => array( 'sources', 'confirmed', 'options' ),
-		'fixed' => array( 'values', 'options' ),
+		'field'    => array( 'sources', 'confirmed', 'options' ),
+		'fixed'    => array( 'values', 'options' ),
+		'template' => array( 'templates', 'confirmed' ),
 	);
 
 	/**
@@ -88,11 +89,6 @@ final class Mapping_Validator {
 	 * Format of the output key, as a PHP pattern (`\z` instead of `$`, which would accept a final newline).
 	 */
 	private const KEY_PATTERN = '/\A[' . self::KEY_CHARACTERS . ']+\z/';
-
-	/**
-	 * Format of a source identifier: a group, a dot and a name.
-	 */
-	private const SOURCE_PATTERN = '/\A([a-z][a-z0-9]*)\.([A-Za-z0-9_.:-]{1,191})\z/';
 
 	/**
 	 * Format of the key of a map of post types: a post type key, or `*` for every post type of the feed.
@@ -197,6 +193,11 @@ final class Mapping_Validator {
 				}
 			} elseif ( 'fixed' === $kind ) {
 				$out['values'] = self::normalize_map( $row['values'] ?? array(), static fn( $value ) => $value );
+			} elseif ( 'template' === $kind ) {
+				$out['templates'] = self::normalize_map( $row['templates'] ?? array(), static fn( $template ) => (string) $template );
+				if ( array() !== ( $row['confirmed'] ?? array() ) ) {
+					$out['confirmed'] = array_values( (array) $row['confirmed'] );
+				}
 			}
 
 			if ( array() !== ( $row['options'] ?? array() ) ) {
@@ -255,20 +256,31 @@ final class Mapping_Validator {
 			return $errors;
 		}
 
-		$detail = 'field' === $kind
-			? self::sources_errors( $row['sources'] ?? null, array_key_exists( 'sources', $row ) )
-			: self::values_errors( $row['values'] ?? null, array_key_exists( 'values', $row ) );
-		foreach ( $detail as $code ) {
-			$errors[] = self::error( $index, 'field' === $kind ? 'sources' : 'values', $code );
+		if ( 'template' === $kind && is_string( $row['type'] ?? null ) && in_array( $row['type'], Mapping::TYPES, true ) && ! in_array( $row['type'], Mapping::TEMPLATE_TYPES, true ) ) {
+			$errors[] = self::error( $index, 'type', 'not_allowed' );
 		}
 
-		if ( 'field' === $kind && array() === $detail ) {
-			foreach ( self::confirmation_errors( $row ) as $error ) {
+		$detail_field = match ( $kind ) {
+			'field'    => 'sources',
+			'template' => 'templates',
+			default    => 'values',
+		};
+		$detail = match ( $kind ) {
+			'field'    => self::sources_errors( $row['sources'] ?? null, array_key_exists( 'sources', $row ) ),
+			'template' => self::templates_errors( $row['templates'] ?? null, array_key_exists( 'templates', $row ) ),
+			default    => self::values_errors( $row['values'] ?? null, array_key_exists( 'values', $row ) ),
+		};
+		foreach ( $detail as $code ) {
+			$errors[] = self::error( $index, $detail_field, $code );
+		}
+
+		if ( 'fixed' !== $kind && array() === $detail ) {
+			foreach ( self::confirmation_errors( $row, self::row_sources( $row ), $detail_field ) as $error ) {
 				$errors[] = self::error( $index, $error[0], $error[1] );
 			}
 		}
 
-		if ( array_key_exists( 'options', $row ) ) {
+		if ( array_key_exists( 'options', $row ) && in_array( 'options', self::KIND_FIELDS[ $kind ], true ) ) {
 			foreach ( self::options_errors( $row['options'], 'field' === $kind ) as $code ) {
 				$errors[] = self::error( $index, 'options', $code );
 			}
@@ -349,22 +361,90 @@ final class Mapping_Validator {
 	}
 
 	/**
-	 * Errors of the confirmations of a `field` row whose sources are well formed.
+	 * Errors of the templates of a `template` row: a map of post types (or `*`) to a template text.
 	 *
-	 * `confirmed` lists, once each, sources of the same row; every sensitive source of the row must be
-	 * in it. Confirming a source that is not sensitive costs nothing and is accepted.
+	 * @param mixed $templates Value of the field.
+	 * @param bool  $present   Whether the row has the field.
+	 * @return list<string> Error codes, in order.
+	 */
+	private static function templates_errors( $templates, bool $present ): array {
+		if ( ! $present ) {
+			return array( 'required' );
+		}
+
+		if ( array() === $templates ) {
+			return array( 'empty' );
+		}
+
+		if ( ! self::is_post_type_map( $templates ) ) {
+			return array( 'format' );
+		}
+
+		$codes = array();
+		foreach ( $templates as $template ) {
+			if ( '' === $template ) {
+				$codes[] = 'empty';
+				continue;
+			}
+
+			$parsed = Template::parse( $template );
+			if ( '' !== $parsed['error'] ) {
+				$codes[] = $parsed['error'];
+				continue;
+			}
+
+			foreach ( Template::sources( $parsed['parts'] ) as $source ) {
+				$code = self::source_error( $source );
+				if ( '' !== $code ) {
+					$codes[] = $code;
+				}
+			}
+		}
+
+		return $codes;
+	}
+
+	/**
+	 * Sources a well-formed `field` or `template` row reads: every source of every chain, or of every
+	 * placeholder of every template.
 	 *
 	 * @param array<mixed> $row The row.
-	 * @return list<array{0: string, 1: string}> Field and code of every error.
+	 * @return array<string, true> Sources, as keys.
 	 */
-	private static function confirmation_errors( array $row ): array {
+	private static function row_sources( array $row ): array {
 		$sources = array();
+
+		if ( 'template' === $row['kind'] ) {
+			foreach ( (array) $row['templates'] as $template ) {
+				foreach ( Template::sources( Template::parse( $template )['parts'] ) as $source ) {
+					$sources[ $source ] = true;
+				}
+			}
+
+			return $sources;
+		}
+
 		foreach ( (array) $row['sources'] as $chain ) {
 			foreach ( (array) $chain as $source ) {
 				$sources[ (string) $source ] = true;
 			}
 		}
 
+		return $sources;
+	}
+
+	/**
+	 * Errors of the confirmations of a `field` or `template` row whose sources are well formed.
+	 *
+	 * `confirmed` lists, once each, sources of the same row; every sensitive source of the row must be
+	 * in it. Confirming a source that is not sensitive costs nothing and is accepted.
+	 *
+	 * @param array<mixed>       $row     The row.
+	 * @param array<string,true> $sources Sources of the row.
+	 * @param string             $field   Field that holds the sources (`sources` or `templates`).
+	 * @return list<array{0: string, 1: string}> Field and code of every error.
+	 */
+	private static function confirmation_errors( array $row, array $sources, string $field ): array {
 		$errors    = array();
 		$confirmed = $row['confirmed'] ?? array();
 		if ( ! self::is_confirmation_list( $confirmed, $sources ) ) {
@@ -373,8 +453,8 @@ final class Mapping_Validator {
 		}
 
 		foreach ( array_keys( $sources ) as $source ) {
-			if ( Sensitive_Keys::is_sensitive_source( $source ) && ! in_array( $source, (array) $confirmed, true ) ) {
-				$errors[] = array( 'sources', 'sensitive' );
+			if ( Sensitive_Keys::is_sensitive_source( (string) $source ) && ! in_array( (string) $source, (array) $confirmed, true ) ) {
+				$errors[] = array( $field, 'sensitive' );
 			}
 		}
 
@@ -409,7 +489,7 @@ final class Mapping_Validator {
 	 * @return string Error code, or an empty string.
 	 */
 	private static function source_error( $source ): string {
-		if ( ! is_string( $source ) || 1 !== preg_match( self::SOURCE_PATTERN, $source, $match ) ) {
+		if ( ! is_string( $source ) || 1 !== preg_match( Mapping::SOURCE_PATTERN, $source, $match ) ) {
 			return 'format';
 		}
 

@@ -233,7 +233,7 @@ class KKCE_Feed_Meta_Unit_Test extends KKCE_Unit_Test_Case {
 			'array'           => array( array( 'version' => 1, 'rows' => array() ) ),
 			'null'            => array( null ),
 			'unknown version' => array( '{"version":2,"rows":[]}' ),
-			'unknown kind'    => array( '{"version":1,"rows":[{"key":"a","kind":"template"}]}' ),
+			'unknown kind'    => array( '{"version":1,"rows":[{"key":"a","kind":"expression"}]}' ),
 			'duplicate key'   => array( '{"version":1,"rows":[{"key":"a","kind":"fixed","values":{"*":1}},{"key":"a","kind":"fixed","values":{"*":2}}]}' ),
 			'unconfirmed sensitive source' => array( '{"version":1,"rows":[{"key":"a","kind":"field","sources":{"*":["meta.api_key"]}}]}' ),
 		);

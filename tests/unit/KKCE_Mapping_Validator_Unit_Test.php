@@ -270,7 +270,6 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	 */
 	public function unknown_kind_provider(): array {
 		return array(
-			'template'   => array( 'template' ),
 			'lookup'     => array( 'lookup' ),
 			'condition'  => array( 'condition' ),
 			'expression' => array( 'expression' ),
@@ -547,7 +546,7 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 		);
 		$this->assertSame( Mapping::blank(), Mapping_Validator::parse( '{"version":1,"rows":[]}' ) );
 
-		foreach ( array( '', '{bad', '{"version":2,"rows":[]}', '{"version":1,"rows":[{"key":"a","kind":"template"}]}', null, 5 ) as $invalid ) {
+		foreach ( array( '', '{bad', '{"version":2,"rows":[]}', '{"version":1,"rows":[{"key":"a","kind":"expression"}]}', null, 5 ) as $invalid ) {
 			$this->assertNull( Mapping_Validator::parse( $invalid ), var_export( $invalid, true ) );
 		}
 	}
@@ -644,5 +643,102 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 
 		$row['confirmed'] = array( 'core.author.url' );
 		$this->assertSame( array(), $this->errors( $this->mapping( array( $row ) ) ) );
+	}
+
+	/**
+	 * A valid `template` row.
+	 *
+	 * @param array<string, mixed> $override Values to change.
+	 * @return array<string, mixed>
+	 */
+	private function template_row( array $override = array() ): array {
+		return array_merge(
+			array(
+				'key'       => 'subtitle',
+				'kind'      => 'template',
+				'type'      => 'string',
+				'templates' => array(
+					'*'     => '{core.title}',
+					'event' => '{core.title} – {meta.place|"n.d."}',
+				),
+			),
+			$override
+		);
+	}
+
+	/**
+	 * A template row is valid with text or HTML output, or `auto`; other types are not allowed.
+	 */
+	public function test_a_template_row_and_its_output_types() {
+		foreach ( array( 'string', 'html', 'auto' ) as $type ) {
+			$this->assertSame( array(), $this->errors( $this->mapping( array( $this->template_row( array( 'type' => $type ) ) ) ) ), $type );
+		}
+		foreach ( array( 'number', 'boolean', 'datetime', 'url', 'list' ) as $type ) {
+			$this->assertSame( array( '0:type:not_allowed' ), $this->errors( $this->mapping( array( $this->template_row( array( 'type' => $type ) ) ) ) ), $type );
+		}
+	}
+
+	/**
+	 * The templates are required, a non-empty map of post types to valid texts, and their sources have known groups.
+	 */
+	public function test_templates_are_required_and_well_formed() {
+		$row = $this->template_row();
+		unset( $row['templates'] );
+		$this->assertSame( array( '0:templates:required' ), $this->errors( $this->mapping( array( $row ) ) ) );
+
+		$cases = array(
+			'empty map'        => array( array(), 'empty' ),
+			'list'             => array( array( '{core.title}' ), 'format' ),
+			'not a text'       => array( array( '*' => 5 ), 'format' ),
+			'empty text'       => array( array( '*' => '' ), 'empty' ),
+			'syntax'           => array( array( '*' => '{core.title' ), 'format' ),
+			'too long'         => array( array( '*' => str_repeat( 'a', 1001 ) ), 'too_long' ),
+			'too many'         => array( array( '*' => str_repeat( '{core.id}', 21 ) ), 'too_many' ),
+			'unknown group'    => array( array( '*' => '{other.title}' ), 'unknown' ),
+			'bad post type'    => array( array( 'Post' => '{core.title}' ), 'format' ),
+		);
+		foreach ( $cases as $name => $case ) {
+			$this->assertSame( array( '0:templates:' . $case[1] ), $this->errors( $this->mapping( array( $this->template_row( array( 'templates' => $case[0] ) ) ) ) ), $name );
+		}
+	}
+
+	/**
+	 * A template row has no options: it is an unknown field.
+	 */
+	public function test_a_template_row_has_no_options() {
+		$this->assertSame( array( '0:options:unknown_field' ), $this->errors( $this->mapping( array( $this->template_row( array( 'options' => array( 'raw' => true ) ) ) ) ) ) );
+	}
+
+	/**
+	 * A sensitive source in a placeholder needs its confirmation in the row, like in a field row.
+	 */
+	public function test_a_sensitive_source_in_a_template_needs_a_confirmation() {
+		$row = $this->template_row( array( 'templates' => array( '*' => 'Contact: {meta.organizer_email|"none"}' ) ) );
+		$this->assertSame( array( '0:templates:sensitive' ), $this->errors( $this->mapping( array( $row ) ) ) );
+
+		$row['confirmed'] = array( 'meta.organizer_email' );
+		$this->assertSame( array(), $this->errors( $this->mapping( array( $row ) ) ) );
+
+		$row['confirmed'] = array( 'meta.other' );
+		$this->assertContains( '0:confirmed:format', $this->errors( $this->mapping( array( $row ) ) ) );
+	}
+
+	/**
+	 * The canonical form of a template row: common fields, templates as texts, confirmations when present.
+	 */
+	public function test_normalize_a_template_row() {
+		$row = $this->template_row( array( 'confirmed' => array( 'core.author.url' ), 'templates' => array( '*' => '{core.author.url}' ) ) );
+		unset( $row['type'] );
+
+		$this->assertSame(
+			array(
+				'key'       => 'subtitle',
+				'kind'      => 'template',
+				'type'      => 'auto',
+				'templates' => array( '*' => '{core.author.url}' ),
+				'confirmed' => array( 'core.author.url' ),
+			),
+			Mapping_Validator::normalize( $this->mapping( array( $row ) ) )['rows'][0]
+		);
 	}
 }

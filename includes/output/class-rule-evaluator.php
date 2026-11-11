@@ -19,6 +19,11 @@ defined( 'ABSPATH' ) || exit;
  *   existing source is empty, the first empty value comes out (`""` or `[]`); when none exists, the row
  *   has no value;
  * - `fixed`: the value of the post type of the item, or the general one `*`;
+ * - `template`: the template of the post type of the item (or `*`), with the value of every placeholder: the
+ *   first alternative with a value (the same empty values as a chain pass on; a literal always has one), in its
+ *   standard text form (by the declared type of its source: dates in ISO 8601, lists joined by `, `, booleans
+ *   `true`/`false`). A placeholder without a value is empty; when no placeholder has a value, the row has
+ *   none. A template without placeholders is a fixed text;
  * - any other kind (unknown, or of a later phase) has no value.
  *
  * A sensitive source that the row does not confirm is never read, also when the mapping did not go
@@ -36,18 +41,22 @@ final class Rule_Evaluator {
 	/**
 	 * Value of one row for an item.
 	 *
-	 * @param array<mixed> $row       Row of the mapping.
-	 * @param string       $post_type Post type of the item.
-	 * @param callable     $read      Reads a source of the item; null when it does not exist.
+	 * @param array<mixed>                     $row       Row of the mapping.
+	 * @param string                           $post_type Post type of the item.
+	 * @param callable                         $read      Reads a source of the item; null when it does not exist.
+	 * @param (callable(string): ?string)|null $declared  Declared type of a source (for the text form of the
+	 *                                                    placeholders of a template), null when unknown.
+	 * @param string                           $origin    Origin of the site, for root-relative URLs.
 	 * @return array{present: bool, value: mixed} Whether the row has a value, and the value.
 	 *
 	 * @phpstan-param callable(string, array<mixed>): mixed $read
 	 */
-	public static function evaluate( array $row, string $post_type, callable $read ): array {
+	public static function evaluate( array $row, string $post_type, callable $read, ?callable $declared = null, string $origin = '' ): array {
 		return match ( $row['kind'] ?? null ) {
-			'field' => self::field( $row, $post_type, $read ),
-			'fixed' => self::fixed( $row, $post_type ),
-			default => self::absent(),
+			'field'    => self::field( $row, $post_type, $read ),
+			'fixed'    => self::fixed( $row, $post_type ),
+			'template' => self::template( $row, $post_type, $read, $declared, $origin ),
+			default    => self::absent(),
 		};
 	}
 
@@ -79,7 +88,7 @@ final class Rule_Evaluator {
 				continue;
 			}
 
-			$result = self::evaluate( $row, $post_type, $read );
+			$result = self::evaluate( $row, $post_type, $read, $declared, $origin );
 			if ( $result['present'] ) {
 				$result = Normalizer::normalize( $result['value'], self::row_type( $row, $declared ), $origin );
 			}
@@ -99,6 +108,10 @@ final class Rule_Evaluator {
 	 */
 	private static function row_type( array $row, ?callable $declared ): string {
 		$type = is_string( $row['type'] ?? null ) ? $row['type'] : 'auto';
+		if ( 'template' === ( $row['kind'] ?? null ) ) {
+			// A template always gives a text: plain unless the row asks for HTML.
+			return 'html' === $type ? 'html' : 'string';
+		}
 		if ( 'auto' !== $type ) {
 			return $type;
 		}
@@ -187,6 +200,102 @@ final class Rule_Evaluator {
 		}
 
 		return self::absent();
+	}
+
+	/**
+	 * Value of a `template` row.
+	 *
+	 * @param array<mixed>                     $row       Row of the mapping.
+	 * @param string                           $post_type Post type of the item.
+	 * @param callable                         $read      Reads a source of the item.
+	 * @param (callable(string): ?string)|null $declared  Declared type of a source.
+	 * @param string                           $origin    Origin of the site.
+	 * @return array{present: bool, value: mixed}
+	 *
+	 * @phpstan-param callable(string, array<mixed>): mixed $read
+	 */
+	private static function template( array $row, string $post_type, callable $read, ?callable $declared, string $origin ): array {
+		$parsed = Template::parse( self::for_post_type( $row['templates'] ?? null, $post_type ) );
+		if ( '' !== $parsed['error'] ) {
+			return self::absent();
+		}
+
+		$confirmed    = is_array( $row['confirmed'] ?? null ) ? $row['confirmed'] : array();
+		$text         = '';
+		$placeholders = 0;
+		$found        = false;
+
+		foreach ( $parsed['parts'] as $part ) {
+			if ( array() === $part['alternatives'] ) {
+				$text .= $part['text'];
+				continue;
+			}
+
+			++$placeholders;
+			foreach ( $part['alternatives'] as $alternative ) {
+				if ( isset( $alternative['literal'] ) ) {
+					$text .= $alternative['literal'];
+					$found = true;
+					break;
+				}
+
+				$source = $alternative['source'];
+				if ( Sensitive_Keys::is_sensitive_source( $source ) && ! in_array( $source, $confirmed, true ) ) {
+					continue;
+				}
+
+				$value = $read( $source, array() );
+				if ( null === $value || self::is_empty( $value ) ) {
+					continue;
+				}
+
+				$text .= self::as_text( $value, null === $declared ? null : $declared( $source ), $origin );
+				$found = true;
+				break;
+			}
+		}
+
+		return $placeholders > 0 && ! $found ? self::absent() : self::present( $text );
+	}
+
+	/**
+	 * Standard text form of the value of a placeholder: texts as they are (HTML included), other values by
+	 * the declared type of their source; a value that cannot be converted is empty.
+	 *
+	 * @param mixed       $value    Value of the source.
+	 * @param string|null $declared Declared type of the source, null when unknown (text).
+	 * @param string      $origin   Origin of the site.
+	 * @return string
+	 */
+	private static function as_text( $value, ?string $declared, string $origin ): string {
+		if ( is_string( $value ) && in_array( $declared ?? 'string', array( 'string', 'html' ), true ) ) {
+			return $value;
+		}
+
+		$result = Normalizer::normalize( $value, $declared ?? 'string', $origin );
+		if ( ! $result['present'] ) {
+			return '';
+		}
+
+		return self::scalar_text( $result['value'] );
+	}
+
+	/**
+	 * Text of a normalized value: booleans `true`/`false`, lists joined by `, `.
+	 *
+	 * @param mixed $value Normalized value.
+	 * @return string
+	 */
+	private static function scalar_text( $value ): string {
+		if ( is_bool( $value ) ) {
+			return $value ? 'true' : 'false';
+		}
+
+		if ( is_array( $value ) ) {
+			return implode( ', ', array_map( array( self::class, 'scalar_text' ), $value ) );
+		}
+
+		return is_scalar( $value ) ? (string) $value : '';
 	}
 
 	/**
