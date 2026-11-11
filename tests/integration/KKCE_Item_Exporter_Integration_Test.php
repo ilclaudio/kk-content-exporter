@@ -357,5 +357,36 @@ class KKCE_Item_Exporter_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( $post->ID, $item['post_id'] );
 		$this->assertSame( get_permalink( $post ), $item['link'] );
 	}
-}
 
+	/**
+	 * A template joins the values of a real post: dates in ISO 8601, a literal fallback for an empty excerpt,
+	 * plain text by default and HTML on request.
+	 */
+	public function test_templates_on_a_real_post() {
+		$post = get_post(
+			self::factory()->post->create(
+				array(
+					'post_status'   => 'publish',
+					'post_title'    => 'Concert & more',
+					'post_excerpt'  => '',
+					'post_date'     => '2026-07-01 10:30:00',
+					'post_date_gmt' => '2026-07-01 08:30:00',
+				)
+			)
+		);
+		$mapping = $this->mapping(
+			array(
+				array( 'key' => 'subtitle', 'kind' => 'template', 'type' => 'string', 'templates' => array( '*' => '{core.title} ({core.date}) – {core.excerpt|"no excerpt"}' ) ),
+				array( 'key' => 'link', 'kind' => 'template', 'type' => 'html', 'templates' => array( '*' => '<a href="{core.permalink}">{core.title}</a>' ) ),
+				array( 'key' => 'nothing', 'kind' => 'template', 'type' => 'string', 'templates' => array( '*' => 'Place: {meta.place}' ) ),
+			)
+		);
+
+		$item = Item_Exporter::export( $post, $mapping );
+
+		$this->assertSame( 'Concert & more (2026-07-01T08:30:00Z) – no excerpt', $item['subtitle'] );
+		$this->assertSame( '<a href="' . get_permalink( $post ) . '">Concert &amp; more</a>', $item['link'] );
+		$this->assertArrayHasKey( 'nothing', $item );
+		$this->assertNull( $item['nothing'], 'No placeholder with a value gives null.' );
+	}
+}

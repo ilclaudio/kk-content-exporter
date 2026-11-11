@@ -203,3 +203,15 @@
 	white-space: pre-wrap;
 	word-break: break-word;
 }
+
+.kkce-mapping-template-scope textarea {
+	width: 100%;
+}
+
+.kkce-mapping-insert {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5em 1em;
+	align-items: flex-end;
+	margin-top: 0.5em;
+}

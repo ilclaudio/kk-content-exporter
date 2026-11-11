@@ -40,6 +40,7 @@
 	const LABEL_REMOVE = __( 'Remove', 'kk-content-exporter' );
 	const LABEL_REMOVE_EXCEPTION = __( 'Remove exception', 'kk-content-exporter' );
 	const LABEL_ADD_FALLBACK = __( 'Add fallback', 'kk-content-exporter' );
+	const LABEL_INSERT_FIELD = __( 'Insert field', 'kk-content-exporter' );
 
 	/**
 	 * Output types of a row, in the order shown, with their labels.
@@ -61,6 +62,7 @@
 	const KINDS = [
 		[ 'field', LABEL_FIELD ],
 		[ 'fixed', __( 'Fixed value', 'kk-content-exporter' ) ],
+		[ 'template', __( 'Template', 'kk-content-exporter' ) ],
 	];
 
 
@@ -136,7 +138,45 @@
 		if ( 'fixed' === row.kind ) {
 			return isMap( row.values );
 		}
+		if ( 'template' === row.kind ) {
+			return isMap( row.templates );
+		}
 		return false;
+	}
+
+	/**
+	 * Map of the scopes of an editable row: chains of a `field` row, values of a `fixed` row, templates of a
+	 * `template` row.
+	 *
+	 * @param {Object} row Row of the mapping.
+	 * @return {Object} Map of post types (or `*`).
+	 */
+	function scopeMap( row ) {
+		if ( 'field' === row.kind ) {
+			return row.sources;
+		}
+		return 'template' === row.kind ? row.templates : row.values;
+	}
+
+	/**
+	 * Sources written in the placeholders of a template, for the warnings only: the server reads the template
+	 * again and checks everything.
+	 *
+	 * @param {string} template Template.
+	 * @return {string[]} Source identifiers.
+	 */
+	function templateSources( template ) {
+		const found = [];
+		const text = String( template || '' ).replace( /\{\{|\}\}/g, '' );
+		( text.match( /\{[^{}]*\}/g ) || [] ).forEach( function ( placeholder ) {
+			placeholder.slice( 1, -1 ).split( '|' ).forEach( function ( alternative ) {
+				const id = alternative.trim();
+				if ( /^[a-z][a-z0-9]*\.[A-Za-z0-9_.:-]+$/.test( id ) && -1 === found.indexOf( id ) ) {
+					found.push( id );
+				}
+			} );
+		} );
+		return found;
 	}
 
 	/**
@@ -163,13 +203,23 @@
 	}
 
 	/**
-	 * Every source of a `field` row, in every chain, without duplicates.
+	 * Every source of a `field` row (every chain) or of a `template` row (every template), without duplicates.
 	 *
 	 * @param {Object} row Row of the mapping.
 	 * @return {string[]} Source identifiers.
 	 */
 	function rowSources( row ) {
 		const found = [];
+		if ( 'template' === row.kind ) {
+			Object.keys( row.templates || {} ).forEach( function ( scope ) {
+				templateSources( row.templates[ scope ] ).forEach( function ( source ) {
+					if ( -1 === found.indexOf( source ) ) {
+						found.push( source );
+					}
+				} );
+			} );
+			return found;
+		}
 		Object.keys( row.sources || {} ).forEach( function ( scope ) {
 			( row.sources[ scope ] || [] ).forEach( function ( source ) {
 				if ( source && -1 === found.indexOf( source ) ) {
@@ -302,7 +352,7 @@
 		 * @param {Object} row Row of the mapping.
 		 */
 		function tidy( row ) {
-			if ( 'field' !== row.kind || ! isEditable( row ) ) {
+			if ( 'fixed' === row.kind || ! isEditable( row ) ) {
 				return;
 			}
 			const sources = rowSources( row );
@@ -362,11 +412,13 @@
 					out.sources = { '*': [] };
 				}
 			} else {
-				out.values = {};
-				scopesOf( row.values ).forEach( function ( scope ) {
-					const value = row.values[ scope ];
+				// Fixed values and templates: empty texts are left out.
+				const name = 'template' === row.kind ? 'templates' : 'values';
+				out[ name ] = {};
+				scopesOf( row[ name ] ).forEach( function ( scope ) {
+					const value = row[ name ][ scope ];
 					if ( undefined !== value && '' !== value ) {
-						out.values[ scope ] = value;
+						out[ name ][ scope ] = value;
 					}
 				} );
 			}
@@ -386,6 +438,7 @@
 				type: __( 'Output type', 'kk-content-exporter' ),
 				sources: __( 'Fields', 'kk-content-exporter' ),
 				values: __( 'Value', 'kk-content-exporter' ),
+				templates: __( 'Template', 'kk-content-exporter' ),
 				confirmed: __( 'Confirmation', 'kk-content-exporter' ),
 				options: __( 'Options', 'kk-content-exporter' ),
 			};
@@ -906,13 +959,51 @@
 		}
 
 		/**
+		 * Template of a scope of a `template` row, with the control that inserts a field.
+		 *
+		 * @param {Object} row   Row.
+		 * @param {string} scope Scope.
+		 * @return {HTMLElement} The group.
+		 */
+		function renderTemplate( row, scope ) {
+			const prefix = 'kkce-mapping-' + row.uid + '-' + scopeId( scope );
+			const label = scopeLabel( scope );
+			const group = el( 'div', { className: 'kkce-mapping-scope kkce-mapping-template-scope' } );
+			const area = el( 'textarea', {
+				id: prefix + '-template',
+				className: 'large-text code kkce-mapping-template',
+				rows: 2,
+				value: String( row.data.templates[ scope ] || '' ),
+				maxLength: data.templateMaxLength,
+				spellcheck: false,
+				ariaDescribedby: 'kkce-mapping-' + row.uid + '-template-help',
+				'data-uid': String( row.uid ),
+				'data-scope': scope,
+			} );
+			/* translators: %s: name of the scope, for example "For all post types". */
+			group.appendChild( labelled( sprintf( __( 'Template (%s)', 'kk-content-exporter' ), label ), area ) );
+
+			const insert = el( 'div', { className: 'kkce-mapping-insert' } );
+			// No data-uid: choosing the field to insert changes nothing until the button is pressed.
+			insert.appendChild( labelled( __( 'Field to insert', 'kk-content-exporter' ), sourceSelect( '', { id: prefix + '-insert', className: 'kkce-mapping-insert-source' } ) ) );
+			/* translators: %s: name of the scope, for example "For all post types". */
+			insert.appendChild( button( row, 'insert', LABEL_INSERT_FIELD, { id: prefix + '-insert-button', ariaLabel: sprintf( __( 'Insert the field in the template (%s)', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
+			if ( '*' !== scope ) {
+				/* translators: %s: post types the exception applies to, for example "For Posts". */
+				insert.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove the exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
+			}
+			group.appendChild( insert );
+			return group;
+		}
+
+		/**
 		 * Control that adds an exception for a checked post type, when some is left.
 		 *
 		 * @param {Object} row Row.
 		 * @return {HTMLElement|null} The control.
 		 */
 		function renderExceptionPicker( row ) {
-			const map = 'field' === row.data.kind ? row.data.sources : row.data.values;
+			const map = scopeMap( row.data );
 			const free = catalog.post_types.filter( function ( postType ) {
 				return ! Object.prototype.hasOwnProperty.call( map, postType );
 			} );
@@ -936,7 +1027,8 @@
 		 * @return {HTMLElement|null} The options.
 		 */
 		function renderOptions( row ) {
-			const accepted = acceptedOptions( row.data );
+			// Only field rows have options; the warnings below are for field and template rows.
+			const accepted = 'field' === row.data.kind ? acceptedOptions( row.data ) : [];
 			const options = row.data.options || {};
 			const prefix = 'kkce-mapping-' + row.uid;
 			const wrapper = el( 'div', { className: 'kkce-mapping-options' } );
@@ -1008,7 +1100,13 @@
 			if ( editable ) {
 				fields.appendChild( labelled( __( 'Rule', 'kk-content-exporter' ), select( { id: prefix + '-kind', className: 'kkce-mapping-kind', 'data-uid': String( row.uid ) }, KINDS, row.data.kind ) ) );
 			}
-			fields.appendChild( labelled( __( 'Output type', 'kk-content-exporter' ), select( { id: prefix + '-type', className: 'kkce-mapping-type', 'data-uid': String( row.uid ) }, TYPES, row.data.type || 'auto' ) ) );
+			// A template always gives a text: plain or HTML.
+			const isTemplate = 'template' === row.data.kind;
+			const types = isTemplate ? TYPES.filter( function ( type ) {
+				return 'string' === type[ 0 ] || 'html' === type[ 0 ];
+			} ) : TYPES;
+			const type = isTemplate ? ( 'html' === row.data.type ? 'html' : 'string' ) : ( row.data.type || 'auto' );
+			fields.appendChild( labelled( __( 'Output type', 'kk-content-exporter' ), select( { id: prefix + '-type', className: 'kkce-mapping-type', 'data-uid': String( row.uid ) }, types, type ) ) );
 			fieldset.appendChild( fields );
 			fieldset.appendChild( error );
 
@@ -1028,6 +1126,22 @@
 				const options = renderOptions( row );
 				if ( options ) {
 					fieldset.appendChild( options );
+				}
+			} else if ( 'template' === row.data.kind ) {
+				if ( ! Object.prototype.hasOwnProperty.call( row.data.templates, '*' ) ) {
+					row.data.templates = Object.assign( { '*': '' }, row.data.templates );
+				}
+				fieldset.appendChild( el( 'p', { id: prefix + '-template-help', className: 'description' }, __( 'Write the text and put the fields between braces, for example {core.title}. {a|b|"text"} uses the first one with a value; write {{ and }} for a brace. "Insert field" writes a field where the cursor is.', 'kk-content-exporter' ) ) );
+				scopesOf( row.data.templates ).forEach( function ( scope ) {
+					fieldset.appendChild( renderTemplate( row, scope ) );
+				} );
+				const picker = renderExceptionPicker( row );
+				if ( picker ) {
+					fieldset.appendChild( picker );
+				}
+				const warnings = renderOptions( row );
+				if ( warnings ) {
+					fieldset.appendChild( warnings );
 				}
 			} else {
 				if ( ! Object.prototype.hasOwnProperty.call( row.data.values, '*' ) ) {
@@ -1206,7 +1320,34 @@
 		function scopeAction( row, action, scope, index ) {
 			const prefix = 'kkce-mapping-' + row.uid;
 			const isField = 'field' === row.data.kind;
-			const map = isField ? row.data.sources : row.data.values;
+			const isTemplate = 'template' === row.data.kind;
+			const map = scopeMap( row.data );
+
+			if ( 'insert' === action ) {
+				const area = document.getElementById( prefix + '-' + scopeId( scope ) + '-template' );
+				const picker = document.getElementById( prefix + '-' + scopeId( scope ) + '-insert' );
+				if ( ! area || ! picker || '' === picker.value ) {
+					return;
+				}
+				// The placeholder goes where the cursor is (or replaces the selected text).
+				const placeholder = '{' + picker.value + '}';
+				const start = area.selectionStart;
+				const end = area.selectionEnd;
+				area.value = area.value.slice( 0, start ) + placeholder + area.value.slice( end );
+				map[ scope ] = area.value;
+				if ( '' === String( row.data.key || '' ) ) {
+					proposeKey( row, picker.value );
+				}
+				commit( true );
+				render( area.id );
+				const again = document.getElementById( area.id );
+				if ( again ) {
+					again.setSelectionRange( start + placeholder.length, start + placeholder.length );
+				}
+				/* translators: %s: placeholder inserted in a template, for example {core.title}. */
+				announce( sprintf( __( 'Inserted %s.', 'kk-content-exporter' ), placeholder ) );
+				return;
+			}
 
 			if ( 'scope-add' === action ) {
 				const picker = document.getElementById( prefix + '-exception' );
@@ -1216,7 +1357,7 @@
 				}
 				map[ postType ] = isField ? [] : '';
 				commit( true );
-				render( prefix + '-' + scopeId( postType ) + ( isField ? '-0-source' : '-value' ) );
+				render( prefix + '-' + scopeId( postType ) + ( isField ? '-0-source' : ( isTemplate ? '-template' : '-value' ) ) );
 				/* translators: %s: name of the exception, for example "For Posts". */
 				announce( sprintf( __( 'Exception added: %s.', 'kk-content-exporter' ), scopeLabel( postType ) ) );
 				return;
@@ -1312,6 +1453,11 @@
 				row.data.values[ input.getAttribute( 'data-scope' ) ] = input.value;
 				commit( true );
 			}
+
+			if ( input.classList.contains( 'kkce-mapping-template' ) ) {
+				row.data.templates[ input.getAttribute( 'data-scope' ) ] = input.value;
+				commit( true );
+			}
 		} );
 
 		list.addEventListener( 'change', function ( event ) {
@@ -1332,7 +1478,7 @@
 				return;
 			}
 
-			if ( control.classList.contains( 'kkce-mapping-fixed' ) ) {
+			if ( control.classList.contains( 'kkce-mapping-fixed' ) || control.classList.contains( 'kkce-mapping-template' ) ) {
 				return;
 			}
 
@@ -1345,13 +1491,20 @@
 				// A row has one rule: only the chosen one is saved. The settings of the other rule stay in memory
 				// until the page is left, so going back (a select can change at every arrow key) loses nothing.
 				const previous = row.data;
-				const next = ( row.stash && row.stash[ control.value ] ) || ( 'fixed' === control.value
-					? { kind: 'fixed', values: { '*': '' } }
-					: { kind: 'field', sources: { '*': [] } } );
+				const blank = {
+					field: { kind: 'field', sources: { '*': [] } },
+					fixed: { kind: 'fixed', values: { '*': '' } },
+					template: { kind: 'template', templates: { '*': '' } },
+				};
+				const next = ( row.stash && row.stash[ control.value ] ) || blank[ control.value ];
 				row.stash = Object.assign( {}, row.stash, { [ previous.kind ]: previous } );
 				// The key and the output type belong to the row, not to the rule: they follow the change.
 				next.key = previous.key;
 				next.type = previous.type || 'auto';
+				if ( 'template' === next.kind && 'html' !== next.type ) {
+					// A template gives a text: plain unless HTML was chosen.
+					next.type = 'string';
+				}
 				row.data = next;
 				/* translators: %s: name of the rule, for example "Fixed value". */
 				announce( sprintf( __( 'Rule changed to %s. Only the settings of this rule are saved.', 'kk-content-exporter' ), control.options[ control.selectedIndex ].text ) );
@@ -1453,7 +1606,7 @@
 		} catch ( error ) {
 			return;
 		}
-		if ( ! data || ! data.catalog || ! Array.isArray( data.catalog.sources ) || ! data.field || ! data.keyPattern || ! data.maxChain || ! data.valueMaxLength || ! data.previewPath || ! data.itemsPath ) {
+		if ( ! data || ! data.catalog || ! Array.isArray( data.catalog.sources ) || ! data.field || ! data.keyPattern || ! data.maxChain || ! data.valueMaxLength || ! data.previewPath || ! data.itemsPath || ! data.templateMaxLength ) {
 			return;
 		}
 

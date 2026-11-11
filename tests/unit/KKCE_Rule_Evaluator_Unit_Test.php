@@ -395,4 +395,136 @@ class KKCE_Rule_Evaluator_Unit_Test extends KKCE_Unit_Test_Case {
 			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $this->reader( array( 'meta.image' => '/a.jpg' ) ), null, 'https://example.org' )
 		);
 	}
+
+	/**
+	 * A `template` row with one template for every post type.
+	 *
+	 * @param string               $template Template.
+	 * @param array<string, mixed> $override Fields to change.
+	 * @return array<string, mixed>
+	 */
+	private function template( string $template, array $override = array() ): array {
+		return array_merge(
+			array(
+				'key'       => 'k',
+				'kind'      => 'template',
+				'type'      => 'string',
+				'templates' => array( '*' => $template ),
+			),
+			$override
+		);
+	}
+
+	/**
+	 * A template joins text and the values of its placeholders; doubled braces are literal braces.
+	 */
+	public function test_a_template_joins_text_and_values() {
+		$reader = $this->reader( array( 'core.title' => 'Concert', 'meta.place' => 'Pisa' ) );
+
+		$this->assertSame(
+			array( 'present' => true, 'value' => 'Concert – Pisa {live}' ),
+			Rule_Evaluator::evaluate( $this->template( '{core.title} – {meta.place} {{live}}' ), 'post', $reader )
+		);
+	}
+
+	/**
+	 * A placeholder uses its first alternative with a value: empty values pass on, a literal always has one.
+	 */
+	public function test_placeholder_fallbacks() {
+		$reader = $this->reader( array( 'meta.place' => '  ', 'meta.city' => '', 'meta.zero' => 0 ) );
+
+		$this->assertSame( 'at n.d.', Rule_Evaluator::evaluate( $this->template( 'at {meta.place|meta.city|meta.none|"n.d."}' ), 'post', $reader )['value'] );
+		$this->assertSame( 'count 0', Rule_Evaluator::evaluate( $this->template( 'count {meta.zero|"none"}' ), 'post', $reader )['value'] );
+	}
+
+	/**
+	 * A placeholder without a value is empty; when no placeholder has a value the row has none.
+	 */
+	public function test_a_template_without_any_value_has_no_value() {
+		$reader = $this->reader( array( 'core.title' => 'T' ) );
+
+		$this->assertSame( array( 'present' => true, 'value' => 'T, ' ), Rule_Evaluator::evaluate( $this->template( '{core.title}, {meta.none}' ), 'post', $reader ) );
+		$this->assertSame( array( 'present' => false, 'value' => null ), Rule_Evaluator::evaluate( $this->template( 'Place: {meta.none}' ), 'post', $reader ) );
+		$this->assertSame( array( 'present' => true, 'value' => 'Site A' ), Rule_Evaluator::evaluate( $this->template( 'Site A' ), 'post', $reader ), 'Without placeholders it is a fixed text.' );
+	}
+
+	/**
+	 * The template of the post type of the item replaces the general one.
+	 */
+	public function test_the_template_of_the_post_type_wins() {
+		$row    = $this->template( '{core.title}', array( 'templates' => array( '*' => '{core.title}', 'event' => '{core.title} @ {meta.place}' ) ) );
+		$reader = $this->reader( array( 'core.title' => 'T', 'meta.place' => 'Pisa' ) );
+
+		$this->assertSame( 'T', Rule_Evaluator::evaluate( $row, 'post', $reader )['value'] );
+		$this->assertSame( 'T @ Pisa', Rule_Evaluator::evaluate( $row, 'event', $reader )['value'] );
+	}
+
+	/**
+	 * An unconfirmed sensitive source is never read in a placeholder; a confirmed one is.
+	 */
+	public function test_unconfirmed_sensitive_placeholders_are_never_read() {
+		$asked  = array();
+		$reader = $this->reader( array( 'meta.api_key' => 'SECRET' ), $asked );
+
+		$this->assertSame( 'key: none', Rule_Evaluator::evaluate( $this->template( 'key: {meta.api_key|"none"}' ), 'post', $reader )['value'] );
+		$this->assertSame( array(), $asked );
+
+		$confirmed = $this->template( 'key: {meta.api_key}', array( 'confirmed' => array( 'meta.api_key' ) ) );
+		$this->assertSame( 'key: SECRET', Rule_Evaluator::evaluate( $confirmed, 'post', $reader )['value'] );
+	}
+
+	/**
+	 * Values that are not text get their standard text form, by the declared type of their source.
+	 */
+	public function test_placeholder_values_in_standard_form() {
+		$reader   = $this->reader( array( 'core.date' => '2026-07-01 08:30:00', 'meta.tags' => array( 'a', 'b', 3 ), 'meta.flag' => true, 'core.id' => 7, 'meta.price' => '15,50' ) );
+		$declared = $this->declared( array( 'core.date' => 'datetime', 'meta.tags' => 'list', 'meta.flag' => 'boolean', 'core.id' => 'number', 'meta.price' => 'number' ) );
+
+		$this->assertSame(
+			array( 'k' => '2026-07-01T08:30:00Z | a, b, 3 | true | 7 | ' ),
+			Rule_Evaluator::evaluate_mapping(
+				array( 'version' => 1, 'rows' => array( $this->template( '{core.date} | {meta.tags} | {meta.flag} | {core.id} | {meta.price}' ) ) ),
+				'post',
+				$reader,
+				$declared
+			)
+		);
+	}
+
+	/**
+	 * Text output removes the tags of the whole result; HTML output keeps them; `auto` is text.
+	 */
+	public function test_template_output_types() {
+		$reader   = $this->reader( array( 'core.content' => '<p>Hello &amp; welcome</p>' ) );
+		$declared = $this->declared( array( 'core.content' => 'html' ) );
+		$mapping  = array(
+			'version' => 1,
+			'rows'    => array(
+				$this->template( '<b>{core.content}</b>', array( 'key' => 'text' ) ),
+				$this->template( '<b>{core.content}</b>', array( 'key' => 'html', 'type' => 'html' ) ),
+				$this->template( '<b>{core.content}</b>', array( 'key' => 'auto', 'type' => 'auto' ) ),
+			),
+		);
+
+		$this->assertSame(
+			array(
+				'text' => 'Hello & welcome',
+				'html' => '<b><p>Hello &amp; welcome</p></b>',
+				'auto' => 'Hello & welcome',
+			),
+			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $reader, $declared )
+		);
+	}
+
+	/**
+	 * A damaged template has no value and reads nothing.
+	 */
+	public function test_a_damaged_template_has_no_value() {
+		$asked  = array();
+		$reader = $this->reader( array( 'core.title' => 'T' ), $asked );
+
+		$this->assertSame( array( 'present' => false, 'value' => null ), Rule_Evaluator::evaluate( $this->template( '{core.title' ), 'post', $reader ) );
+		$this->assertSame( array( 'present' => false, 'value' => null ), Rule_Evaluator::evaluate( $this->template( '', array( 'templates' => 'x' ) ), 'post', $reader ) );
+		$this->assertSame( array(), $asked );
+	}
 }

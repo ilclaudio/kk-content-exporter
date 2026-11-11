@@ -323,7 +323,7 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( array( array( 'row' => -1, 'field' => '', 'code' => 'json' ) ), $response->get_data()['data']['errors'] );
 
 		$invalid  = $this->mapping( array(
-			array( 'key' => 'a', 'kind' => 'template' ),
+			array( 'key' => 'a', 'kind' => 'expression' ),
 			array( 'key' => 'b', 'kind' => 'field', 'sources' => array( '*' => array( 'meta.user_pass' ) ) ),
 		) );
 		$response = $this->preview( array( 'mapping' => $invalid, 'post_types' => array( 'post' ), 'post_id' => $post_id ) );
@@ -454,5 +454,23 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertSame( array(), $response->get_data()['items'] );
+	}
+
+	/**
+	 * The preview computes template rows, and refuses a template with a syntax error.
+	 */
+	public function test_preview_of_a_template_row() {
+		wp_set_current_user( self::$admin );
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish', 'post_title' => 'Concert' ) );
+		$row     = array( 'key' => 'subtitle', 'kind' => 'template', 'templates' => array( '*' => 'Event: {core.title}' ) );
+
+		$response = $this->preview( array( 'mapping' => $this->mapping( array( $row ) ), 'post_types' => array( 'post' ), 'post_id' => $post_id ) );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array( 'subtitle' => 'Event: Concert' ), (array) $response->get_data()['items'][0]['data'] );
+
+		$row['templates']['*'] = 'Event: {core.title';
+		$response              = $this->preview( array( 'mapping' => $this->mapping( array( $row ) ), 'post_types' => array( 'post' ), 'post_id' => $post_id ) );
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( array( array( 'row' => 0, 'field' => 'templates', 'code' => 'format' ) ), $response->get_data()['data']['errors'] );
 	}
 }

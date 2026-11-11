@@ -11,6 +11,7 @@ use KKCE\Feed_Meta;
 use KKCE\Feed_Post_Type;
 use KKCE\Output\Mapping;
 use KKCE\Output\Mapping_Validator;
+use KKCE\Output\Template;
 use KKCE\Rest\Admin_Routes;
 use WP_Post;
 
@@ -71,17 +72,18 @@ final class Mapping_Box {
 		}
 
 		$data = array(
-			'mapping'        => Feed_Meta::mapping( $post->ID ),
-			'catalog'        => Admin_Routes::describe_catalog( Feed_Meta::post_types( $post->ID ) ),
-			'catalogPath'    => '/' . Admin_Routes::NAMESPACE . '/catalog',
-			'previewPath'    => '/' . Admin_Routes::NAMESPACE . '/preview',
-			'itemsPath'      => '/' . Admin_Routes::NAMESPACE . '/items',
-			'field'          => Feed_Editor::FIELD . '[mapping]',
-			'maxRows'        => Mapping::MAX_ROWS,
-			'keyMaxLength'   => Mapping::KEY_MAX_LENGTH,
-			'keyPattern'     => Mapping_Validator::KEY_FORMAT,
-			'maxChain'       => Mapping_Validator::MAX_CHAIN,
-			'valueMaxLength' => Mapping_Validator::VALUE_MAX_LENGTH,
+			'mapping'           => Feed_Meta::mapping( $post->ID ),
+			'catalog'           => Admin_Routes::describe_catalog( Feed_Meta::post_types( $post->ID ) ),
+			'catalogPath'       => '/' . Admin_Routes::NAMESPACE . '/catalog',
+			'previewPath'       => '/' . Admin_Routes::NAMESPACE . '/preview',
+			'itemsPath'         => '/' . Admin_Routes::NAMESPACE . '/items',
+			'field'             => Feed_Editor::FIELD . '[mapping]',
+			'maxRows'           => Mapping::MAX_ROWS,
+			'keyMaxLength'      => Mapping::KEY_MAX_LENGTH,
+			'keyPattern'        => Mapping_Validator::KEY_FORMAT,
+			'maxChain'          => Mapping_Validator::MAX_CHAIN,
+			'valueMaxLength'    => Mapping_Validator::VALUE_MAX_LENGTH,
+			'templateMaxLength' => Template::MAX_LENGTH,
 		);
 		?>
 		<p class="description kkce-box-intro"><?php esc_html_e( 'The mapping decides what each item of the feed contains: every row adds one key to the JSON of every item, with the value it reads from the content or a fixed value. Every item has all the keys, in the order of the rows; a key without a value is written with null, so the program that reads the feed always finds the same keys.', 'kk-content-exporter' ); ?></p>
@@ -93,6 +95,7 @@ final class Mapping_Box {
 				<li><?php esc_html_e( 'JSON key: the name of the key in every item, for example "title". It is proposed from the field you choose, and you can change it.', 'kk-content-exporter' ); ?></li>
 				<li><?php esc_html_e( 'Rule "Field": the value is read from a field of the content. With "Add fallback" another field is used when the first one is empty; with "Different for" a post type can read other fields.', 'kk-content-exporter' ); ?></li>
 				<li><?php esc_html_e( 'Rule "Fixed value": every item gets the same text, for example the name of the site; with "Different for" a post type can get another one.', 'kk-content-exporter' ); ?></li>
+				<li><?php esc_html_e( 'Rule "Template": a text that joins fields and words, for example "{core.title} – {meta.place}". "Insert field" writes a field between braces; {a|b|"text"} uses the first one with a value.', 'kk-content-exporter' ); ?></li>
 				<li><?php esc_html_e( 'Output type: how the value is written in the JSON (text, HTML, number, true or false, date and time, URL, list). "Automatic" uses the type of the field.', 'kk-content-exporter' ); ?></li>
 				<li><?php esc_html_e( 'Preview: as soon as there is a row, the JSON of a published item of each checked post type appears beside the rules and changes while you edit them.', 'kk-content-exporter' ); ?></li>
 			</ul>

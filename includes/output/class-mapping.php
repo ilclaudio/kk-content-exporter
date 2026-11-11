@@ -51,9 +51,14 @@ final class Mapping {
 	public const MAX_DEPTH = 8;
 
 	/**
-	 * Rule kinds that exist today. `template`, `lookup` and `condition` come with phase 4.
+	 * Rule kinds that exist today. `lookup` and `condition` come with steps 12c and 12d of phase 2.
 	 */
-	public const KINDS = array( 'field', 'fixed' );
+	public const KINDS = array( 'field', 'fixed', 'template' );
+
+	/**
+	 * Output types of a `template` row: its result is always a text, plain or HTML (`auto` is plain text).
+	 */
+	public const TEMPLATE_TYPES = array( 'auto', 'string', 'html' );
 
 	/**
 	 * Expected types of the output of a row. `auto` uses the declared type of the source.
@@ -64,6 +69,11 @@ final class Mapping {
 	 * Groups of source identifiers (`group.name`): the first part says who provides the value.
 	 */
 	public const SOURCE_GROUPS = array( 'core', 'meta', 'taxonomy', 'image', 'language', 'acf', 'cmb2' );
+
+	/**
+	 * Format of a source identifier: a group, a dot and a name. Whether the group is known is checked apart.
+	 */
+	public const SOURCE_PATTERN = '/\A([a-z][a-z0-9]*)\.([A-Za-z0-9_.:-]{1,191})\z/';
 
 	/**
 	 * A mapping with no rows, in the current version.
