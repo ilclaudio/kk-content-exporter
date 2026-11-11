@@ -26,7 +26,7 @@ class KKCE_Item_Exporter_Integration_Test extends WP_UnitTestCase {
 		) );
 		add_shortcode( 'kkce_context', static fn() => 'shortcode:' . get_the_ID() . ':' . $GLOBALS['id'] );
 		$mapping = $this->mapping( array( array(
-			'key' => 'body', 'kind' => 'field', 'type' => 'html', 'missing' => 'omit',
+			'key' => 'body', 'kind' => 'field', 'type' => 'html',
 			'sources' => array( '*' => array( 'core.content' ) ), 'options' => array( 'shortcodes' => true ),
 		) ) );
 		try {
@@ -72,7 +72,7 @@ class KKCE_Item_Exporter_Integration_Test extends WP_UnitTestCase {
 		} );
 		try {
 			Item_Exporter::export( $target, $this->mapping( array( array(
-				'key' => 'body', 'kind' => 'field', 'type' => 'html', 'missing' => 'omit',
+				'key' => 'body', 'kind' => 'field', 'type' => 'html',
 				'sources' => array( '*' => array( 'core.content' ) ), 'options' => array( 'shortcodes' => true ),
 			) ) ) );
 			$this->fail( 'The exception must propagate.' );
@@ -86,20 +86,45 @@ class KKCE_Item_Exporter_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An accepted fixed date with a null byte applies the missing policy without aborting other rows.
+	 * An accepted fixed date with a null byte gives null without aborting the other rows.
 	 */
-	public function test_invalid_fixed_date_applies_missing_policy() {
-		$post = get_post( self::factory()->post->create() );
-		$rows = array();
-		foreach ( array( 'omit', 'null' ) as $policy ) {
-			$rows[] = array( 'key' => $policy, 'kind' => 'fixed', 'type' => 'datetime', 'missing' => $policy, 'values' => array( '*' => "2026-07\0-01" ) );
-		}
-		$mapping = $this->mapping( $rows );
+	public function test_invalid_fixed_date_gives_null() {
+		$post    = get_post( self::factory()->post->create() );
+		$mapping = $this->mapping( array( array( 'key' => 'when', 'kind' => 'fixed', 'type' => 'datetime', 'values' => array( '*' => "2026-07\0-01" ) ) ) );
 		$this->assertSame( array(), KKCE\Output\Mapping_Validator::validate( $mapping ) );
 		$item = Item_Exporter::export( $post, $mapping );
-		$this->assertArrayNotHasKey( 'omit', $item );
-		$this->assertNull( $item['null'] );
+		$this->assertArrayHasKey( 'when', $item );
+		$this->assertNull( $item['when'] );
 		$this->assertSame( $post->ID, $item['id'] );
+	}
+
+	/**
+	 * The mapping is a contract: every item has every key of the mapping, in the order of the rows, also
+	 * when a field is absent, empty or cannot be converted.
+	 */
+	public function test_every_item_has_every_key_of_the_mapping() {
+		$with    = get_post( self::factory()->post->create( array( 'post_status' => 'publish', 'post_excerpt' => 'Short', 'post_title' => 'With' ) ) );
+		$without = get_post( self::factory()->post->create( array( 'post_status' => 'publish', 'post_excerpt' => '', 'post_title' => '', 'post_author' => 0 ) ) );
+		$mapping = $this->mapping(
+			array(
+				array( 'key' => 'excerpt', 'kind' => 'field', 'type' => 'html', 'sources' => array( '*' => array( 'core.excerpt' ) ) ),
+				array( 'key' => 'author', 'kind' => 'field', 'type' => 'auto', 'sources' => array( '*' => array( 'core.author.name' ) ) ),
+				array( 'key' => 'price', 'kind' => 'field', 'type' => 'number', 'sources' => array( '*' => array( 'meta.price' ) ) ),
+				array( 'key' => 'only_pages', 'kind' => 'fixed', 'type' => 'auto', 'values' => array( 'page' => 'p' ) ),
+			)
+		);
+
+		$first  = Item_Exporter::export( $with, $mapping );
+		$second = Item_Exporter::export( $without, $mapping );
+
+		$keys = array( 'id', 'summary', 'source', 'excerpt', 'author', 'price', 'only_pages' );
+		$this->assertSame( $keys, array_keys( $first ) );
+		$this->assertSame( $keys, array_keys( $second ) );
+		$this->assertSame( 'Short', $first['excerpt'] );
+		$this->assertSame( '', $second['excerpt'], 'An empty excerpt is there, but empty.' );
+		$this->assertNull( $second['author'], 'No author gives null.' );
+		$this->assertNull( $first['price'], 'A source without a value gives null.' );
+		$this->assertNull( $first['only_pages'], 'A fixed value of another post type gives null.' );
 	}
 
 	/**
@@ -118,14 +143,12 @@ class KKCE_Item_Exporter_Integration_Test extends WP_UnitTestCase {
 							'key'     => 'id',
 							'kind'    => 'field',
 							'type'    => 'auto',
-							'missing' => 'omit',
 							'sources' => array( '*' => array( 'core.id' ) ),
 						),
 						array(
 							'key'     => 'summary',
 							'kind'    => 'field',
 							'type'    => 'auto',
-							'missing' => 'null',
 							'sources' => array(
 								'*'    => array( 'core.excerpt', 'core.title' ),
 								'page' => array( 'core.title' ),
@@ -135,7 +158,6 @@ class KKCE_Item_Exporter_Integration_Test extends WP_UnitTestCase {
 							'key'     => 'source',
 							'kind'    => 'fixed',
 							'type'    => 'auto',
-							'missing' => 'omit',
 							'values'  => array( '*' => 'site-a' ),
 						),
 					),
@@ -203,7 +225,6 @@ class KKCE_Item_Exporter_Integration_Test extends WP_UnitTestCase {
 					'key'     => 'link',
 					'kind'    => 'field',
 					'type'    => 'auto',
-					'missing' => 'omit',
 					'sources' => array( '*' => array( 'core.permalink' ) ),
 				),
 			)
@@ -240,7 +261,6 @@ class KKCE_Item_Exporter_Integration_Test extends WP_UnitTestCase {
 					'key'     => 'link',
 					'kind'    => 'field',
 					'type'    => 'auto',
-					'missing' => 'omit',
 					'sources' => array( '*' => array( 'core.permalink' ) ),
 				),
 			)
@@ -269,11 +289,12 @@ class KKCE_Item_Exporter_Integration_Test extends WP_UnitTestCase {
 			'key'     => 'author_page',
 			'kind'    => 'field',
 			'type'    => 'auto',
-			'missing' => 'omit',
 			'sources' => array( '*' => array( 'core.author.url' ) ),
 		);
 
-		$this->assertArrayNotHasKey( 'author_page', Item_Exporter::export( $post, $this->mapping( array( $row ) ) ) );
+		$unconfirmed = Item_Exporter::export( $post, $this->mapping( array( $row ) ) );
+		$this->assertArrayHasKey( 'author_page', $unconfirmed, 'The key of the contract is still written.' );
+		$this->assertNull( $unconfirmed['author_page'] );
 
 		$row['confirmed'] = array( 'core.author.url' );
 		$this->assertSame( get_author_posts_url( $author ), Item_Exporter::export( $post, $this->mapping( array( $row ) ) )['author_page'] );
@@ -288,7 +309,6 @@ class KKCE_Item_Exporter_Integration_Test extends WP_UnitTestCase {
 			'key'     => 'name',
 			'kind'    => 'field',
 			'type'    => 'auto',
-			'missing' => 'omit',
 			'sources' => array( '*' => array( 'meta.name', 'core.nothing', 'core.title' ) ),
 		);
 
@@ -314,7 +334,6 @@ class KKCE_Item_Exporter_Integration_Test extends WP_UnitTestCase {
 			'key'     => $key,
 			'kind'    => 'field',
 			'type'    => $type,
-			'missing' => 'omit',
 			'sources' => array( '*' => array( $source ) ),
 		);
 

@@ -112,7 +112,6 @@ final class Catalog {
 				'key'     => 'type',
 				'kind'    => 'field',
 				'type'    => 'string',
-				'missing' => 'omit',
 				'sources' => array( '*' => array( 'core.type' ) ),
 			),
 		);

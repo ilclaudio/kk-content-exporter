@@ -1,0 +1,1121 @@
+/**
+ * Mapping editor of a feed (kkce_feed): rows of the mapping, built from the data printed by the
+ * "Mapping" box.
+ *
+ * Every row writes one key in every exported item (with null when there is no value: the mapping is a
+ * contract). A row has an output key, a rule and an output type:
+ * - rule "Field": a chain of fields for every post type (`*`), and optional exceptions for single post
+ *   types, which replace the general chain for that type. In a chain the first field with a value wins;
+ *   the next ones are fallbacks. The options of the fields (run shortcodes, raw content) are shown only
+ *   when a field of the row accepts them, with their warnings;
+ * - rule "Fixed value": a text for every post type, with the same exceptions; the output type of the row
+ *   converts it (a number, true or false).
+ * Rows can be added, removed and moved. The script keeps the mapping in a hidden field
+ * `kkce_feed[mapping]` that it creates itself: without JavaScript the field does not exist and the saved
+ * mapping stays as it is. The checks made here only help while typing: the server checks the whole
+ * mapping again when the feed is saved.
+ *
+ * The catalog of the sources comes from the page; when the checked post types change, a new one is asked
+ * to the admin route `GET /kkce-admin/v1/catalog` with wp.apiFetch, which sends the REST nonce. The DOM is
+ * built with createElement and textContent only: no HTML string is ever parsed.
+ *
+ * @package KKCE
+ */
+
+( function ( wp ) {
+	'use strict';
+
+	if ( ! wp || ! wp.i18n || ! wp.apiFetch ) {
+		return;
+	}
+
+	const { __, sprintf } = wp.i18n;
+
+	/**
+	 * Labels used by several controls.
+	 */
+	const LABEL_FIELD = __( 'Field', 'kk-content-exporter' );
+	const LABEL_UP = __( 'Move up', 'kk-content-exporter' );
+	const LABEL_DOWN = __( 'Move down', 'kk-content-exporter' );
+	const LABEL_REMOVE = __( 'Remove', 'kk-content-exporter' );
+	const LABEL_REMOVE_EXCEPTION = __( 'Remove exception', 'kk-content-exporter' );
+	const LABEL_ADD_FALLBACK = __( 'Add fallback', 'kk-content-exporter' );
+
+	/**
+	 * Output types of a row, in the order shown, with their labels.
+	 */
+	const TYPES = [
+		[ 'auto', __( 'Automatic (type of the field)', 'kk-content-exporter' ) ],
+		[ 'string', __( 'Text', 'kk-content-exporter' ) ],
+		[ 'html', __( 'HTML', 'kk-content-exporter' ) ],
+		[ 'number', __( 'Number', 'kk-content-exporter' ) ],
+		[ 'boolean', __( 'True or false', 'kk-content-exporter' ) ],
+		[ 'datetime', __( 'Date and time', 'kk-content-exporter' ) ],
+		[ 'url', __( 'URL', 'kk-content-exporter' ) ],
+		[ 'list', __( 'List', 'kk-content-exporter' ) ],
+	];
+
+	/**
+	 * Rules this interface can edit. The rules of a later version are kept unchanged.
+	 */
+	const KINDS = [
+		[ 'field', LABEL_FIELD ],
+		[ 'fixed', __( 'Fixed value', 'kk-content-exporter' ) ],
+	];
+
+
+	/**
+	 * Delay before asking a new catalog, so that several checkboxes changed quickly make one request.
+	 */
+	const CATALOG_DELAY = 300;
+
+
+	/**
+	 * Creates an element.
+	 *
+	 * @param {string} tag        Tag name.
+	 * @param {Object} attributes Properties set on the element (className, id, type, ...); names starting
+	 *                            with `aria` or `data-` are set as attributes.
+	 * @param {string} text       Text content.
+	 * @return {HTMLElement} The element.
+	 */
+	function el( tag, attributes, text ) {
+		const node = document.createElement( tag );
+		Object.keys( attributes || {} ).forEach( function ( name ) {
+			if ( name.startsWith( 'aria' ) || name.startsWith( 'data-' ) ) {
+				node.setAttribute( name.replace( /^aria([A-Z])/, function ( match, letter ) {
+					return 'aria-' + letter.toLowerCase();
+				} ), attributes[ name ] );
+			} else {
+				node[ name ] = attributes[ name ];
+			}
+		} );
+		if ( undefined !== text ) {
+			node.textContent = text;
+		}
+		return node;
+	}
+
+	/**
+	 * Creates a select element with its options.
+	 *
+	 * @param {Object}  attributes Properties of the select.
+	 * @param {Array[]} options    Pairs [value, label].
+	 * @param {string}  selected   Selected value.
+	 * @return {HTMLSelectElement} The select.
+	 */
+	function select( attributes, options, selected ) {
+		const node = el( 'select', attributes );
+		options.forEach( function ( option ) {
+			node.appendChild( el( 'option', { value: option[ 0 ], selected: option[ 0 ] === selected }, option[ 1 ] ) );
+		} );
+		return node;
+	}
+
+	/**
+	 * Whether this interface can edit a row: a `field` row whose sources are a map of chains, or a `fixed`
+	 * row whose values are a map of values. Other rows are kept unchanged.
+	 *
+	 * @param {Object} row Row of the mapping.
+	 * @return {boolean} Whether the row can be edited.
+	 */
+	function isEditable( row ) {
+		const isMap = function ( value ) {
+			return value && 'object' === typeof value && ! Array.isArray( value );
+		};
+		if ( 'field' === row.kind ) {
+			return isMap( row.sources ) && Object.keys( row.sources ).every( function ( scope ) {
+				return Array.isArray( row.sources[ scope ] );
+			} );
+		}
+		if ( 'fixed' === row.kind ) {
+			return isMap( row.values );
+		}
+		return false;
+	}
+
+	/**
+	 * Scopes of a row (`*` first, then the exceptions in their order).
+	 *
+	 * @param {Object} map Sources or values of the row.
+	 * @return {string[]} Scopes.
+	 */
+	function scopesOf( map ) {
+		const scopes = Object.keys( map ).filter( function ( scope ) {
+			return '*' !== scope;
+		} );
+		return [ '*' ].concat( scopes );
+	}
+
+	/**
+	 * Part of an element id for a scope (`*` cannot be used in an id).
+	 *
+	 * @param {string} scope Scope.
+	 * @return {string} Id part.
+	 */
+	function scopeId( scope ) {
+		return '*' === scope ? 'all' : 't-' + scope;
+	}
+
+	/**
+	 * Every source of a `field` row, in every chain, without duplicates.
+	 *
+	 * @param {Object} row Row of the mapping.
+	 * @return {string[]} Source identifiers.
+	 */
+	function rowSources( row ) {
+		const found = [];
+		Object.keys( row.sources || {} ).forEach( function ( scope ) {
+			( row.sources[ scope ] || [] ).forEach( function ( source ) {
+				if ( source && -1 === found.indexOf( source ) ) {
+					found.push( String( source ) );
+				}
+			} );
+		} );
+		return found;
+	}
+
+	/**
+	 * Error of an output key, or an empty string when the key can be used.
+	 *
+	 * @param {string}   key       Key.
+	 * @param {string[]} otherKeys Keys of the other rows.
+	 * @param {number}   maxLength Maximum length.
+	 * @param {RegExp}   pattern   Allowed format, given by the server.
+	 * @return {string} Message.
+	 */
+	function keyError( key, otherKeys, maxLength, pattern ) {
+		if ( '' === key ) {
+			return __( 'Enter a key.', 'kk-content-exporter' );
+		}
+		if ( key.length > maxLength ) {
+			/* translators: %d: maximum number of characters of a key. */
+			return sprintf( __( 'Use at most %d characters.', 'kk-content-exporter' ), maxLength );
+		}
+		if ( ! pattern.test( key ) ) {
+			return __( 'Use only letters, digits, underscores, dots and dashes.', 'kk-content-exporter' );
+		}
+		if ( /^[0-9]+$/.test( key ) ) {
+			return __( 'A key cannot be made only of digits.', 'kk-content-exporter' );
+		}
+		if ( -1 !== otherKeys.indexOf( key ) ) {
+			return __( 'Another row already uses this key.', 'kk-content-exporter' );
+		}
+		return '';
+	}
+
+	/**
+	 * The mapping editor bound to its container.
+	 *
+	 * @param {HTMLElement} container Container printed by the box.
+	 * @param {Object}      data      Initial data.
+	 */
+	function MappingEditor( container, data ) {
+		const mapping = data.mapping && Array.isArray( data.mapping.rows ) ? data.mapping : { version: 1, rows: [] };
+		// Rules of the keys and limits come from the server (Mapping_Validator): nothing is copied here.
+		const keyPattern = new RegExp( data.keyPattern );
+		let nextId = 1;
+		let catalog = data.catalog;
+		let request = 0;
+		let timer = null;
+		// A saved mapping is never replaced by the proposed rows; an empty one is, until it is touched.
+		let touched = mapping.rows.length > 0;
+		let rows = mapping.rows.map( function ( row ) {
+			return { uid: nextId++, data: row, autoKey: null };
+		} );
+
+		const list = el( 'ol', { className: 'kkce-mapping-rows' } );
+		const empty = el( 'p', { className: 'kkce-mapping-empty' }, __( 'No rows yet. Add a row to choose what the feed exports.', 'kk-content-exporter' ) );
+		const addButton = el( 'button', { type: 'button', className: 'button' }, __( 'Add row', 'kk-content-exporter' ) );
+		const limit = el( 'p', { className: 'description', hidden: true } );
+		const status = el( 'p', { className: 'screen-reader-text', ariaLive: 'polite' } );
+		const field = el( 'input', { type: 'hidden', name: data.field } );
+
+		container.textContent = '';
+		[ empty, list, addButton, limit, status, field ].forEach( function ( node ) {
+			container.appendChild( node );
+		} );
+
+		/**
+		 * Announces a message to screen readers.
+		 *
+		 * @param {string} message Message.
+		 */
+		function announce( message ) {
+			status.textContent = '';
+			window.setTimeout( function () {
+				status.textContent = message;
+			}, 50 );
+		}
+
+		/**
+		 * Source of the catalog with the given identifier.
+		 *
+		 * @param {string} id Identifier.
+		 * @return {Object|null} Source.
+		 */
+		function findSource( id ) {
+			return catalog.sources.find( function ( source ) {
+				return source.id === id;
+			} ) || null;
+		}
+
+		/**
+		 * Options accepted by the sources of a row, from the catalog.
+		 *
+		 * @param {Object} row Row of the mapping.
+		 * @return {string[]} Option names.
+		 */
+		function acceptedOptions( row ) {
+			const accepted = [];
+			rowSources( row ).forEach( function ( id ) {
+				const source = findSource( id );
+				( source ? source.options : [] ).forEach( function ( option ) {
+					if ( -1 === accepted.indexOf( option ) ) {
+						accepted.push( option );
+					}
+				} );
+			} );
+			return accepted;
+		}
+
+		/**
+		 * Keeps the data of a `field` row consistent: options only when a source accepts them, without the ones
+		 * turned off (`false`; other values, such as a date format, are kept), confirmations only for sources
+		 * still in the row.
+		 *
+		 * @param {Object} row Row of the mapping.
+		 */
+		function tidy( row ) {
+			if ( 'field' !== row.kind || ! isEditable( row ) ) {
+				return;
+			}
+			const sources = rowSources( row );
+			// Keep the options while some field of the row is unknown to the catalog (not loaded, or not offered).
+			const known = sources.every( function ( id ) {
+				return null !== findSource( id );
+			} );
+			if ( row.options && known ) {
+				const accepted = acceptedOptions( row );
+				Object.keys( row.options ).forEach( function ( name ) {
+					if ( -1 === accepted.indexOf( name ) || false === row.options[ name ] ) {
+						delete row.options[ name ];
+					}
+				} );
+			}
+			if ( row.options && ! Object.keys( row.options ).length ) {
+				delete row.options;
+			}
+			if ( Array.isArray( row.confirmed ) ) {
+				row.confirmed = row.confirmed.filter( function ( id ) {
+					return -1 !== sources.indexOf( id );
+				} );
+				if ( ! row.confirmed.length ) {
+					delete row.confirmed;
+				}
+			}
+		}
+
+		/**
+		 * Form of a row written in the hidden field.
+		 *
+		 * The interface keeps fields not chosen yet (an empty select after "Add fallback", a new exception) and
+		 * empty fixed values while the administrator works; the mapping gets only what was chosen: empty
+		 * places of a chain are left out, and so are empty chains and empty fixed values (the post types they
+		 * cover then use the general chain or value, or give null). A row with nothing chosen keeps an empty
+		 * general chain or no value, so the server reports it when the feed is saved.
+		 *
+		 * @param {Object} row Row of the mapping (state of the interface).
+		 * @return {Object} Row to save.
+		 */
+		function serialize( row ) {
+			if ( ! isEditable( row ) ) {
+				return row;
+			}
+			const out = Object.assign( {}, row );
+			if ( 'field' === row.kind ) {
+				out.sources = {};
+				scopesOf( row.sources ).forEach( function ( scope ) {
+					const chain = ( row.sources[ scope ] || [] ).filter( function ( source ) {
+						return '' !== source;
+					} );
+					if ( chain.length ) {
+						out.sources[ scope ] = chain;
+					}
+				} );
+				if ( ! Object.keys( out.sources ).length ) {
+					out.sources = { '*': [] };
+				}
+			} else {
+				out.values = {};
+				scopesOf( row.values ).forEach( function ( scope ) {
+					const value = row.values[ scope ];
+					if ( undefined !== value && '' !== value ) {
+						out.values[ scope ] = value;
+					}
+				} );
+			}
+			return out;
+		}
+
+		/**
+		 * Writes the mapping in the hidden field.
+		 *
+		 * @param {boolean} byUser Whether the change comes from the administrator (it then counts as an
+		 *                         unsaved change of the page).
+		 */
+		function commit( byUser ) {
+			rows.forEach( function ( row ) {
+				tidy( row.data );
+			} );
+			field.value = JSON.stringify( {
+				version: mapping.version || 1,
+				rows: rows.map( function ( row ) {
+					return serialize( row.data );
+				} ),
+			} );
+			if ( byUser ) {
+				touched = true;
+				field.dispatchEvent( new Event( 'change', { bubbles: true } ) );
+			}
+		}
+
+		/**
+		 * Label of a post type, or of the general scope.
+		 *
+		 * @param {string} scope Post type, or `*`.
+		 * @return {string} Label.
+		 */
+		function scopeLabel( scope ) {
+			if ( '*' === scope ) {
+				return __( 'For all post types', 'kk-content-exporter' );
+			}
+			if ( -1 === catalog.post_types.indexOf( scope ) ) {
+				/* translators: %s: key of a post type that is not checked in the settings of the feed. */
+				return sprintf( __( 'For %s (not checked)', 'kk-content-exporter' ), scope );
+			}
+			/* translators: %s: label of a post type. */
+			return sprintf( __( 'For %s', 'kk-content-exporter' ), ( catalog.labels || {} )[ scope ] || scope );
+		}
+
+		/**
+		 * Select element of a field of a chain, grouped by post type.
+		 *
+		 * @param {string} current Selected source.
+		 * @param {Object} attrs   Properties of the select.
+		 * @return {HTMLSelectElement} The select.
+		 */
+		function sourceSelect( current, attrs ) {
+			const node = el( 'select', attrs );
+			node.appendChild( el( 'option', { value: '' }, __( '— Choose a field —', 'kk-content-exporter' ) ) );
+
+			if ( '' !== current && null === findSource( current ) ) {
+				/* translators: %s: identifier of a field that the post types of the feed do not offer. */
+				node.appendChild( el( 'option', { value: current, selected: true }, sprintf( __( '%s (not offered by the checked post types)', 'kk-content-exporter' ), current ) ) );
+			}
+
+			const groups = [ [ '', __( 'Common fields', 'kk-content-exporter' ) ] ];
+			catalog.post_types.forEach( function ( postType ) {
+				/* translators: %s: label of a post type. */
+				groups.push( [ postType, sprintf( __( 'Fields of %s', 'kk-content-exporter' ), ( catalog.labels || {} )[ postType ] || postType ) ] );
+			} );
+
+			groups.forEach( function ( group ) {
+				const sources = catalog.sources.filter( function ( source ) {
+					return source.post_type === group[ 0 ];
+				} );
+				if ( ! sources.length ) {
+					return;
+				}
+				const optgroup = el( 'optgroup', { label: group[ 1 ] } );
+				sources.forEach( function ( source ) {
+					optgroup.appendChild( el( 'option', { value: source.id, selected: source.id === current }, source.label ) );
+				} );
+				node.appendChild( optgroup );
+			} );
+
+			return node;
+		}
+
+		/**
+		 * Labelled field of a row.
+		 *
+		 * @param {string}      label   Label.
+		 * @param {HTMLElement} control Control.
+		 * @return {HTMLElement} Wrapper.
+		 */
+		function labelled( label, control ) {
+			const wrapper = el( 'div', { className: 'kkce-mapping-field' } );
+			wrapper.appendChild( el( 'label', { htmlFor: control.id }, label ) );
+			wrapper.appendChild( control );
+			return wrapper;
+		}
+
+		/**
+		 * Button of a row, carrying what it acts on.
+		 *
+		 * @param {Object} row     Row.
+		 * @param {string} action  Action.
+		 * @param {string} text    Visible text.
+		 * @param {Object} extra   Other properties (id, ariaLabel, disabled, data-scope, data-index, className).
+		 * @return {HTMLButtonElement} The button.
+		 */
+		function button( row, action, text, extra ) {
+			return el( 'button', Object.assign( { type: 'button', className: 'button', 'data-uid': String( row.uid ), 'data-action': action }, extra ), text );
+		}
+
+		/**
+		 * Text of the legend of a row.
+		 *
+		 * @param {number} index Position of the row.
+		 * @param {Object} row   Row.
+		 * @return {string} Legend.
+		 */
+		function legendText( index, row ) {
+			const key = String( row.data.key || '' );
+			if ( '' === key ) {
+				/* translators: %d: position of the row. */
+				return sprintf( __( 'Row %d (no key)', 'kk-content-exporter' ), index + 1 );
+			}
+			/* translators: 1: position of the row, 2: output key of the row. */
+			return sprintf( __( 'Row %1$d: %2$s', 'kk-content-exporter' ), index + 1, key );
+		}
+
+		/**
+		 * Chain of fields of a scope of a `field` row.
+		 *
+		 * @param {Object} row   Row.
+		 * @param {string} scope Scope.
+		 * @return {HTMLElement} The group.
+		 */
+		function renderChain( row, scope ) {
+			const prefix = 'kkce-mapping-' + row.uid + '-' + scopeId( scope );
+			const chain = row.data.sources[ scope ];
+			const group = el( 'fieldset', { className: 'kkce-mapping-scope' } );
+			const label = scopeLabel( scope );
+			group.appendChild( el( 'legend', {}, label ) );
+
+			const items = el( 'ol', { className: 'kkce-mapping-chain' } );
+			// An empty chain still shows one select, so a field can be chosen at once.
+			const shown = chain.length ? chain : [ '' ];
+			shown.forEach( function ( source, index ) {
+				const item = el( 'li' );
+				const id = prefix + '-' + index;
+				const control = sourceSelect( String( source || '' ), { id: id + '-source', className: 'kkce-mapping-source', 'data-uid': String( row.uid ), 'data-scope': scope, 'data-index': String( index ) } );
+				/* translators: %d: position of a fallback field in its chain (2 for the first fallback). */
+				item.appendChild( labelled( 0 === index ? LABEL_FIELD : sprintf( __( 'Otherwise, field %d', 'kk-content-exporter' ), index + 1 ), control ) );
+
+				if ( chain.length > 1 ) {
+					const actions = el( 'span', { className: 'kkce-mapping-chain-actions' } );
+					/* translators: 1: position of the field in its chain, 2: name of the chain, for example "For all post types". */
+					actions.appendChild( button( row, 'chain-up', LABEL_UP, { id: id + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move field %1$d up (%2$s)', 'kk-content-exporter' ), index + 1, label ), 'data-scope': scope, 'data-index': String( index ) } ) );
+					/* translators: 1: position of the field in its chain, 2: name of the chain, for example "For all post types". */
+					actions.appendChild( button( row, 'chain-down', LABEL_DOWN, { id: id + '-down', disabled: index === chain.length - 1, ariaLabel: sprintf( __( 'Move field %1$d down (%2$s)', 'kk-content-exporter' ), index + 1, label ), 'data-scope': scope, 'data-index': String( index ) } ) );
+					/* translators: 1: position of the field in its chain, 2: name of the chain, for example "For all post types". */
+					actions.appendChild( button( row, 'chain-remove', LABEL_REMOVE, { id: id + '-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove field %1$d (%2$s)', 'kk-content-exporter' ), index + 1, label ), 'data-scope': scope, 'data-index': String( index ) } ) );
+					item.appendChild( actions );
+				}
+				items.appendChild( item );
+			} );
+			group.appendChild( items );
+
+			const tools = el( 'div', { className: 'kkce-mapping-scope-actions' } );
+			// A fallback can be added once the last field of the chain is chosen.
+			/* translators: %s: name of the chain, for example "For all post types". */
+			tools.appendChild( button( row, 'chain-add', LABEL_ADD_FALLBACK, { id: prefix + '-add', disabled: chain.length >= data.maxChain || ! chain.length || '' === chain[ chain.length - 1 ], ariaLabel: sprintf( __( 'Add a fallback field (%s)', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
+			if ( '*' !== scope ) {
+				/* translators: %s: post types the exception applies to, for example "For Posts". */
+				tools.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove the exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
+			}
+			group.appendChild( tools );
+
+			return group;
+		}
+
+		/**
+		 * Value of a scope of a `fixed` row.
+		 *
+		 * @param {Object} row   Row.
+		 * @param {string} scope Scope.
+		 * @return {HTMLElement} The group.
+		 */
+		function renderValue( row, scope ) {
+			const prefix = 'kkce-mapping-' + row.uid + '-' + scopeId( scope );
+			const value = row.data.values[ scope ];
+			const label = scopeLabel( scope );
+			const group = el( 'div', { className: 'kkce-mapping-scope kkce-mapping-value' } );
+			const input = el( 'input', {
+				type: 'text',
+				id: prefix + '-value',
+				className: 'regular-text kkce-mapping-fixed',
+				value: null === value || undefined === value ? '' : String( value ),
+				maxLength: data.valueMaxLength,
+				'data-uid': String( row.uid ),
+				'data-scope': scope,
+			} );
+			/* translators: %s: name of the scope, for example "For all post types". */
+			group.appendChild( labelled( sprintf( __( 'Value (%s)', 'kk-content-exporter' ), label ), input ) );
+			if ( '*' !== scope ) {
+				/* translators: %s: post types the exception applies to, for example "For Posts". */
+				group.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove the exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
+			}
+			return group;
+		}
+
+		/**
+		 * Control that adds an exception for a checked post type, when some is left.
+		 *
+		 * @param {Object} row Row.
+		 * @return {HTMLElement|null} The control.
+		 */
+		function renderExceptionPicker( row ) {
+			const map = 'field' === row.data.kind ? row.data.sources : row.data.values;
+			const free = catalog.post_types.filter( function ( postType ) {
+				return ! Object.prototype.hasOwnProperty.call( map, postType );
+			} );
+			if ( ! free.length ) {
+				return null;
+			}
+			const prefix = 'kkce-mapping-' + row.uid;
+			const wrapper = el( 'div', { className: 'kkce-mapping-exception' } );
+			const picker = select( { id: prefix + '-exception' }, free.map( function ( postType ) {
+				return [ postType, ( catalog.labels || {} )[ postType ] || postType ];
+			} ), free[ 0 ] );
+			wrapper.appendChild( labelled( __( 'Different for', 'kk-content-exporter' ), picker ) );
+			wrapper.appendChild( button( row, 'scope-add', __( 'Add exception', 'kk-content-exporter' ), { id: prefix + '-exception-add' } ) );
+			return wrapper;
+		}
+
+		/**
+		 * Options of the fields of a `field` row, with their warnings, shown only when a field accepts them.
+		 *
+		 * @param {Object} row Row.
+		 * @return {HTMLElement|null} The options.
+		 */
+		function renderOptions( row ) {
+			const accepted = acceptedOptions( row.data );
+			const options = row.data.options || {};
+			const prefix = 'kkce-mapping-' + row.uid;
+			const wrapper = el( 'div', { className: 'kkce-mapping-options' } );
+
+			if ( -1 !== accepted.indexOf( 'raw' ) ) {
+				const raw = el( 'input', { type: 'checkbox', id: prefix + '-raw', checked: true === options.raw, 'data-uid': String( row.uid ), 'data-option': 'raw', ariaDescribedby: prefix + '-raw-help' } );
+				const label = el( 'label', { htmlFor: raw.id } );
+				label.appendChild( raw );
+				label.appendChild( document.createTextNode( ' ' + __( 'Raw content', 'kk-content-exporter' ) ) );
+				wrapper.appendChild( label );
+				wrapper.appendChild( el( 'p', { id: prefix + '-raw-help', className: 'description' }, __( 'The text as stored in the database: blocks are not turned into HTML and links stay as they are.', 'kk-content-exporter' ) ) );
+			}
+
+			if ( -1 !== accepted.indexOf( 'shortcodes' ) ) {
+				const shortcodes = el( 'input', { type: 'checkbox', id: prefix + '-shortcodes', checked: true === options.shortcodes, disabled: true === options.raw, 'data-uid': String( row.uid ), 'data-option': 'shortcodes', ariaDescribedby: prefix + '-shortcodes-help' } );
+				const label = el( 'label', { htmlFor: shortcodes.id } );
+				label.appendChild( shortcodes );
+				label.appendChild( document.createTextNode( ' ' + __( 'Run the shortcodes', 'kk-content-exporter' ) ) );
+				wrapper.appendChild( label );
+				wrapper.appendChild( el( 'p', { id: prefix + '-shortcodes-help', className: 'description kkce-mapping-warning' }, true === options.raw
+					? __( 'Not used with the raw content.', 'kk-content-exporter' )
+					: __( 'Off: shortcodes are removed. On: the shortcodes of other plugins run while the feed is read, as for a visitor; they can add content you do not expect or slow the feed down. Turn it on only for shortcodes you know.', 'kk-content-exporter' ) ) );
+			}
+
+			rowSources( row.data ).forEach( function ( id ) {
+				const source = findSource( id );
+				if ( ! source || ! source.needs_confirmation ) {
+					return;
+				}
+				if ( 'core.author.url' === source.id ) {
+					wrapper.appendChild( el( 'p', { className: 'kkce-mapping-warning' }, __( 'The author archive URL usually contains the login name of the author: it is exported only after an explicit confirmation, asked when the feed is saved.', 'kk-content-exporter' ) ) );
+					return;
+				}
+				/* translators: %s: label of a field whose name looks sensitive or personal. */
+				wrapper.appendChild( el( 'p', { className: 'kkce-mapping-warning' }, sprintf( __( '%s looks like sensitive or personal data: in a public feed anyone can read it. It is exported only after an explicit confirmation, asked when the feed is saved.', 'kk-content-exporter' ), source.label ) ) );
+			} );
+
+			return wrapper.childNodes.length ? wrapper : null;
+		}
+
+		/**
+		 * Builds the element of a row.
+		 *
+		 * @param {Object} row   Row.
+		 * @param {number} index Position.
+		 * @return {HTMLElement} List item.
+		 */
+		function renderRow( row, index ) {
+			const prefix = 'kkce-mapping-' + row.uid;
+			const item = el( 'li', { className: 'kkce-mapping-row' } );
+			const fieldset = el( 'fieldset' );
+			const fields = el( 'div', { className: 'kkce-mapping-fields' } );
+			const error = el( 'p', { id: prefix + '-key-error', className: 'kkce-mapping-error', hidden: true } );
+			const key = el( 'input', {
+				type: 'text',
+				id: prefix + '-key',
+				className: 'kkce-mapping-key',
+				value: String( row.data.key || '' ),
+				maxLength: data.keyMaxLength,
+				autocomplete: 'off',
+				spellcheck: false,
+				ariaDescribedby: error.id,
+				'data-uid': String( row.uid ),
+			} );
+			const editable = isEditable( row.data );
+
+			fieldset.appendChild( el( 'legend', {}, legendText( index, row ) ) );
+			fields.appendChild( labelled( __( 'JSON key', 'kk-content-exporter' ), key ) );
+			if ( editable ) {
+				fields.appendChild( labelled( __( 'Rule', 'kk-content-exporter' ), select( { id: prefix + '-kind', className: 'kkce-mapping-kind', 'data-uid': String( row.uid ) }, KINDS, row.data.kind ) ) );
+			}
+			fields.appendChild( labelled( __( 'Output type', 'kk-content-exporter' ), select( { id: prefix + '-type', className: 'kkce-mapping-type', 'data-uid': String( row.uid ) }, TYPES, row.data.type || 'auto' ) ) );
+			fieldset.appendChild( fields );
+			fieldset.appendChild( error );
+
+			if ( ! editable ) {
+				fieldset.appendChild( el( 'p', { className: 'kkce-mapping-kept' }, __( 'This rule cannot be edited here yet and is kept unchanged.', 'kk-content-exporter' ) ) );
+			} else if ( 'field' === row.data.kind ) {
+				if ( ! row.data.sources[ '*' ] ) {
+					row.data.sources = Object.assign( { '*': [] }, row.data.sources );
+				}
+				scopesOf( row.data.sources ).forEach( function ( scope ) {
+					fieldset.appendChild( renderChain( row, scope ) );
+				} );
+				const picker = renderExceptionPicker( row );
+				if ( picker ) {
+					fieldset.appendChild( picker );
+				}
+				const options = renderOptions( row );
+				if ( options ) {
+					fieldset.appendChild( options );
+				}
+			} else {
+				if ( ! Object.prototype.hasOwnProperty.call( row.data.values, '*' ) ) {
+					row.data.values = Object.assign( { '*': '' }, row.data.values );
+				}
+				scopesOf( row.data.values ).forEach( function ( scope ) {
+					fieldset.appendChild( renderValue( row, scope ) );
+				} );
+				const picker = renderExceptionPicker( row );
+				if ( picker ) {
+					fieldset.appendChild( picker );
+				}
+			}
+
+			const actions = el( 'div', { className: 'kkce-mapping-actions' } );
+			/* translators: %d: position of the row. */
+			actions.appendChild( button( row, 'up', LABEL_UP, { id: prefix + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move row %d up', 'kk-content-exporter' ), index + 1 ) } ) );
+			/* translators: %d: position of the row. */
+			actions.appendChild( button( row, 'down', LABEL_DOWN, { id: prefix + '-down', disabled: index === rows.length - 1, ariaLabel: sprintf( __( 'Move row %d down', 'kk-content-exporter' ), index + 1 ) } ) );
+			/* translators: %d: position of the row. */
+			actions.appendChild( button( row, 'remove', LABEL_REMOVE, { id: prefix + '-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove row %d', 'kk-content-exporter' ), index + 1 ) } ) );
+			fieldset.appendChild( actions );
+			item.appendChild( fieldset );
+
+			return item;
+		}
+
+		/**
+		 * Shows the errors of the keys of every row.
+		 */
+		function checkKeys() {
+			rows.forEach( function ( row, index ) {
+				const others = rows.filter( function ( other, position ) {
+					return position !== index;
+				} ).map( function ( other ) {
+					return String( other.data.key || '' );
+				} );
+				const message = keyError( String( row.data.key || '' ), others, data.keyMaxLength, keyPattern );
+				const input = document.getElementById( 'kkce-mapping-' + row.uid + '-key' );
+				const error = document.getElementById( 'kkce-mapping-' + row.uid + '-key-error' );
+				if ( ! input || ! error ) {
+					return;
+				}
+				error.textContent = message;
+				error.hidden = '' === message;
+				if ( '' === message ) {
+					input.removeAttribute( 'aria-invalid' );
+				} else {
+					input.setAttribute( 'aria-invalid', 'true' );
+				}
+			} );
+		}
+
+		/**
+		 * Draws every row again and moves the focus to an element, by its id.
+		 *
+		 * @param {string} focusId Id of the element to focus, if any.
+		 */
+		function render( focusId ) {
+			list.textContent = '';
+			rows.forEach( function ( row, index ) {
+				list.appendChild( renderRow( row, index ) );
+			} );
+			empty.hidden = rows.length > 0;
+			addButton.disabled = rows.length >= data.maxRows;
+			/* translators: %d: maximum number of rows of a mapping. */
+			limit.textContent = sprintf( __( 'A mapping can have at most %d rows.', 'kk-content-exporter' ), data.maxRows );
+			limit.hidden = rows.length < data.maxRows;
+			checkKeys();
+
+			if ( focusId ) {
+				const target = document.getElementById( focusId );
+				if ( target && ! target.disabled ) {
+					target.focus();
+				}
+			}
+		}
+
+		/**
+		 * Position of a row by its uid.
+		 *
+		 * @param {string} uid Uid read from a data attribute.
+		 * @return {number} Position, -1 when not found.
+		 */
+		function indexOf( uid ) {
+			return rows.findIndex( function ( row ) {
+				return String( row.uid ) === uid;
+			} );
+		}
+
+		/**
+		 * Proposes the key of a field while the key of the row is empty or still the one proposed before.
+		 *
+		 * @param {Object} row Row.
+		 * @param {string} id  Source identifier.
+		 */
+		function proposeKey( row, id ) {
+			const source = findSource( id );
+			const key = String( row.data.key || '' );
+			if ( source && source.suggested_key && ( '' === key || key === row.autoKey ) ) {
+				row.data.key = source.suggested_key;
+				row.autoKey = source.suggested_key;
+			}
+		}
+
+		/**
+		 * Uses the rows proposed by the catalog while the administrator has not touched an empty mapping.
+		 */
+		function proposeRows() {
+			if ( touched ) {
+				return;
+			}
+			rows = ( catalog.suggested_rows || [] ).map( function ( row ) {
+				return { uid: nextId++, data: JSON.parse( JSON.stringify( row ) ), autoKey: row.key };
+			} );
+		}
+
+		addButton.addEventListener( 'click', function () {
+			if ( rows.length >= data.maxRows ) {
+				return;
+			}
+			const row = { uid: nextId++, data: { key: '', kind: 'field', type: 'auto', sources: { '*': [] } }, autoKey: '' };
+			rows.push( row );
+			commit( true );
+			render( 'kkce-mapping-' + row.uid + '-key' );
+			/* translators: %d: position of the new row. */
+			announce( sprintf( __( 'Row %d added.', 'kk-content-exporter' ), rows.length ) );
+		} );
+
+		/**
+		 * Actions on a whole row: move and remove.
+		 *
+		 * @param {string} action Action.
+		 * @param {number} index  Position of the row.
+		 */
+		function rowAction( action, index ) {
+			const row = rows[ index ];
+
+			if ( 'remove' === action ) {
+				rows.splice( index, 1 );
+				commit( true );
+				const next = rows[ index ] || rows[ index - 1 ];
+				render( next ? 'kkce-mapping-' + next.uid + '-key' : '' );
+				if ( ! next ) {
+					addButton.focus();
+				}
+				/* translators: %d: position of the removed row. */
+				announce( sprintf( __( 'Row %d removed.', 'kk-content-exporter' ), index + 1 ) );
+				return;
+			}
+
+			const up = 'up' === action;
+			const target = up ? index - 1 : index + 1;
+			if ( target < 0 || target >= rows.length ) {
+				return;
+			}
+			rows.splice( index, 1 );
+			rows.splice( target, 0, row );
+			commit( true );
+			// Keep the focus on the same button; at the first or last position it is disabled, so use the other one.
+			const atEdge = up ? 0 === target : rows.length - 1 === target;
+			render( 'kkce-mapping-' + row.uid + '-' + ( up !== atEdge ? 'up' : 'down' ) );
+			/* translators: %d: new position of the moved row. */
+			announce( sprintf( __( 'Row moved to position %d.', 'kk-content-exporter' ), target + 1 ) );
+		}
+
+		/**
+		 * Actions on the chains of fields and on the exceptions of a row.
+		 *
+		 * @param {Object} row    Row.
+		 * @param {string} action Action.
+		 * @param {string} scope  Scope of the button, if any.
+		 * @param {number} index  Position in the chain, if any.
+		 */
+		function scopeAction( row, action, scope, index ) {
+			const prefix = 'kkce-mapping-' + row.uid;
+			const isField = 'field' === row.data.kind;
+			const map = isField ? row.data.sources : row.data.values;
+
+			if ( 'scope-add' === action ) {
+				const picker = document.getElementById( prefix + '-exception' );
+				const postType = picker ? picker.value : '';
+				if ( ! postType || Object.prototype.hasOwnProperty.call( map, postType ) ) {
+					return;
+				}
+				map[ postType ] = isField ? [] : '';
+				commit( true );
+				render( prefix + '-' + scopeId( postType ) + ( isField ? '-0-source' : '-value' ) );
+				/* translators: %s: name of the exception, for example "For Posts". */
+				announce( sprintf( __( 'Exception added: %s.', 'kk-content-exporter' ), scopeLabel( postType ) ) );
+				return;
+			}
+
+			if ( 'scope-remove' === action ) {
+				const label = scopeLabel( scope );
+				delete map[ scope ];
+				commit( true );
+				render( '' );
+				// The post type is free again, so the "Different for" picker exists: it takes the focus.
+				const target = document.getElementById( prefix + '-exception' ) || document.getElementById( prefix + '-key' );
+				if ( target ) {
+					target.focus();
+				}
+				/* translators: %s: name of the exception, for example "For Posts". */
+				announce( sprintf( __( 'Exception removed: %s.', 'kk-content-exporter' ), label ) );
+				return;
+			}
+
+			const chain = row.data.sources[ scope ];
+			const base = prefix + '-' + scopeId( scope );
+
+			if ( 'chain-add' === action ) {
+				if ( chain.length >= data.maxChain ) {
+					return;
+				}
+				chain.push( '' );
+				commit( true );
+				render( base + '-' + ( chain.length - 1 ) + '-source' );
+				announce( __( 'Fallback field added.', 'kk-content-exporter' ) );
+				return;
+			}
+
+			if ( 'chain-remove' === action ) {
+				chain.splice( index, 1 );
+				commit( true );
+				render( base + '-' + Math.min( index, Math.max( chain.length - 1, 0 ) ) + '-source' );
+				announce( __( 'Field removed from the chain.', 'kk-content-exporter' ) );
+				return;
+			}
+
+			const up = 'chain-up' === action;
+			const target = up ? index - 1 : index + 1;
+			if ( target < 0 || target >= chain.length ) {
+				return;
+			}
+			const moved = chain.splice( index, 1 )[ 0 ];
+			chain.splice( target, 0, moved );
+			commit( true );
+			const atEdge = up ? 0 === target : chain.length - 1 === target;
+			render( base + '-' + target + '-' + ( up !== atEdge ? 'up' : 'down' ) );
+			/* translators: %d: new position of the moved field in its chain. */
+			announce( sprintf( __( 'Field moved to position %d of the chain.', 'kk-content-exporter' ), target + 1 ) );
+		}
+
+		list.addEventListener( 'click', function ( event ) {
+			const control = event.target.closest( 'button[data-action]' );
+			if ( ! control ) {
+				return;
+			}
+			const index = indexOf( control.getAttribute( 'data-uid' ) || '' );
+			if ( -1 === index ) {
+				return;
+			}
+			const action = control.getAttribute( 'data-action' );
+			if ( 'up' === action || 'down' === action || 'remove' === action ) {
+				rowAction( action, index );
+				return;
+			}
+			scopeAction( rows[ index ], action, control.getAttribute( 'data-scope' ) || '', parseInt( control.getAttribute( 'data-index' ) || '0', 10 ) );
+		} );
+
+		list.addEventListener( 'input', function ( event ) {
+			const input = event.target;
+			const index = indexOf( input.getAttribute( 'data-uid' ) || '' );
+			if ( -1 === index ) {
+				return;
+			}
+			const row = rows[ index ];
+
+			if ( input.classList.contains( 'kkce-mapping-key' ) ) {
+				row.data.key = input.value.trim();
+				row.autoKey = null;
+				commit( true );
+				// Update the legend and the errors without drawing the row again, so the caret stays where it is.
+				input.closest( 'li' ).querySelector( 'legend' ).textContent = legendText( index, row );
+				checkKeys();
+				return;
+			}
+
+			if ( input.classList.contains( 'kkce-mapping-fixed' ) ) {
+				row.data.values[ input.getAttribute( 'data-scope' ) ] = input.value;
+				commit( true );
+			}
+		} );
+
+		list.addEventListener( 'change', function ( event ) {
+			const control = event.target;
+			const index = indexOf( control.getAttribute( 'data-uid' ) || '' );
+			if ( -1 === index ) {
+				return;
+			}
+			const row = rows[ index ];
+
+			if ( control.classList.contains( 'kkce-mapping-key' ) ) {
+				// Announced when the field is left, not at every key: the message is also linked to the field.
+				const error = document.getElementById( 'kkce-mapping-' + row.uid + '-key-error' );
+				if ( error && ! error.hidden && '' !== error.textContent ) {
+					/* translators: 1: position of the row, 2: error message about its key. */
+					announce( sprintf( __( 'Error in row %1$d: %2$s', 'kk-content-exporter' ), index + 1, error.textContent ) );
+				}
+				return;
+			}
+
+			if ( control.classList.contains( 'kkce-mapping-fixed' ) ) {
+				return;
+			}
+
+			if ( control.classList.contains( 'kkce-mapping-type' ) ) {
+				row.data.type = control.value;
+			} else if ( control.classList.contains( 'kkce-mapping-kind' ) ) {
+				if ( control.value === row.data.kind ) {
+					return;
+				}
+				// A row has one rule: only the chosen one is saved. The settings of the other rule stay in memory
+				// until the page is left, so going back (a select can change at every arrow key) loses nothing.
+				const previous = row.data;
+				const next = ( row.stash && row.stash[ control.value ] ) || ( 'fixed' === control.value
+					? { kind: 'fixed', values: { '*': '' } }
+					: { kind: 'field', sources: { '*': [] } } );
+				row.stash = Object.assign( {}, row.stash, { [ previous.kind ]: previous } );
+				// The key and the output type belong to the row, not to the rule: they follow the change.
+				next.key = previous.key;
+				next.type = previous.type || 'auto';
+				row.data = next;
+				/* translators: %s: name of the rule, for example "Fixed value". */
+				announce( sprintf( __( 'Rule changed to %s. Only the settings of this rule are saved.', 'kk-content-exporter' ), control.options[ control.selectedIndex ].text ) );
+			} else if ( control.classList.contains( 'kkce-mapping-source' ) ) {
+				const scope = control.getAttribute( 'data-scope' );
+				const position = parseInt( control.getAttribute( 'data-index' ) || '0', 10 );
+				// An empty choice keeps its place in the chain, so the other fields do not move while browsing.
+				row.data.sources[ scope ][ position ] = control.value;
+				if ( 0 === position && '' !== control.value ) {
+					proposeKey( row, control.value );
+				}
+			} else if ( control.hasAttribute( 'data-option' ) ) {
+				row.data.options = Object.assign( {}, row.data.options );
+				row.data.options[ control.getAttribute( 'data-option' ) ] = control.checked;
+			} else {
+				return;
+			}
+
+			commit( true );
+			render( control.id );
+		} );
+
+		/**
+		 * Asks the catalog of the checked post types.
+		 *
+		 * @param {string[]} postTypes Checked post types.
+		 */
+		function loadCatalog( postTypes ) {
+			const current = ++request;
+
+			if ( ! postTypes.length ) {
+				catalog = Object.assign( {}, catalog, {
+					post_types: [],
+					labels: {},
+					suggested_rows: [],
+					sources: catalog.sources.filter( function ( source ) {
+						return '' === source.post_type;
+					} ),
+				} );
+				proposeRows();
+				commit( false );
+				render( '' );
+				return;
+			}
+
+			const query = postTypes.map( function ( postType ) {
+				return 'post_types[]=' + encodeURIComponent( postType );
+			} ).join( '&' );
+
+			wp.apiFetch( { path: data.catalogPath + '?' + query } ).then( function ( response ) {
+				if ( current !== request ) {
+					return;
+				}
+				catalog = response;
+				proposeRows();
+				commit( false );
+				render( document.activeElement && container.contains( document.activeElement ) ? document.activeElement.id : '' );
+			} ).catch( function () {
+				if ( current === request ) {
+					announce( __( 'The fields of the selected post types could not be loaded. The previous list is kept.', 'kk-content-exporter' ) );
+				}
+			} );
+		}
+
+		document.addEventListener( 'change', function ( event ) {
+			const target = event.target;
+			if ( ! target.matches || ! target.matches( 'input[type="checkbox"][name="kkce_feed[post_types][]"]' ) ) {
+				return;
+			}
+			window.clearTimeout( timer );
+			timer = window.setTimeout( function () {
+				const checked = Array.prototype.map.call(
+					document.querySelectorAll( 'input[type="checkbox"][name="kkce_feed[post_types][]"]:checked' ),
+					function ( input ) {
+						return input.value;
+					}
+				);
+				loadCatalog( checked );
+			}, CATALOG_DELAY );
+		} );
+
+		proposeRows();
+		commit( false );
+		render( '' );
+	}
+
+	function init() {
+		const container = document.getElementById( 'kkce-feed-mapping' );
+		if ( ! container ) {
+			return;
+		}
+
+		let data;
+		try {
+			data = JSON.parse( container.getAttribute( 'data-kkce-mapping' ) || '' );
+		} catch ( error ) {
+			return;
+		}
+		if ( ! data || ! data.catalog || ! Array.isArray( data.catalog.sources ) || ! data.field || ! data.keyPattern || ! data.maxChain || ! data.valueMaxLength ) {
+			return;
+		}
+
+		MappingEditor( container, data );
+	}
+
+	if ( 'loading' === document.readyState ) {
+		document.addEventListener( 'DOMContentLoaded', init );
+	} else {
+		init();
+	}
+}( window.wp ) );

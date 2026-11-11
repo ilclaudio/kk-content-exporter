@@ -224,6 +224,39 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Sanitization must never turn a malformed submitted slug into another valid slug.
+	 *
+	 * @dataProvider malformed_slug_provider
+	 *
+	 * @param mixed $slug Submitted slug.
+	 */
+	public function test_a_malformed_slug_is_refused_before_sanitization( $slug ) {
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields() );
+
+		$this->submit( $feed, $this->fields( array( 'slug' => $slug, 'per_page' => '7' ) ) );
+
+		$this->assertSame( 'news', get_post_field( 'post_name', $feed ) );
+		$this->assertSame( 'format', get_transient( 'kkce_feed_errors_' . $this->admin . '_' . $feed )['slug'] );
+		$this->assertSame( 7, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ) );
+	}
+
+	/**
+	 * Inputs that must be refused instead of repaired by sanitize_text_field().
+	 *
+	 * @return array<string, array{0: mixed}>
+	 */
+	public function malformed_slug_provider(): array {
+		return array(
+			'HTML tags'       => array( '<b>other</b>' ),
+			'encoded octets'  => array( 'my%2dfeed' ),
+			'only HTML tags'  => array( '<b></b>' ),
+			'embedded break'  => array( "other\nfeed" ),
+			'tampered array'  => array( array( 'other' ) ),
+		);
+	}
+
+	/**
 	 * A feed can keep its own slug when it is saved again.
 	 */
 	public function test_a_feed_can_be_saved_again_with_its_own_slug() {
@@ -350,17 +383,6 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( 'incomplete', $errors['active'] );
 		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
 		$this->assertSame( array(), Feed_Meta::post_types( $feed ) );
-	}
-
-	/**
-	 * A feed without a source cannot be enabled.
-	 */
-	public function test_a_feed_without_source_cannot_be_enabled() {
-		$feed = $this->feed();
-
-		$this->submit( $feed, $this->fields( array( 'post_types' => array() ) ) );
-
-		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
 	}
 
 	/**

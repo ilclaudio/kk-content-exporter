@@ -39,7 +39,6 @@ class KKCE_Rule_Evaluator_Unit_Test extends KKCE_Unit_Test_Case {
 				'key'     => 'k',
 				'kind'    => 'field',
 				'type'    => 'auto',
-				'missing' => 'omit',
 				'sources' => array( '*' => $chain ),
 			),
 			$override
@@ -163,7 +162,6 @@ class KKCE_Rule_Evaluator_Unit_Test extends KKCE_Unit_Test_Case {
 			'key'     => 'lang',
 			'kind'    => 'fixed',
 			'type'    => 'auto',
-			'missing' => 'omit',
 			'values'  => array(
 				'*'     => 'it',
 				'event' => 'en',
@@ -214,29 +212,54 @@ class KKCE_Rule_Evaluator_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
-	 * A whole mapping gives an object: rows with a value, `null` for the rows with the `null` policy, and
-	 * nothing for the omitted ones; the order of the rows is kept.
+	 * A whole mapping gives an object with every key of the mapping, in the order of the rows: the mapping is
+	 * a contract, so a row without a value writes `null` instead of disappearing.
 	 */
 	public function test_evaluate_mapping() {
 		$mapping = array(
 			'version' => 1,
 			'rows'    => array(
 				$this->field( array( 'core.title' ), array( 'key' => 'title' ) ),
-				$this->field( array( 'meta.none' ), array( 'key' => 'omitted' ) ),
-				$this->field( array( 'meta.none' ), array( 'key' => 'nothing', 'missing' => 'null' ) ),
-				array( 'key' => 'lang', 'kind' => 'fixed', 'type' => 'auto', 'missing' => 'omit', 'values' => array( '*' => 'it' ) ),
+				$this->field( array( 'meta.none' ), array( 'key' => 'nothing' ) ),
+				array( 'key' => 'lang', 'kind' => 'fixed', 'type' => 'auto', 'values' => array( '*' => 'it' ) ),
 				$this->field( array( 'meta.zero' ), array( 'key' => 'zero' ) ),
+				array( 'key' => 'only_events', 'kind' => 'fixed', 'type' => 'auto', 'values' => array( 'event' => 'x' ) ),
 			),
 		);
 
 		$this->assertSame(
 			array(
-				'title'   => 'T',
-				'nothing' => null,
-				'lang'    => 'it',
-				'zero'    => 0,
+				'title'       => 'T',
+				'nothing'     => null,
+				'lang'        => 'it',
+				'zero'        => 0,
+				'only_events' => null,
 			),
 			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $this->reader( array( 'core.title' => 'T', 'meta.zero' => 0 ) ), $this->declared( array( 'core.title' => 'string', 'meta.zero' => 'number' ) ) )
+		);
+	}
+
+	/**
+	 * Rows that cannot give a value still write their key with `null`: an unknown kind, a damaged shape, an
+	 * unconfirmed sensitive source.
+	 */
+	public function test_rows_without_a_value_write_null() {
+		$mapping = array(
+			'version' => 1,
+			'rows'    => array(
+				array( 'key' => 'future', 'kind' => 'expression', 'sources' => array( '*' => array( 'core.title' ) ) ),
+				array( 'key' => 'damaged', 'kind' => 'field', 'sources' => 'core.title' ),
+				$this->field( array( 'meta.api_key' ), array( 'key' => 'secret' ) ),
+			),
+		);
+
+		$this->assertSame(
+			array(
+				'future'  => null,
+				'damaged' => null,
+				'secret'  => null,
+			),
+			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $this->reader( array( 'core.title' => 'T', 'meta.api_key' => 'SECRET' ) ) )
 		);
 	}
 
@@ -292,26 +315,36 @@ class KKCE_Rule_Evaluator_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
-	 * A value that cannot be converted counts as missing: the policy of the row applies.
+	 * A value that cannot be converted, and an empty value of a type without an empty form, give `null`; an
+	 * empty value keeps its empty form for text, HTML and lists ("there, but empty").
 	 */
-	public function test_a_value_that_cannot_be_converted_counts_as_missing() {
+	public function test_a_value_that_cannot_be_converted_gives_null() {
 		$mapping = array(
 			'version' => 1,
 			'rows'    => array(
 				$this->field( array( 'meta.price' ), array( 'key' => 'price', 'type' => 'number' ) ),
-				$this->field( array( 'meta.price' ), array( 'key' => 'price_or_null', 'type' => 'number', 'missing' => 'null' ) ),
-				$this->field( array( 'meta.empty' ), array( 'key' => 'empty_number', 'type' => 'number', 'missing' => 'null' ) ),
+				$this->field( array( 'meta.empty' ), array( 'key' => 'empty_number', 'type' => 'number' ) ),
+				$this->field( array( 'meta.empty' ), array( 'key' => 'empty_date', 'type' => 'datetime' ) ),
+				$this->field( array( 'meta.empty' ), array( 'key' => 'empty_url', 'type' => 'url' ) ),
+				$this->field( array( 'meta.empty' ), array( 'key' => 'empty_boolean', 'type' => 'boolean' ) ),
 				$this->field( array( 'meta.empty' ), array( 'key' => 'empty_text', 'type' => 'string' ) ),
+				$this->field( array( 'meta.empty' ), array( 'key' => 'empty_html', 'type' => 'html' ) ),
+				$this->field( array( 'meta.empty_list' ), array( 'key' => 'empty_list', 'type' => 'list' ) ),
 			),
 		);
 
 		$this->assertSame(
 			array(
-				'price_or_null' => null,
+				'price'         => null,
 				'empty_number'  => null,
+				'empty_date'    => null,
+				'empty_url'     => null,
+				'empty_boolean' => null,
 				'empty_text'    => '',
+				'empty_html'    => '',
+				'empty_list'    => array(),
 			),
-			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $this->reader( array( 'meta.price' => '15,50', 'meta.empty' => '' ) ) )
+			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $this->reader( array( 'meta.price' => '15,50', 'meta.empty' => '', 'meta.empty_list' => array() ) ) )
 		);
 	}
 
@@ -323,7 +356,6 @@ class KKCE_Rule_Evaluator_Unit_Test extends KKCE_Unit_Test_Case {
 			'key'     => $key,
 			'kind'    => 'fixed',
 			'type'    => $type,
-			'missing' => 'omit',
 			'values'  => array( '*' => $value ),
 		);
 		$mapping = array(
@@ -343,6 +375,7 @@ class KKCE_Rule_Evaluator_Unit_Test extends KKCE_Unit_Test_Case {
 				'b' => false,
 				'c' => 'it',
 				'd' => true,
+				'e' => null,
 			),
 			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $this->reader( array() ) )
 		);

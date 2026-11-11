@@ -41,10 +41,12 @@
     "make-pot": "wp i18n make-pot . languages/kk-content-exporter.pot --slug=kk-content-exporter --domain=kk-content-exporter --exclude=vendor,node_modules,tests,DEV,AGENTS,bin,build",
     "update-po": "wp i18n update-po languages/kk-content-exporter.pot languages",
     "make-mo": "wp i18n make-mo languages",
+    "make-json": "wp i18n make-json languages",
     "i18n": [
       "@make-pot",
       "@update-po",
-      "@make-mo"
+      "@make-mo",
+      "@make-json"
     ],
     "hooks:install": "git config core.hooksPath .githooks",
     "build:zip": "@php bin/build-zip.php",
@@ -67,7 +69,8 @@
     "make-pot": "Regenerate languages/kk-content-exporter.pot",
     "update-po": "Merge the .pot into every languages/*.po",
     "make-mo": "Compile every languages/*.po into .mo",
-    "i18n": "make-pot, update-po and make-mo in order",
+    "make-json": "Write the JSON translations of the admin scripts from every languages/*.po",
+    "i18n": "make-pot, update-po, make-mo and make-json in order",
     "hooks:install": "Activate the Git hooks of .githooks/ in this clone",
     "build:zip": "Build build/kk-content-exporter-<version>.zip (clean tree, checks, .distignore, verification); options after --: --allow-dirty, --skip-checks",
     "svn:prepare": "Prepare the WordPress.org SVN working copy from the build (dry run by default; --apply; never commits)",

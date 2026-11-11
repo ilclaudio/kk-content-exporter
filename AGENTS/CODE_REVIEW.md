@@ -39,7 +39,7 @@ recorded in the progress file; reconcile new or changed paths rather than resett
 ## Checks
 
 - **Export correctness**: mapping of every source type; distinction between missing value, empty
-  string, `0` and `false`; type conversions and their failures (omit + log); dates in ISO 8601 UTC and
+  string, `0` and `false`; type conversions and their failures (`null` + log); every key of the mapping in every item; dates in ISO 8601 UTC and
   date-only values; relative-to-absolute URLs in HTML; image metadata; pagination arithmetic, stable
   ordering (modified GMT + ID), `modified_after` boundaries; behavior without the optional plugins.
 - **Data exposure** (highest priority): the *Export safety* rules of `AGENTS/CODING_STANDARDS.md`
@@ -149,7 +149,7 @@ are recorded as skipped); when resuming, keep the batches recorded in the progre
 2. Feed storage: `kkce_feed` post type, meta registration, revisions, migrations of the configuration.
 3. Admin: feed list and editor, validation, preview, duplication, export/import, capabilities and nonces.
 4. Sources: core fields, post meta, taxonomies, featured image, language, optional ACF/CMB2/Polylang providers.
-5. Output: normalization, dates, HTML and URL handling, missing-value policy, sensitive-key filter.
+5. Output: normalization, dates, HTML and URL handling, every key always written (`null` when missing), sensitive-key filter.
 6. REST endpoints: routes, argument schema, permissions and authentication, queries, pagination, `modified_after`.
 7. Logging and operations.
 8. Translations and documentation consistency (`readme.txt`, `README.md`, `CHANGELOG.md`, guides).

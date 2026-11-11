@@ -25,7 +25,6 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 				'key'     => 'title',
 				'kind'    => 'field',
 				'type'    => 'string',
-				'missing' => 'omit',
 				'sources' => array( '*' => array( 'core.title' ) ),
 			),
 			$override
@@ -93,7 +92,6 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 							array(
 								'key'     => 'price',
 								'type'    => 'number',
-								'missing' => 'null',
 								'sources' => array(
 									'product' => array( 'meta._price', 'acf.price' ),
 									'event'   => array( 'meta.cost' ),
@@ -294,32 +292,38 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
-	 * The output type is one of the eight known types; the missing-value policy is `omit` or `null`.
+	 * The output type is one of the eight known types.
 	 */
-	public function test_output_type_and_missing_policy() {
+	public function test_output_type() {
 		foreach ( array( 'auto', 'string', 'html', 'number', 'boolean', 'datetime', 'url', 'list' ) as $type ) {
 			$this->assertSame( array(), $this->errors( $this->mapping( array( $this->field_row( array( 'type' => $type ) ) ) ) ), $type );
-		}
-		foreach ( array( 'omit', 'null' ) as $policy ) {
-			$this->assertSame( array(), $this->errors( $this->mapping( array( $this->field_row( array( 'missing' => $policy ) ) ) ) ), $policy );
 		}
 
 		foreach ( array( 'date', 'String', '', null, 3 ) as $bad ) {
 			$this->assertSame( array( '0:type:unknown' ), $this->errors( $this->mapping( array( $this->field_row( array( 'type' => $bad ) ) ) ) ), 'type ' . var_export( $bad, true ) );
 		}
-		foreach ( array( 'empty', 'Null', '', null, false ) as $bad ) {
-			$this->assertSame( array( '0:missing:unknown' ), $this->errors( $this->mapping( array( $this->field_row( array( 'missing' => $bad ) ) ) ) ), 'missing ' . var_export( $bad, true ) );
-		}
 	}
 
 	/**
-	 * The type and the policy are optional: `auto` and `omit` apply.
+	 * The type is optional: `auto` applies.
 	 */
-	public function test_type_and_policy_are_optional() {
+	public function test_type_is_optional() {
 		$row = $this->field_row();
-		unset( $row['type'], $row['missing'] );
+		unset( $row['type'] );
 
 		$this->assertSame( array(), $this->errors( $this->mapping( array( $row ) ) ) );
+	}
+
+	/**
+	 * A row has no missing-value policy: every key is always written (the mapping is a contract), so the old
+	 * field `missing` is an unknown field, whatever its value.
+	 */
+	public function test_the_missing_value_policy_no_longer_exists() {
+		foreach ( array( 'omit', 'null', '' ) as $policy ) {
+			$this->assertSame( array( '0:missing:unknown_field' ), $this->errors( $this->mapping( array( $this->field_row( array( 'missing' => $policy ) ) ) ) ), $policy );
+			$this->assertSame( array( '0:missing:unknown_field' ), $this->errors( $this->mapping( array( $this->fixed_row( array( 'missing' => $policy ) ) ) ) ), $policy );
+		}
+		$this->assertNull( Mapping_Validator::parse( '{"version":1,"rows":[{"key":"lang","kind":"fixed","missing":"omit","values":{"*":"it"}}]}' ) );
 	}
 
 	/**
@@ -481,14 +485,12 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 						'key'     => 'when',
 						'kind'    => 'field',
 						'type'    => 'auto',
-						'missing' => 'omit',
 						'sources' => array( 'event' => array( 'meta.when' ), '*' => array( 'core.title' ) ),
 					),
 					array(
 						'key'     => 'lang',
 						'kind'    => 'fixed',
 						'type'    => 'auto',
-						'missing' => 'omit',
 						'values'  => array( '*' => 'it' ),
 					),
 				),
@@ -537,7 +539,6 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 						'key'     => 'lang',
 						'kind'    => 'fixed',
 						'type'    => 'auto',
-						'missing' => 'omit',
 						'values'  => array( '*' => 'it' ),
 					),
 				),
@@ -627,7 +628,7 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 
 		$normalized = Mapping_Validator::normalize( $this->mapping( array( $row ) ) )['rows'][0];
 
-		$this->assertSame( array( 'key', 'kind', 'type', 'missing', 'sources', 'confirmed', 'options' ), array_keys( $normalized ) );
+		$this->assertSame( array( 'key', 'kind', 'type', 'sources', 'confirmed', 'options' ), array_keys( $normalized ) );
 		$this->assertSame( array( 'meta.organizer_email' ), $normalized['confirmed'] );
 
 		$row['confirmed'] = array();

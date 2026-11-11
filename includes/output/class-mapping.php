@@ -14,12 +14,13 @@ defined( 'ABSPATH' ) || exit;
  *
  * It is stored as JSON text with a version number:
  *
- *     { "version": 1, "rows": [ { "key": "title", "kind": "field", "type": "string", "missing": "omit",
+ *     { "version": 1, "rows": [ { "key": "title", "kind": "field", "type": "string",
  *                                  "sources": { "*": [ "core.title" ] } } ] }
  *
- * A row is "output key + value rule": `kind` says which rule it is, `type` the expected type of the
- * output and `missing` what to do when the rule gives no value. This class holds the vocabulary and
- * reads the text; `Mapping_Validator` checks a mapping and gives its canonical form. Pure logic: no
+ * A row is "output key + value rule": `kind` says which rule it is and `type` the expected type of the
+ * output. The mapping is a contract: every row writes its key in every item, with `null` when the rule
+ * gives no value (decision of 2026-11-11: there is no missing-value policy). This class holds the
+ * vocabulary and reads the text; `Mapping_Validator` checks a mapping and gives its canonical form. Pure logic: no
  * WordPress function is called, so everything here is tested without WordPress.
  */
 final class Mapping {
@@ -58,11 +59,6 @@ final class Mapping {
 	 * Expected types of the output of a row. `auto` uses the declared type of the source.
 	 */
 	public const TYPES = array( 'auto', 'string', 'html', 'number', 'boolean', 'datetime', 'url', 'list' );
-
-	/**
-	 * What to do when a rule gives no value: leave the key out (default) or write `null`.
-	 */
-	public const MISSING_POLICIES = array( 'omit', 'null' );
 
 	/**
 	 * Groups of source identifiers (`group.name`): the first part says who provides the value.

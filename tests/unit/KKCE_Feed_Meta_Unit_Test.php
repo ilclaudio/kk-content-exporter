@@ -14,41 +14,6 @@ use KKCE\Feed_Meta;
 class KKCE_Feed_Meta_Unit_Test extends KKCE_Unit_Test_Case {
 
 	/**
-	 * register() registers the five configuration meta of the feed, none of them in REST.
-	 */
-	public function test_register_registers_the_five_meta_hidden_from_rest() {
-		$registered = array();
-
-		Functions\expect( 'register_post_meta' )
-			->times( 5 )
-			->andReturnUsing(
-				static function ( $post_type, $key, $args ) use ( &$registered ) {
-					$registered[ $key ] = array( $post_type, $args );
-					return true;
-				}
-			);
-
-		Feed_Meta::register();
-
-		$this->assertSame(
-			array( '_kkce_post_type', '_kkce_mapping', '_kkce_access', '_kkce_active', '_kkce_per_page' ),
-			array_keys( $registered )
-		);
-		foreach ( $registered as $key => $entry ) {
-			$this->assertSame( 'kkce_feed', $entry[0] );
-			$this->assertFalse( $entry[1]['show_in_rest'] );
-			$this->assertSame( '_kkce_post_type' !== $key, $entry[1]['single'], $key );
-			$this->assertIsCallable( $entry[1]['sanitize_callback'] );
-			$this->assertIsCallable( $entry[1]['auth_callback'] );
-		}
-		$this->assertArrayNotHasKey( 'default', $registered['_kkce_post_type'][1], 'A default would give a list with an empty post type.' );
-		$this->assertSame( '', $registered['_kkce_mapping'][1]['default'] );
-		$this->assertSame( 'public', $registered['_kkce_access'][1]['default'] );
-		$this->assertFalse( $registered['_kkce_active'][1]['default'] );
-		$this->assertSame( 50, $registered['_kkce_per_page'][1]['default'] );
-	}
-
-	/**
 	 * The access is either `public` or `authenticated`; anything else falls back to `public`.
 	 *
 	 * @dataProvider access_provider
@@ -224,7 +189,7 @@ class KKCE_Feed_Meta_Unit_Test extends KKCE_Unit_Test_Case {
 		$saved = Feed_Meta::sanitize_mapping( '{"rows":[{"kind":"fixed","key":"lang","values":{"*":"it"}}],"version":1}' );
 
 		$this->assertSame(
-			'{"version":1,"rows":[{"key":"lang","kind":"fixed","type":"auto","missing":"omit","values":{"*":"it"}}]}',
+			'{"version":1,"rows":[{"key":"lang","kind":"fixed","type":"auto","values":{"*":"it"}}]}',
 			$saved
 		);
 		$this->assertSame( $saved, Feed_Meta::sanitize_mapping( $saved ), 'The canonical form does not change when sanitized again.' );

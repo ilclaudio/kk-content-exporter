@@ -79,10 +79,13 @@ final class Plugin {
 		add_action( 'manage_' . Feed_Post_Type::POST_TYPE . '_posts_custom_column', array( Admin\Feed_List::class, 'render_column' ), 10, 2 );
 		add_filter( 'post_row_actions', array( Admin\Feed_List::class, 'row_actions' ), 10, 2 );
 		add_action( 'add_meta_boxes_' . Feed_Post_Type::POST_TYPE, array( Admin\Feed_Editor::class, 'add_meta_box' ) );
+		add_action( 'add_meta_boxes_' . Feed_Post_Type::POST_TYPE, array( Admin\Mapping_Box::class, 'add_meta_box' ) );
 		add_filter( 'wp_insert_post_data', array( Admin\Feed_Editor::class, 'filter_post_data' ), 10, 2 );
 		add_action( 'save_post_' . Feed_Post_Type::POST_TYPE, array( Admin\Feed_Editor::class, 'save' ) );
 		add_action( 'admin_notices', array( Admin\Feed_Editor::class, 'render_notices' ) );
 		add_action( 'admin_enqueue_scripts', array( Admin\Feed_Editor::class, 'enqueue_assets' ) );
+		add_action( 'admin_enqueue_scripts', array( Admin\Mapping_Box::class, 'enqueue_assets' ) );
+		add_action( 'rest_api_init', array( Rest\Admin_Routes::class, 'register' ) );
 		add_filter( 'plugin_row_meta', array( self::class, 'filter_plugin_row_meta' ), 10, 2 );
 	}
 

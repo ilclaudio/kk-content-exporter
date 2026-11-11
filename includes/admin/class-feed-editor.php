@@ -60,6 +60,11 @@ final class Feed_Editor {
 	public const SLUG_PLACEHOLDER = '__kkce_slug__';
 
 	/**
+	 * Above this number of post types, the box offers a filter of the checkboxes.
+	 */
+	public const FILTER_THRESHOLD = 10;
+
+	/**
 	 * Prefix of the nonce action; the ID of the feed is appended, so a nonce is valid for one feed.
 	 */
 	private const NONCE_ACTION = 'kkce_save_feed_';
@@ -117,12 +122,7 @@ final class Feed_Editor {
 	 * @return void
 	 */
 	public static function enqueue_assets( $hook_suffix ): void {
-		if ( 'post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix ) {
-			return;
-		}
-
-		$screen = get_current_screen();
-		if ( null === $screen || Feed_Post_Type::POST_TYPE !== $screen->post_type ) {
+		if ( ! self::is_feed_screen( $hook_suffix ) ) {
 			return;
 		}
 
@@ -133,6 +133,23 @@ final class Feed_Editor {
 			KKCE_VERSION,
 			array( 'in_footer' => true )
 		);
+	}
+
+	/**
+	 * Whether the admin page being loaded edits or creates a feed: the only screens that load the
+	 * scripts of the feed editor.
+	 *
+	 * @param mixed $hook_suffix Admin page being loaded (`admin_enqueue_scripts`).
+	 * @return bool
+	 */
+	public static function is_feed_screen( $hook_suffix ): bool {
+		if ( 'post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix ) {
+			return false;
+		}
+
+		$screen = get_current_screen();
+
+		return null !== $screen && Feed_Post_Type::POST_TYPE === $screen->post_type;
 	}
 
 	/**
@@ -208,9 +225,18 @@ final class Feed_Editor {
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Source', 'kk-content-exporter' ); ?> <?php self::print_required_marker(); ?></th>
 					<td>
-						<fieldset aria-describedby="kkce-feed-post-types-help">
+						<?php $choices = self::source_choices( $values['post_types'] ); ?>
+						<?php if ( count( $choices ) > self::FILTER_THRESHOLD ) : ?>
+							<?php // Shown by the editor script: without it, every checkbox stays visible. ?>
+							<p class="kkce-post-type-filter" hidden>
+								<label for="kkce-post-type-filter"><?php esc_html_e( 'Filter post types', 'kk-content-exporter' ); ?></label>
+								<input type="search" id="kkce-post-type-filter" class="regular-text" autocomplete="off" aria-controls="kkce-feed-post-types" aria-describedby="kkce-post-type-filter-help">
+								<span class="description" id="kkce-post-type-filter-help"><?php esc_html_e( 'Shows only the post types whose name contains the text. Checked post types are always shown.', 'kk-content-exporter' ); ?></span>
+							</p>
+						<?php endif; ?>
+						<fieldset id="kkce-feed-post-types" aria-describedby="kkce-feed-post-types-help">
 							<legend class="screen-reader-text"><span><?php esc_html_e( 'Source post types', 'kk-content-exporter' ); ?></span></legend>
-							<?php foreach ( self::source_choices( $values['post_types'] ) as $name => $label ) : ?>
+							<?php foreach ( $choices as $name => $label ) : ?>
 								<label>
 									<input type="checkbox" name="<?php echo esc_attr( self::FIELD ); ?>[post_types][]" value="<?php echo esc_attr( $name ); ?>"<?php checked( in_array( $name, $values['post_types'], true ) ); ?>>
 									<?php echo esc_html( $label ); ?>
@@ -295,8 +321,22 @@ final class Feed_Editor {
 				: null;
 		}
 
+		// The submitted slug is validated, never repaired: filter_var() gives it back unchanged when it has the
+		// format of a slug (spaces at the ends are trimmed by Feed_Form), and false otherwise (tags, encoded
+		// octets, line breaks, a list), which becomes the format error and keeps the stored slug. Feed_Form then
+		// checks length, reserved words and uniqueness.
+		$slug = '';
+		if ( isset( $_POST[ self::FIELD ]['slug'] ) ) {
+			$valid = filter_var(
+				wp_unslash( $_POST[ self::FIELD ]['slug'] ),
+				FILTER_VALIDATE_REGEXP,
+				array( 'options' => array( 'regexp' => '/\A\s*(?:' . Feed_Validator::SLUG_PATTERN . ')?\s*\z/' ) )
+			);
+			$slug  = is_string( $valid ) ? $valid : '!';
+		}
+
 		$input = array(
-			'slug'       => isset( $_POST[ self::FIELD ]['slug'] ) ? sanitize_text_field( wp_unslash( $_POST[ self::FIELD ]['slug'] ) ) : '',
+			'slug'       => $slug,
 			'post_types' => $post_types,
 			'access'     => isset( $_POST[ self::FIELD ]['access'] ) ? sanitize_text_field( wp_unslash( $_POST[ self::FIELD ]['access'] ) ) : '',
 			'active'     => isset( $_POST[ self::FIELD ]['active'] ) && '1' === sanitize_text_field( wp_unslash( $_POST[ self::FIELD ]['active'] ) ),

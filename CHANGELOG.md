@@ -43,8 +43,8 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 - The editor of a feed shows the full address of the feed under the slug field and updates it while the slug
   is typed (it follows the permalink settings of the site); a slug that cannot be used is reported at once.
   The editor warns before leaving the page with unsaved changes in the feed settings.
-- Format of the mapping of a feed (versioned JSON: output key, rule kind `field` or `fixed`, expected type,
-  missing-value policy) with its validation and the hidden meta `_kkce_mapping`. A mapping that is not valid
+- Format of the mapping of a feed (versioned JSON: output key, rule kind `field` or `fixed`, expected type)
+  with its validation and the hidden meta `_kkce_mapping`. A mapping that is not valid
   is never stored. A source whose name looks sensitive (a password, a token, a key of a service, an e-mail
   address) must be confirmed explicitly in its row, otherwise the mapping is not stored. Not used by the
   editor or by any endpoint yet.
@@ -59,11 +59,27 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 - Normalization of the exported values to the type of their row: plain text (tags removed, entities
   decoded), HTML, number, boolean, date in UTC ISO 8601 (dates without time kept as `YYYY-MM-DD`), absolute
   http or https URL, list. With the `auto` type a key keeps the same JSON type for every item. A value that
-  cannot be converted is left out (or `null`, as the row says).
+  cannot be converted gives `null`.
+- The mapping is a contract: every exported item has every key of the mapping, in the same order, with
+  `null` when there is no value (an empty text stays `""`, an empty list `[]`).
 - Content and excerpt are exported as clean HTML: blocks rendered without their comments, paragraphs for
   content written with the classic editor, relative links and images made absolute. Shortcodes run only
   when the row asks for it (otherwise they are removed), embeds are not resolved (no request to external
   sites), and a raw variant gives the stored text. Other plugins' content filters are not run.
+- Admin-only REST routes for the mapping editor (`kkce-admin/v1`): the catalog of the sources for the
+  post types of a feed, and the preview of a mapping, saved or not, on a published item. Only users who
+  can edit feeds reach them; the preview shows what a visitor would get, and never a draft, private or
+  password-protected item, or an item of another post type.
+- "Mapping" box in the feed editor (first part): rows with the output key, the field to read (grouped by
+  post type), the output type and what to do when there is no value; rows can be added, removed and moved,
+  by keyboard too. The fields follow the post types checked in the settings box. The mapping is not saved
+  yet, and without JavaScript the saved mapping stays unchanged.
+- "Mapping" box, second part: a row reads a chain of fields (the first one with a value wins, the next ones
+  are fallbacks), can use a different chain for a single post type, or writes a fixed value (also different
+  per post type). Content and excerpt offer "Run the shortcodes" and "Raw content" with their warnings, and
+  fields that need a confirmation show a warning.
+- A filter above the source post types when there are more than ten of them.
+- The feed editor asks for confirmation before leaving with unsaved changes in the mapping too.
 
 ### Changed
 
@@ -79,10 +95,12 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 ### Fixed
 
+- Malformed feed slugs are refused before text sanitization can silently rename them; the saved slug
+  is kept and the editor reports the existing format error.
 - Exported blocks and shortcodes use the current item's post context, with the previous user and loop
   globals restored even when rendering fails.
 - Plain text keeps literal comparison signs; integer text outside the PHP integer range and dates
-  containing null bytes follow the mapping row's missing-value policy.
+  containing null bytes give `null`.
 - Image `srcset` URLs keep embedded commas, including data URLs, while relative candidates become absolute.
 - Scanner tests prefer Git Bash on Windows and accept a `KKCE_TEST_BASH` executable override.
 - Integration tests keep uploads in the repository cache instead of the WordPress framework checkout.
