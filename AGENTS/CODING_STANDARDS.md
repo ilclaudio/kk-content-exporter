@@ -161,6 +161,12 @@ WordPress.org Plugin Directory guidelines and the project conventions below.
 
 ## Verification
 
+Operator-approved PHPCS policy (2026-11-11): `WordPress.DB.SlowDBQuery` is disabled centrally in
+`phpcs.xml.dist`; do not add inline suppressions for it. It flags meta-query arguments without measuring
+their cost. Assess performance through query counts and representative data instead. Other database
+security and coding-standard checks remain active. This specific decision is an exception to the rule
+against weakening quality gates, not permission to disable other checks.
+
 Pick the checks that match the change, run them, and report the ones that could not run and why.
 Never state that something was verified when the check did not run. The canonical command list is in
 `AGENTS/ARCHITECTURE.md` (*Quality checks*).
@@ -189,5 +195,7 @@ Any unavoidable exception is limited to one identifier and path, documented with
 - Integration tests in `tests/integration/`, named `KKCE_<Name>_Integration_Test.php`, extending
   `WP_UnitTestCase` (each test runs in a transaction that is rolled back).
 - `tests/` and `bin/` are excluded from PHPCS: follow the style of the surrounding files and `.editorconfig`.
+- Do not add `phpcs:ignore` comments to `tests/`: they have no effect under the project ruleset.
+  Keep plain comments when they explain intentional test setup or direct database access.
 - A failing contract test (versions, requirements, PHPStan coverage, AGENTS documents) means a file
   was updated and another one forgotten: fix the data, not the test.

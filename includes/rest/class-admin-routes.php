@@ -33,6 +33,8 @@ defined( 'ABSPATH' ) || exit;
  * - `POST /preview`: the exported object of an item for a mapping, saved or not. The item is computed
  *   as an anonymous visitor (`Item_Exporter`), and only published items without a password of the given
  *   post types can be previewed: the preview never shows what an endpoint would not export.
+ * - `GET /items`: the latest modified items of a post type that the preview can use (the same rules: published,
+ *   without a password), so the editor can choose the item to preview.
  */
 final class Admin_Routes {
 
@@ -50,6 +52,11 @@ final class Admin_Routes {
 	 * Most post types accepted in one request.
 	 */
 	private const MAX_POST_TYPES = 100;
+
+	/**
+	 * Items listed by `GET /items` for a post type.
+	 */
+	public const RECENT_ITEMS = 20;
 
 	/**
 	 * Registers the routes. Hooked on `rest_api_init`.
@@ -91,6 +98,25 @@ final class Admin_Routes {
 						'description' => __( 'Item to preview; without it, the latest published item of every post type.', 'kk-content-exporter' ),
 						'type'        => 'integer',
 						'minimum'     => 1,
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/items',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'items' ),
+				'permission_callback' => array( self::class, 'can_edit_feeds' ),
+				'show_in_index'       => false,
+				'args'                => array(
+					'post_type' => array(
+						'description' => __( 'Post type whose latest items are listed.', 'kk-content-exporter' ),
+						'type'        => 'string',
+						'required'    => true,
+						'pattern'     => self::POST_TYPE_PATTERN,
 					),
 				),
 			)
@@ -254,6 +280,36 @@ final class Admin_Routes {
 	}
 
 	/**
+	 * Latest modified items of a selectable post type that the preview can use.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function items( WP_REST_Request $request ) {
+		list( $post_types ) = self::split_post_types( array( $request->get_param( 'post_type' ) ) );
+		if ( array() === $post_types ) {
+			return new WP_Error(
+				'kkce_no_post_types',
+				__( 'None of the requested post types can be exported.', 'kk-content-exporter' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$items = array();
+		foreach ( self::recent_items( $post_types[0], self::RECENT_ITEMS ) as $post ) {
+			$items[] = array(
+				'id'       => $post->ID,
+				'title'    => $post->post_title,
+				'modified' => str_replace( ' ', 'T', $post->post_modified_gmt ) . 'Z',
+			);
+		}
+
+		return new WP_REST_Response( array( 'items' => $items ) );
+	}
+
+	/**
 	 * Splits the requested post types into the selectable ones and the others, without duplicates.
 	 *
 	 * @param mixed $requested Validated `post_types` argument.
@@ -314,12 +370,23 @@ final class Admin_Routes {
 	 * @return WP_Post|null
 	 */
 	private static function latest_item( string $post_type ): ?WP_Post {
+		return self::recent_items( $post_type, 1 )[0] ?? null;
+	}
+
+	/**
+	 * Latest modified items of a post type that are published and have no password, newest first.
+	 *
+	 * @param string $post_type Post type.
+	 * @param int    $limit     Most items.
+	 * @return list<WP_Post>
+	 */
+	private static function recent_items( string $post_type, int $limit ): array {
 		$posts = get_posts(
 			array(
 				'post_type'           => $post_type,
 				'post_status'         => 'publish',
 				'has_password'        => false,
-				'posts_per_page'      => 1,
+				'posts_per_page'      => $limit,
 				'orderby'             => array(
 					'modified' => 'DESC',
 					'ID'       => 'DESC',
@@ -329,9 +396,7 @@ final class Admin_Routes {
 			)
 		);
 
-		$post = $posts[0] ?? null;
-
-		return $post instanceof WP_Post ? $post : null;
+		return array_values( $posts );
 	}
 
 	/**

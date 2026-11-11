@@ -78,11 +78,19 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
   are fallbacks), can use a different chain for a single post type, or writes a fixed value (also different
   per post type). Content and excerpt offer "Run the shortcodes" and "Raw content" with their warnings, and
   fields that need a confirmation show a warning.
+- The "Feed settings" and "Mapping" boxes explain what they are for; the second one also explains how the
+  rows work.
+- Live preview in the "Mapping" box, shown as soon as there is a row: the JSON of one item for each checked post type, computed with the rules
+  of the box (saved or not) as a visitor would get it, updated shortly after every change. Another published
+  item can be chosen from the latest ones; errors of the mapping are listed by row. On a wide screen the
+  preview stays beside the rules.
 - A filter above the source post types when there are more than ten of them.
 - The feed editor asks for confirmation before leaving with unsaved changes in the mapping too.
 
 ### Changed
 
+- Development tooling: disable the PHPCS meta-query performance heuristic centrally and remove its
+  redundant inline suppressions from integration tests.
 - The list of the feeds shows the relative address of the endpoint (for example `/wp-json/kkce/v1/news`, the
   absolute one in the tooltip) instead of the slug, and no address for a feed without a usable slug.
 - The slug and at least one source post type of a feed are required: an empty slug is no longer taken from

@@ -139,8 +139,8 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 			$wpdb->postmeta,
 			array(
 				'post_id'    => $id,
-				'meta_key'   => '_kkce_post_type', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_value' => '<script>alert(1)</script>', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_key'   => '_kkce_post_type',
+				'meta_value' => '<script>alert(1)</script>',
 			)
 		);
 		wp_cache_delete( $id, 'post_meta' );
@@ -238,8 +238,8 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 				$wpdb->postmeta,
 				array(
 					'post_id'    => $id,
-					'meta_key'   => $key, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-					'meta_value' => $value, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+					'meta_key'   => $key,
+					'meta_value' => $value,
 				)
 			);
 		}

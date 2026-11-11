@@ -90,9 +90,16 @@ class KKCE_Uninstaller_Integration_Test extends WP_UnitTestCase {
 	private function feed_meta_rows(): int {
 		global $wpdb;
 
-		$ids = implode( ',', array_map( 'intval', $this->feeds ) );
+		if ( array() === $this->feeds ) {
+			return 0;
+		}
 
-		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE post_id IN ({$ids})" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Integers only.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE post_id IN (' . implode( ', ', array_fill( 0, count( $this->feeds ), '%d' ) ) . ')',
+				array_merge( array( $wpdb->postmeta ), $this->feeds )
+			)
+		);
 	}
 
 	/**
@@ -157,7 +164,7 @@ class KKCE_Uninstaller_Integration_Test extends WP_UnitTestCase {
 		update_option( Settings::OPTION, array( 'remove_data' => 'yes please' ) );
 		// The sanitizer turns it off; store the raw damaged value to be sure the reader is safe too.
 		global $wpdb;
-		$wpdb->update( $wpdb->options, array( 'option_value' => serialize( array( 'remove_data' => 'yes please' ) ) ), array( 'option_name' => Settings::OPTION ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update( $wpdb->options, array( 'option_value' => serialize( array( 'remove_data' => 'yes please' ) ) ), array( 'option_name' => Settings::OPTION ) );
 		wp_cache_delete( Settings::OPTION, 'options' );
 		wp_cache_delete( 'alloptions', 'options' );
 

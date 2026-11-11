@@ -274,8 +274,8 @@ class KKCE_Settings_Page_Integration_Test extends WP_UnitTestCase {
 			$wpdb->postmeta,
 			array(
 				'post_id'    => $id,
-				'meta_key'   => '_kkce_access', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_value' => 'Everyone', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_key'   => '_kkce_access',
+				'meta_value' => 'Everyone',
 			)
 		);
 		update_post_meta( $id, '_kkce_active', true );

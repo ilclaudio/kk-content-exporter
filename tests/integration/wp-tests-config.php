@@ -79,7 +79,7 @@ define( 'SECURE_AUTH_SALT', 'kkce-tests' );
 define( 'LOGGED_IN_SALT', 'kkce-tests' );
 define( 'NONCE_SALT', 'kkce-tests' );
 
-$table_prefix = 'wptests_'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Required name of the test framework.
+$table_prefix = 'wptests_'; // Required name of the test framework.
 
 define( 'WP_TESTS_DOMAIN', 'example.org' );
 define( 'WP_TESTS_EMAIL', 'admin@example.org' );

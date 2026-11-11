@@ -33,6 +33,11 @@
 	<rule ref="WordPress-Extra"/>
 	<rule ref="WordPress"/>
 
+	<!-- Operator-approved: assess meta-query performance with measurements, not field-name heuristics. -->
+	<rule ref="WordPress.DB.SlowDBQuery">
+		<severity>0</severity>
+	</rule>
+
 	<!-- PHP and WordPress compatibility with the declared minimums (PHP 8.3, WordPress 6.4). -->
 	<rule ref="PHPCompatibilityWP"/>
 	<config name="testVersion" value="8.3-"/>

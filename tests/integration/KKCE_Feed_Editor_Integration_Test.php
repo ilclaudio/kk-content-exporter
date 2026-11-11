@@ -411,8 +411,8 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 			$wpdb->postmeta,
 			array(
 				'post_id'    => $feed,
-				'meta_key'   => '_kkce_access', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'meta_value' => 'Authenticated', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
+				'meta_key'   => '_kkce_access',
+				'meta_value' => 'Authenticated',
 			)
 		);
 		wp_cache_delete( $feed, 'post_meta' );
@@ -883,5 +883,14 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->assertStringEndsWith( '/kkce/v1/news?lang=it', \KKCE\Plugin::feed_url( 'news' ) );
 
 		remove_filter( 'rest_url', $add_lang );
+	}
+
+	/**
+	 * The settings box opens with a text that says what it is for, before the fields.
+	 */
+	public function test_the_box_explains_what_it_is_for() {
+		$html = $this->box( $this->feed() );
+
+		$this->assertMatchesRegularExpression( '#\A\s*<input[^>]*kkce_feed_nonce[^>]*>(?:\s*<input[^>]*>)?\s*<p class="description kkce-box-intro">[^<]+</p>\s*<table class="form-table"#', $html );
 	}
 }
