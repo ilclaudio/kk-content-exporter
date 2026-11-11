@@ -147,7 +147,6 @@ class KKCE_Catalog_Unit_Test extends KKCE_Unit_Test_Case {
 					'key'     => 'type',
 					'kind'    => 'field',
 					'type'    => 'string',
-					'missing' => 'omit',
 					'sources' => array( '*' => array( 'core.type' ) ),
 				),
 			),

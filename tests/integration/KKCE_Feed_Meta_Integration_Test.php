@@ -172,7 +172,6 @@ class KKCE_Feed_Meta_Integration_Test extends WP_UnitTestCase {
 						'key'     => 'when',
 						'kind'    => 'field',
 						'type'    => 'datetime',
-						'missing' => 'null',
 						'sources' => array( 'event' => array( 'meta.when' ), '*' => array( 'core.title' ) ),
 						'options' => array( 'date_format' => 'd/m/Y' ),
 					),
@@ -192,7 +191,7 @@ class KKCE_Feed_Meta_Integration_Test extends WP_UnitTestCase {
 		$this->assertCount( 2, $mapping['rows'] );
 		$this->assertSame( $text, $mapping['rows'][1]['values']['*'] );
 		$this->assertSame( array( 'event' => array( 'meta.when' ), '*' => array( 'core.title' ) ), $mapping['rows'][0]['sources'] );
-		$this->assertSame( 'null', $mapping['rows'][0]['missing'] );
+		$this->assertArrayNotHasKey( 'missing', $mapping['rows'][0], 'Rows have no missing-value policy.' );
 		$this->assertSame( array( 'date_format' => 'd/m/Y' ), $mapping['rows'][0]['options'] );
 		$stored = get_post_meta( $feed, '_kkce_mapping', true );
 		$this->assertSame( $stored, Feed_Meta::sanitize_mapping( $stored ), 'The stored text is the canonical JSON.' );

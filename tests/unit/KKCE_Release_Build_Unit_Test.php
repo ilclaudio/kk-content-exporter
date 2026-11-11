@@ -80,7 +80,7 @@ class KKCE_Release_Build_Unit_Test extends KKCE_Unit_Test_Case {
 	 * @return array<string, array{0: string}>
 	 */
 	public static function data_runtime_paths() {
-		$paths = array( 'kk-content-exporter.php', 'uninstall.php', 'includes/class-plugin.php', 'includes/admin/class-feed-editor.php', 'assets/js/feed-editor.js', 'languages/kk-content-exporter-it_IT.mo', 'languages/kk-content-exporter.pot', 'readme.txt', 'LICENSE', 'CHANGELOG.md' );
+		$paths = array( 'kk-content-exporter.php', 'uninstall.php', 'includes/class-plugin.php', 'includes/admin/class-feed-editor.php', 'assets/js/feed-editor.js', 'assets/js/feed-mapping.js', 'assets/css/feed-mapping.css', 'languages/kk-content-exporter-it_IT.mo', 'languages/kk-content-exporter.pot', 'readme.txt', 'LICENSE', 'CHANGELOG.md' );
 		return array_combine( $paths, array_map( static fn( $path ) => array( $path ), $paths ) );
 	}
 
@@ -100,13 +100,15 @@ class KKCE_Release_Build_Unit_Test extends KKCE_Unit_Test_Case {
 	 * Missing required files are reported, a compiled translation included.
 	 */
 	public function test_missing_required_files_are_reported() {
-		$complete = array( 'kk-content-exporter.php', 'uninstall.php', 'readme.txt', 'LICENSE', 'includes/class-plugin.php', 'includes/class-autoloader.php', 'assets/js/feed-editor.js', 'languages/kk-content-exporter-it_IT.mo' );
+		$complete = array( 'kk-content-exporter.php', 'uninstall.php', 'readme.txt', 'LICENSE', 'includes/class-plugin.php', 'includes/class-autoloader.php', 'assets/js/feed-editor.js', 'assets/js/feed-mapping.js', 'assets/css/feed-mapping.css', 'languages/kk-content-exporter-it_IT.mo' );
 
 		$this->assertSame( array(), kkce_release_missing_files( $complete ) );
 		$without_license_and_mo = array_values( array_diff( $complete, array( 'LICENSE', 'languages/kk-content-exporter-it_IT.mo' ) ) );
 		$this->assertSame( array( 'LICENSE', 'languages/kk-content-exporter-<locale>.mo' ), kkce_release_missing_files( $without_license_and_mo ) );
 		$without_script = array_values( array_diff( $complete, array( 'assets/js/feed-editor.js' ) ) );
 		$this->assertSame( array( 'assets/js/feed-editor.js' ), kkce_release_missing_files( $without_script ) );
+		$without_mapping_assets = array_values( array_diff( $complete, array( 'assets/js/feed-mapping.js', 'assets/css/feed-mapping.css' ) ) );
+		$this->assertSame( array( 'assets/js/feed-mapping.js', 'assets/css/feed-mapping.css' ), kkce_release_missing_files( $without_mapping_assets ) );
 	}
 
 	/**

@@ -1,5 +1,6 @@
 /**
- * Editor of a feed (kkce_feed): live address of the feed and warning about unsaved changes.
+ * Editor of a feed (kkce_feed): live address of the feed, filter of a long list of post types and
+ * warning about unsaved changes.
  *
  * Progressive enhancement of the "Feed settings" box: without this script the box shows the address of
  * the saved feed and works as before. The rules of the slug (pattern, maximum length, reserved slugs)
@@ -76,22 +77,59 @@
 	}
 
 	/**
-	 * Asks for confirmation before leaving the page with unsaved changes in the settings box.
+	 * Hides the checkboxes of the post types whose name does not contain the text of the filter.
+	 *
+	 * The filter is printed hidden by the server only when the list is long; it is shown here, so without
+	 * JavaScript every checkbox stays visible. Checked post types are always shown, and the form always
+	 * sends every checkbox.
+	 *
+	 * @param {HTMLInputElement} filter   Filter field.
+	 * @param {HTMLElement}      fieldset Fieldset of the post types.
+	 */
+	function bindPostTypeFilter( filter, fieldset ) {
+		const labels = Array.prototype.filter.call( fieldset.querySelectorAll( 'label' ), function ( label ) {
+			return null !== label.querySelector( 'input[type="checkbox"]' );
+		} );
+
+		function update() {
+			const text = filter.value.trim().toLowerCase();
+			labels.forEach( function ( label ) {
+				const checkbox = label.querySelector( 'input[type="checkbox"]' );
+				const name = ( label.textContent + ' ' + checkbox.value ).toLowerCase();
+				const hidden = '' !== text && ! checkbox.checked && -1 === name.indexOf( text );
+				// The admin style gives these labels `display: inline-block`, which wins over the `hidden`
+				// attribute: the display is set on the element.
+				label.style.display = hidden ? 'none' : '';
+				if ( label.nextElementSibling && 'BR' === label.nextElementSibling.tagName ) {
+					label.nextElementSibling.style.display = hidden ? 'none' : '';
+				}
+			} );
+		}
+
+		filter.closest( '.kkce-post-type-filter' ).hidden = false;
+		filter.addEventListener( 'input', update );
+	}
+
+	/**
+	 * Asks for confirmation before leaving the page with unsaved changes in the boxes of the feed.
 	 *
 	 * WordPress warns only about the title and the content of a post, not about the fields of a meta box.
+	 * The mapping editor signals its changes with a `change` event that bubbles from its hidden field.
 	 *
-	 * @param {HTMLElement}     box  Settings box.
-	 * @param {HTMLFormElement} form Form of the editor.
+	 * @param {HTMLElement[]}   boxes Boxes of the feed (settings, mapping).
+	 * @param {HTMLFormElement} form  Form of the editor.
 	 */
-	function bindUnsavedWarning( box, form ) {
+	function bindUnsavedWarning( boxes, form ) {
 		let changed = false;
 
 		function markChanged() {
 			changed = true;
 		}
 
-		box.addEventListener( 'input', markChanged );
-		box.addEventListener( 'change', markChanged );
+		boxes.forEach( function ( box ) {
+			box.addEventListener( 'input', markChanged );
+			box.addEventListener( 'change', markChanged );
+		} );
 		form.addEventListener( 'submit', function () {
 			changed = false;
 		} );
@@ -107,12 +145,18 @@
 		const input = document.getElementById( 'kkce-feed-slug' );
 		const output = document.getElementById( 'kkce-feed-url' );
 		const box = document.getElementById( 'kkce_feed_settings' );
+		const mappingBox = document.getElementById( 'kkce_feed_mapping' );
+		const filter = document.getElementById( 'kkce-post-type-filter' );
+		const postTypes = document.getElementById( 'kkce-feed-post-types' );
 
 		if ( input && output ) {
 			bindAddress( input, output );
 		}
+		if ( filter && postTypes ) {
+			bindPostTypeFilter( filter, postTypes );
+		}
 		if ( box && input && input.form ) {
-			bindUnsavedWarning( box, input.form );
+			bindUnsavedWarning( mappingBox ? [ box, mappingBox ] : [ box ], input.form );
 		}
 	}
 

@@ -38,7 +38,9 @@ downloads, timeouts, import logs and scheduling.
   response, its order and its pagination; a field with the post type of the item is always selectable.
 - Mapping rows, starting from the output: free JSON key (proposed equal to the source name), a **value
   rule** with a declared kind, expected type (`auto`, string, HTML, number, boolean, date/time, URL,
-  simple list) and missing-value policy (omit by default, or `null`). The mapping format is versioned and
+  simple list). The mapping is a contract: every row writes its key in every item, with `null` when there is
+  no value (an empty text stays `""`, an empty list `[]`); there is no option to leave a key out
+  (decision of 2026-11-11). The mapping format is versioned and
   has one evaluation point, shared by the preview and the endpoint. Rule kinds of V1: Field (a source per
   post type, with a fallback chain: the first value that is present wins, so `0` and `false` stay values),
   Fixed value (also per post type), Template (text with placeholders, for concatenation), Lookup table

@@ -11,6 +11,7 @@ use KKCE\Feed_Meta;
 use KKCE\Feed_Post_Type;
 use KKCE\Settings;
 use WP_Error;
+use WP_REST_Server;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -228,8 +229,10 @@ final class Settings_Page {
 	/**
 	 * Whether a plugin or a setting rejects anonymous requests to the REST API.
 	 *
-	 * Runs the filter `rest_authentication_errors` as an anonymous user, then restores the signed-in user.
-	 * An invalid nonce error is ignored: it depends on this request, not on the site.
+	 * Asks the REST server of WordPress to check the authentication (`WP_REST_Server::check_authentication()`,
+	 * which runs the filter `rest_authentication_errors`) as an anonymous user, then restores the signed-in
+	 * user. A new server object is used, so no `rest_api_init` runs and no request is made. An invalid nonce
+	 * error is ignored: it depends on this request, not on the site.
 	 *
 	 * @return bool
 	 */
@@ -238,7 +241,7 @@ final class Settings_Page {
 
 		wp_set_current_user( 0 );
 		try {
-			$result = apply_filters( 'rest_authentication_errors', null ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Runs the core filter on purpose, to see whether something rejects anonymous requests.
+			$result = ( new WP_REST_Server() )->check_authentication();
 		} finally {
 			wp_set_current_user( $user_id );
 		}

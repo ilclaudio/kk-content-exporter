@@ -80,7 +80,7 @@ function kkce_release_forbidden_files( array $files ): array {
  * @return list<string> The missing paths.
  */
 function kkce_release_missing_files( array $files ): array {
-	$required = array( KKCE_RELEASE_SLUG . '.php', 'uninstall.php', 'readme.txt', 'LICENSE', 'includes/class-plugin.php', 'includes/class-autoloader.php', 'assets/js/feed-editor.js' );
+	$required = array( KKCE_RELEASE_SLUG . '.php', 'uninstall.php', 'readme.txt', 'LICENSE', 'includes/class-plugin.php', 'includes/class-autoloader.php', 'assets/js/feed-editor.js', 'assets/js/feed-mapping.js', 'assets/css/feed-mapping.css' );
 
 	$missing = array_values( array_diff( $required, $files ) );
 	if ( array() === preg_grep( '#^languages/' . preg_quote( KKCE_RELEASE_SLUG, '#' ) . '-[a-z]{2,3}_[A-Z]{2}\.mo$#', $files ) ) {

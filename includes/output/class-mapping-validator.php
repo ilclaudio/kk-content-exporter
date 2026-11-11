@@ -20,7 +20,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * Error codes (`code` of an error):
  * - `not_object`: the mapping is not an object;
- * - `unknown`: a version, kind, type, policy or source group that is not known;
+ * - `unknown`: a version, kind, type or source group that is not known;
  * - `unknown_field`: a field that the mapping or the row does not have;
  * - `required`: a field that must be present;
  * - `format`: a value of the wrong shape or with characters that are not allowed;
@@ -63,7 +63,7 @@ final class Mapping_Validator {
 	/**
 	 * Fields every row has, in canonical order.
 	 */
-	private const COMMON_FIELDS = array( 'key', 'kind', 'type', 'missing' );
+	private const COMMON_FIELDS = array( 'key', 'kind', 'type' );
 
 	/**
 	 * Fields of each kind of row, after the common ones, in canonical order.
@@ -74,9 +74,20 @@ final class Mapping_Validator {
 	);
 
 	/**
-	 * Format of the output key of a row: letters, digits, `_`, `-`, `.`.
+	 * Characters of the output key of a row: letters, digits, `_`, `-`, `.`.
 	 */
-	private const KEY_PATTERN = '/\A[A-Za-z0-9_.-]+\z/';
+	private const KEY_CHARACTERS = 'A-Za-z0-9_.-';
+
+	/**
+	 * Format of the output key, written so that PCRE and JavaScript read it the same way: the mapping editor
+	 * receives it from the server instead of copying it.
+	 */
+	public const KEY_FORMAT = '^[' . self::KEY_CHARACTERS . ']+$';
+
+	/**
+	 * Format of the output key, as a PHP pattern (`\z` instead of `$`, which would accept a final newline).
+	 */
+	private const KEY_PATTERN = '/\A[' . self::KEY_CHARACTERS . ']+\z/';
 
 	/**
 	 * Format of a source identifier: a group, a dot and a name.
@@ -155,8 +166,8 @@ final class Mapping_Validator {
 	}
 
 	/**
-	 * Canonical form of a valid mapping: every field in a fixed order, the default type (`auto`) and
-	 * policy (`omit`) written out, keys of the maps of post types as text, and empty options left out.
+	 * Canonical form of a valid mapping: every field in a fixed order, the default type (`auto`) written
+	 * out, keys of the maps of post types as text, and empty options left out.
 	 * Normalizing a normalized mapping changes nothing.
 	 *
 	 * Call it only after `validate()` found no error: on an invalid mapping the result is not defined.
@@ -174,10 +185,9 @@ final class Mapping_Validator {
 
 			$kind = is_string( $row['kind'] ?? null ) ? $row['kind'] : '';
 			$out  = array(
-				'key'     => $row['key'] ?? '',
-				'kind'    => $kind,
-				'type'    => $row['type'] ?? 'auto',
-				'missing' => $row['missing'] ?? 'omit',
+				'key'  => $row['key'] ?? '',
+				'kind' => $kind,
+				'type' => $row['type'] ?? 'auto',
 			);
 
 			if ( 'field' === $kind ) {
@@ -239,10 +249,6 @@ final class Mapping_Validator {
 
 		if ( array_key_exists( 'type', $row ) && ( ! is_string( $row['type'] ) || ! in_array( $row['type'], Mapping::TYPES, true ) ) ) {
 			$errors[] = self::error( $index, 'type', 'unknown' );
-		}
-
-		if ( array_key_exists( 'missing', $row ) && ( ! is_string( $row['missing'] ) || ! in_array( $row['missing'], Mapping::MISSING_POLICIES, true ) ) ) {
-			$errors[] = self::error( $index, 'missing', 'unknown' );
 		}
 
 		if ( ! $known ) {

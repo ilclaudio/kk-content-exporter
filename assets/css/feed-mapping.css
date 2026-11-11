@@ -1,0 +1,133 @@
+/**
+ * Mapping editor of a feed (kkce_feed): layout of the rows in the "Mapping" box.
+ *
+ * Colors and focus come from the WordPress admin; only the layout is set here.
+ *
+ * @package KKCE
+ */
+
+.kkce-mapping-rows {
+	list-style: none;
+	margin: 0 0 1em;
+	padding: 0;
+}
+
+.kkce-mapping-row {
+	margin: 0 0 1em;
+}
+
+.kkce-mapping-row fieldset {
+	border: 1px solid #c3c4c7;
+	border-radius: 2px;
+	margin: 0;
+	padding: 0.5em 1em 1em;
+}
+
+.kkce-mapping-row legend {
+	font-weight: 600;
+	padding: 0 0.25em;
+}
+
+.kkce-mapping-fields {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75em 1.5em;
+	align-items: flex-end;
+}
+
+.kkce-mapping-field label {
+	display: block;
+	margin-bottom: 0.25em;
+}
+
+.kkce-mapping-field select,
+.kkce-mapping-field input[type="text"] {
+	max-width: 100%;
+}
+
+.kkce-mapping-kept {
+	font-style: italic;
+	margin: 0;
+}
+
+.kkce-mapping-error {
+	color: #d63638;
+	margin: 0.5em 0 0;
+}
+
+.kkce-mapping-key[aria-invalid="true"] {
+	border-color: #d63638;
+}
+
+.kkce-mapping-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5em 1em;
+	align-items: center;
+	margin-top: 0.75em;
+}
+
+.kkce-post-type-filter {
+	margin-top: 0;
+}
+
+.kkce-mapping-scope {
+	border: 0;
+	border-left: 3px solid #dcdcde;
+	margin: 0.75em 0 0;
+	padding: 0 0 0 0.75em;
+}
+
+.kkce-mapping-scope legend {
+	font-weight: 400;
+	font-style: italic;
+	padding: 0;
+}
+
+.kkce-mapping-chain {
+	list-style: none;
+	margin: 0.25em 0 0;
+	padding: 0;
+}
+
+.kkce-mapping-chain li {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5em 1em;
+	align-items: flex-end;
+	margin: 0 0 0.5em;
+}
+
+.kkce-mapping-chain-actions,
+.kkce-mapping-scope-actions,
+.kkce-mapping-exception {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5em 1em;
+	align-items: flex-end;
+}
+
+.kkce-mapping-exception {
+	margin-top: 0.75em;
+}
+
+.kkce-mapping-value {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5em 1em;
+	align-items: flex-end;
+}
+
+.kkce-mapping-options {
+	margin-top: 0.75em;
+}
+
+.kkce-mapping-options label {
+	display: inline-block;
+	margin-right: 1.5em;
+}
+
+.kkce-mapping-warning {
+	border-left: 3px solid #dba617;
+	padding-left: 0.5em;
+}

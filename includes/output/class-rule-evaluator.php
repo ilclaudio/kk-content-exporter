@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
  *   the first source with a value wins. `0`, `"0"` and `false` are values. A source that does not
  *   exist, or that is empty (empty string, only spaces, empty list), passes to the next one. When every
  *   existing source is empty, the first empty value comes out (`""` or `[]`); when none exists, the row
- *   has no value and its missing-value policy applies;
+ *   has no value;
  * - `fixed`: the value of the post type of the item, or the general one `*`;
  * - any other kind (unknown, or of a later phase) has no value.
  *
@@ -52,9 +52,10 @@ final class Rule_Evaluator {
 	}
 
 	/**
-	 * Object exported for an item: the key of every row with a value, `null` for the rows without a value
-	 * and the `null` policy; the rows without a value and the `omit` policy are left out. The order of the
-	 * rows is kept.
+	 * Object exported for an item: the mapping is a contract, so it has the key of every row, in the order of
+	 * the rows, with `null` when the row has no value (a source that does not exist, a value that cannot be
+	 * converted, an unconfirmed sensitive source, an unknown kind). An empty value keeps its empty form for
+	 * text, HTML and lists (`""`, `[]`). Rows without a text key are skipped (a damaged mapping).
 	 *
 	 * Every value is normalized to the type of its row (`Normalizer`). With `auto`, a `field` row takes the
 	 * declared type shared by all its sources (every chain), otherwise text, so a key has the same JSON type
@@ -83,11 +84,7 @@ final class Rule_Evaluator {
 				$result = Normalizer::normalize( $result['value'], self::row_type( $row, $declared ), $origin );
 			}
 
-			if ( $result['present'] ) {
-				$item[ $row['key'] ] = $result['value'];
-			} elseif ( 'null' === ( $row['missing'] ?? 'omit' ) ) {
-				$item[ $row['key'] ] = null;
-			}
+			$item[ $row['key'] ] = $result['present'] ? $result['value'] : null;
 		}
 
 		return $item;

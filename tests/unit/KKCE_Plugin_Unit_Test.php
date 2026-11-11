@@ -36,6 +36,9 @@ class KKCE_Plugin_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( 10, has_action( 'save_post_kkce_feed', array( \KKCE\Admin\Feed_Editor::class, 'save' ) ) );
 		$this->assertSame( 10, has_action( 'admin_notices', array( \KKCE\Admin\Feed_Editor::class, 'render_notices' ) ) );
 		$this->assertSame( 10, has_action( 'admin_enqueue_scripts', array( \KKCE\Admin\Feed_Editor::class, 'enqueue_assets' ) ) );
+		$this->assertSame( 10, has_action( 'rest_api_init', array( \KKCE\Rest\Admin_Routes::class, 'register' ) ) );
+		$this->assertSame( 10, has_action( 'add_meta_boxes_kkce_feed', array( \KKCE\Admin\Mapping_Box::class, 'add_meta_box' ) ) );
+		$this->assertSame( 10, has_action( 'admin_enqueue_scripts', array( \KKCE\Admin\Mapping_Box::class, 'enqueue_assets' ) ) );
 	}
 
 	/**

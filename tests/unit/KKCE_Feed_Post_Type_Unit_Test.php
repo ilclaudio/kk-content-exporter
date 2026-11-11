@@ -1,41 +1,17 @@
 <?php
 /**
- * Unit tests of the feed post type wiring, with WordPress mocked by Brain Monkey.
+ * Unit tests of the capabilities of the feed post type (pure logic, no mocks); the registration itself is
+ * checked by KKCE_Feed_Post_Type_Integration_Test.
  *
  * @package KKCE
  */
 
-use Brain\Monkey\Functions;
-use KKCE\Feed_Meta;
 use KKCE\Feed_Post_Type;
 
 /**
- * Registration of the `kkce_feed` post type.
+ * Capabilities of the `kkce_feed` post type.
  */
 class KKCE_Feed_Post_Type_Unit_Test extends KKCE_Unit_Test_Case {
-
-	/**
-	 * register() registers the `kkce_feed` post type once, with the private arguments.
-	 */
-	public function test_register_calls_register_post_type_with_private_arguments() {
-		Functions\expect( 'register_post_type' )
-			->once()
-			->with(
-				'kkce_feed',
-				\Mockery::on(
-					static function ( $args ) {
-						return is_array( $args )
-							&& false === $args['public']
-							&& false === $args['show_in_rest']
-							&& false === $args['rewrite']
-							&& true === $args['map_meta_cap']
-							&& array( 'title' ) === $args['supports'];
-					}
-				)
-			);
-
-		Feed_Post_Type::register();
-	}
 
 	/**
 	 * Every capability of the post type requires the administration capability.

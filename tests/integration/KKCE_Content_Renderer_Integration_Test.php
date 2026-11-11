@@ -273,7 +273,6 @@ class KKCE_Content_Renderer_Integration_Test extends WP_UnitTestCase {
 					'key'     => 'body',
 					'kind'    => 'field',
 					'type'    => 'auto',
-					'missing' => 'omit',
 					'sources' => array( '*' => array( 'core.content' ) ),
 				),
 			),
@@ -297,7 +296,6 @@ class KKCE_Content_Renderer_Integration_Test extends WP_UnitTestCase {
 			'key'     => $key,
 			'kind'    => 'field',
 			'type'    => 'html',
-			'missing' => 'omit',
 			'sources' => array( '*' => array( 'core.content' ) ),
 			'options' => $options,
 		);

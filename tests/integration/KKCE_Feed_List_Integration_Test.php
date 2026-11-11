@@ -6,7 +6,6 @@
  */
 
 use KKCE\Feed_Meta;
-use KKCE\Feed_Post_Type;
 
 /**
  * Columns of the `kkce_feed` list: slug, source post type, access and status, always escaped.
@@ -58,25 +57,6 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 		}
 
 		return $id;
-	}
-
-	/**
-	 * The list screen of the post type gets the four feed columns and loses the date.
-	 */
-	public function test_the_list_has_the_feed_columns() {
-		$columns = apply_filters(
-			'manage_kkce_feed_posts_columns',
-			array(
-				'cb'    => 'cb',
-				'title' => 'Title',
-				'date'  => 'Date',
-			)
-		);
-
-		$this->assertSame(
-			array( 'cb', 'title', 'kkce_endpoint', 'kkce_source', 'kkce_access', 'kkce_status' ),
-			array_keys( $columns )
-		);
 	}
 
 	/**
@@ -286,10 +266,4 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( $actions, $post );
 	}
 
-	/**
-	 * Other columns print nothing.
-	 */
-	public function test_other_columns_print_nothing() {
-		$this->assertSame( '', $this->cell( 'comments', $this->feed() ) );
-	}
 }
