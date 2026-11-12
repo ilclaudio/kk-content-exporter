@@ -24,6 +24,16 @@ defined( 'ABSPATH' ) || exit;
  *   standard text form (by the declared type of its source: dates in ISO 8601, lists joined by `, `, booleans
  *   `true`/`false`). A placeholder without a value is empty; when no placeholder has a value, the row has
  *   none. A template without placeholders is a fixed text;
+ * - `lookup`: the input of the post type of the item (or `*`), in its standard text form without spaces at
+ *   the ends, is compared exactly with the text of every case; the first case that matches gives its output
+ *   (a fixed value, or the value of a source: none when it does not exist, its empty form when empty).
+ *   An input that does not exist, is empty or is not confirmed matches no case: the default is used (none
+ *   gives no value; a fixed value, a source, or the input as it is). A list is not an input: no value;
+ * - `condition`: the input of the post type of the item (or `*`) is checked with one operator: `empty` /
+ *   `not_empty` (the empty values of a chain; lists too), `equals` / `not_equals` / `one_of` (standard text
+ *   form without spaces at the ends, exact; a list gives no value), `contains` (an element of a list, or a
+ *   single value, equal to the text). A missing or unconfirmed input counts as an empty text. The `then` or
+ *   `else` output follows (missing: no value; fixed, source or the input as it is);
  * - any other kind (unknown, or of a later phase) has no value.
  *
  * A sensitive source that the row does not confirm is never read, also when the mapping did not go
@@ -56,6 +66,8 @@ final class Rule_Evaluator {
 			'field'    => self::field( $row, $post_type, $read ),
 			'fixed'    => self::fixed( $row, $post_type ),
 			'template' => self::template( $row, $post_type, $read, $declared, $origin ),
+			'lookup'    => self::lookup( $row, $post_type, $read, $declared, $origin ),
+			'condition' => self::condition( $row, $post_type, $read, $declared, $origin ),
 			default    => self::absent(),
 		};
 	}
@@ -117,6 +129,17 @@ final class Rule_Evaluator {
 		}
 
 		$types = array();
+		if ( 'lookup' === ( $row['kind'] ?? null ) ) {
+			$outputs   = array_map( static fn( $item ) => is_array( $item ) ? $item['output'] ?? null : null, (array) ( $row['cases'] ?? array() ) );
+			$outputs[] = $row['default'] ?? null;
+
+			return Normalizer::common_type( self::output_types( $outputs, $row, $declared ) );
+		}
+
+		if ( 'condition' === ( $row['kind'] ?? null ) ) {
+			return Normalizer::common_type( self::output_types( array( $row['then'] ?? null, $row['else'] ?? null ), $row, $declared ) );
+		}
+
 		if ( 'fixed' === ( $row['kind'] ?? null ) ) {
 			foreach ( (array) ( $row['values'] ?? array() ) as $value ) {
 				$types[] = Normalizer::type_of_value( $value );
@@ -161,7 +184,7 @@ final class Rule_Evaluator {
 				continue;
 			}
 
-			if ( Sensitive_Keys::is_sensitive_source( $source ) && ! in_array( $source, $confirmed, true ) ) {
+			if ( ! self::can_read( $source, $confirmed ) ) {
 				continue;
 			}
 
@@ -240,7 +263,7 @@ final class Rule_Evaluator {
 				}
 
 				$source = $alternative['source'];
-				if ( Sensitive_Keys::is_sensitive_source( $source ) && ! in_array( $source, $confirmed, true ) ) {
+				if ( ! self::can_read( $source, $confirmed ) ) {
 					continue;
 				}
 
@@ -256,6 +279,203 @@ final class Rule_Evaluator {
 		}
 
 		return $placeholders > 0 && ! $found ? self::absent() : self::present( $text );
+	}
+
+	/**
+	 * Value of a `lookup` row.
+	 *
+	 * @param array<mixed>                     $row       Row of the mapping.
+	 * @param string                           $post_type Post type of the item.
+	 * @param callable                         $read      Reads a source of the item.
+	 * @param (callable(string): ?string)|null $declared  Declared type of a source.
+	 * @param string                           $origin    Origin of the site.
+	 * @return array{present: bool, value: mixed}
+	 *
+	 * @phpstan-param callable(string, array<mixed>): mixed $read
+	 */
+	private static function lookup( array $row, string $post_type, callable $read, ?callable $declared, string $origin ): array {
+		$confirmed = is_array( $row['confirmed'] ?? null ) ? $row['confirmed'] : array();
+		$input     = self::for_post_type( $row['inputs'] ?? null, $post_type );
+		$value     = is_string( $input ) && self::can_read( $input, $confirmed ) ? $read( $input, array() ) : null;
+
+		if ( is_array( $value ) ) {
+			return self::absent();
+		}
+
+		if ( is_string( $input ) && null !== $value && ! self::is_empty( $value ) && is_array( $row['cases'] ?? null ) ) {
+			$text = trim( self::as_text( $value, null === $declared ? null : $declared( $input ), $origin ) );
+			foreach ( $row['cases'] as $case ) {
+				if ( is_array( $case ) && ( $case['match'] ?? null ) === $text ) {
+					return self::output( $case['output'] ?? null, $read, $confirmed );
+				}
+			}
+		}
+
+		$default = $row['default'] ?? null;
+		if ( is_array( $default ) && true === ( $default['input'] ?? null ) ) {
+			return self::found( $value );
+		}
+
+		return self::output( $default, $read, $confirmed );
+	}
+
+	/**
+	 * Value of an output of a `lookup` or `condition` row: a fixed value, or the value of a source.
+	 *
+	 * @param mixed        $output    The output (`fixed` or `source`).
+	 * @param callable     $read      Reads a source of the item.
+	 * @param array<mixed> $confirmed Confirmed sources of the row.
+	 * @return array{present: bool, value: mixed}
+	 *
+	 * @phpstan-param callable(string, array<mixed>): mixed $read
+	 */
+	private static function output( $output, callable $read, array $confirmed ): array {
+		if ( ! is_array( $output ) ) {
+			return self::absent();
+		}
+
+		if ( array_key_exists( 'fixed', $output ) && is_scalar( $output['fixed'] ) ) {
+			return self::present( $output['fixed'] );
+		}
+
+		$source = $output['source'] ?? null;
+		if ( ! is_string( $source ) || ! self::can_read( $source, $confirmed ) ) {
+			return self::absent();
+		}
+
+		return self::found( $read( $source, array() ) );
+	}
+
+	/**
+	 * Result of a value read from a source: none for null, an empty value as `""` or `[]`.
+	 *
+	 * @param mixed $value Value read.
+	 * @return array{present: bool, value: mixed}
+	 */
+	private static function found( $value ): array {
+		if ( null === $value ) {
+			return self::absent();
+		}
+
+		return self::present( self::is_empty( $value ) ? ( is_array( $value ) ? array() : '' ) : $value );
+	}
+
+	/**
+	 * Value of a `condition` row.
+	 *
+	 * @param array<mixed>                     $row       Row of the mapping.
+	 * @param string                           $post_type Post type of the item.
+	 * @param callable                         $read      Reads a source of the item.
+	 * @param (callable(string): ?string)|null $declared  Declared type of a source.
+	 * @param string                           $origin    Origin of the site.
+	 * @return array{present: bool, value: mixed}
+	 *
+	 * @phpstan-param callable(string, array<mixed>): mixed $read
+	 */
+	private static function condition( array $row, string $post_type, callable $read, ?callable $declared, string $origin ): array {
+		$input    = self::for_post_type( $row['inputs'] ?? null, $post_type );
+		$operator = $row['operator'] ?? null;
+		$matches  = $row['matches'] ?? null;
+		$compares = ! in_array( $operator, array( 'empty', 'not_empty' ), true );
+
+		if ( ! is_string( $input ) || ! in_array( $operator, Mapping::OPERATORS, true ) || ( $compares && ! is_array( $matches ) ) ) {
+			return self::absent();
+		}
+
+		$confirmed = is_array( $row['confirmed'] ?? null ) ? $row['confirmed'] : array();
+		$value     = self::can_read( $input, $confirmed ) ? $read( $input, array() ) : null;
+		$empty     = null === $value || self::is_empty( $value );
+
+		if ( is_array( $value ) && in_array( $operator, array( 'equals', 'not_equals', 'one_of' ), true ) ) {
+			return self::absent();
+		}
+
+		$text = static fn( $item ): string => $empty ? '' : trim( self::as_text( $item, null === $declared ? null : $declared( $input ), $origin ) );
+
+		$true = match ( $operator ) {
+			'empty'      => $empty,
+			'not_empty'  => ! $empty,
+			'equals'     => in_array( $text( $value ), array_slice( (array) $matches, 0, 1 ), true ),
+			'not_equals' => ! in_array( $text( $value ), array_slice( (array) $matches, 0, 1 ), true ),
+			'one_of'     => ! $empty && in_array( $text( $value ), (array) $matches, true ),
+			default      => ! $empty && self::contains( $value, $text, (string) ( ( (array) $matches )[0] ?? '' ), $origin ),
+		};
+
+		$output = $row[ $true ? 'then' : 'else' ] ?? null;
+		if ( is_array( $output ) && true === ( $output['input'] ?? null ) ) {
+			return self::found( $value );
+		}
+
+		return self::output( $output, $read, $confirmed );
+	}
+
+	/**
+	 * Whether a value contains a text: an element of a list equal to the text, or the text inside a single
+	 * value (capital letters included).
+	 *
+	 * @param mixed    $value  Value of the input, not empty.
+	 * @param callable $text   Standard text form of the value of the input.
+	 * @param string   $needle Text to look for.
+	 * @param string   $origin Origin of the site.
+	 * @return bool
+	 *
+	 * @phpstan-param callable(mixed): string $text
+	 */
+	private static function contains( $value, callable $text, string $needle, string $origin ): bool {
+		if ( '' === $needle ) {
+			return false;
+		}
+
+		if ( is_array( $value ) ) {
+			foreach ( $value as $item ) {
+				if ( trim( self::as_text( $item, null, $origin ) ) === $needle ) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		return str_contains( $text( $value ), $needle );
+	}
+
+	/**
+	 * Declared types of the outputs of a `lookup` or `condition` row: fixed values by their JSON type, sources
+	 * by their declared type, and the inputs of the row for an output that is the input.
+	 *
+	 * @param array<mixed>                     $outputs  Outputs of the row.
+	 * @param array<mixed>                     $row      Row of the mapping.
+	 * @param (callable(string): ?string)|null $declared Declared type of a source.
+	 * @return list<string|null>
+	 */
+	private static function output_types( array $outputs, array $row, ?callable $declared ): array {
+		$types = array();
+		foreach ( $outputs as $output ) {
+			if ( ! is_array( $output ) ) {
+				continue;
+			}
+			if ( array_key_exists( 'fixed', $output ) ) {
+				$types[] = Normalizer::type_of_value( $output['fixed'] );
+			} elseif ( is_string( $output['source'] ?? null ) ) {
+				$types[] = null === $declared ? null : $declared( $output['source'] );
+			} elseif ( true === ( $output['input'] ?? null ) ) {
+				foreach ( (array) ( $row['inputs'] ?? array() ) as $input ) {
+					$types[] = is_string( $input ) && null !== $declared ? $declared( $input ) : null;
+				}
+			}
+		}
+
+		return $types;
+	}
+
+	/**
+	 * Whether a source can be read: a sensitive source only when the row confirms it.
+	 *
+	 * @param string       $source    Source identifier.
+	 * @param array<mixed> $confirmed Confirmed sources of the row.
+	 * @return bool
+	 */
+	private static function can_read( string $source, array $confirmed ): bool {
+		return ! Sensitive_Keys::is_sensitive_source( $source ) || in_array( $source, $confirmed, true );
 	}
 
 	/**

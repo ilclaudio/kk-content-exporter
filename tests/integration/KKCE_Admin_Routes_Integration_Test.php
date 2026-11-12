@@ -473,4 +473,52 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( 400, $response->get_status() );
 		$this->assertSame( array( array( 'row' => 0, 'field' => 'templates', 'code' => 'format' ) ), $response->get_data()['data']['errors'] );
 	}
+
+	/**
+	 * The preview computes lookup rows, and refuses a table with the same value twice.
+	 */
+	public function test_preview_of_a_lookup_row() {
+		wp_set_current_user( self::$admin );
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish', 'post_title' => 'Concert' ) );
+		$row     = array(
+			'key'    => 'label',
+			'kind'   => 'lookup',
+			'inputs' => array( '*' => 'core.type' ),
+			'cases'  => array( array( 'match' => 'post', 'output' => array( 'fixed' => 'News' ) ) ),
+		);
+
+		$response = $this->preview( array( 'mapping' => $this->mapping( array( $row ) ), 'post_types' => array( 'post' ), 'post_id' => $post_id ) );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array( 'label' => 'News' ), (array) $response->get_data()['items'][0]['data'] );
+
+		$row['cases'][] = array( 'match' => 'post', 'output' => array( 'fixed' => 'Again' ) );
+		$response       = $this->preview( array( 'mapping' => $this->mapping( array( $row ) ), 'post_types' => array( 'post' ), 'post_id' => $post_id ) );
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( array( array( 'row' => 0, 'field' => 'cases', 'code' => 'duplicate' ) ), $response->get_data()['data']['errors'] );
+	}
+
+	/**
+	 * The preview computes condition rows, and refuses an operator that needs a text without one.
+	 */
+	public function test_preview_of_a_condition_row() {
+		wp_set_current_user( self::$admin );
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish', 'post_title' => 'Concert' ) );
+		$row     = array(
+			'key'      => 'is_post',
+			'kind'     => 'condition',
+			'inputs'   => array( '*' => 'core.type' ),
+			'operator' => 'equals',
+			'matches'  => array( 'post' ),
+			'then'     => array( 'fixed' => 'yes' ),
+		);
+
+		$response = $this->preview( array( 'mapping' => $this->mapping( array( $row ) ), 'post_types' => array( 'post' ), 'post_id' => $post_id ) );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array( 'is_post' => 'yes' ), (array) $response->get_data()['items'][0]['data'] );
+
+		unset( $row['matches'] );
+		$response = $this->preview( array( 'mapping' => $this->mapping( array( $row ) ), 'post_types' => array( 'post' ), 'post_id' => $post_id ) );
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( array( array( 'row' => 0, 'field' => 'matches', 'code' => 'required' ) ), $response->get_data()['data']['errors'] );
+	}
 }

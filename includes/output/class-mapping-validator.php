@@ -25,7 +25,7 @@ defined( 'ABSPATH' ) || exit;
  * - `required`: a field that must be present;
  * - `format`: a value of the wrong shape or with characters that are not allowed;
  * - `empty`, `too_long`, `too_many`: a value that is empty, longer or more numerous than the limit;
- * - `duplicate`: an output key used by an earlier row;
+ * - `duplicate`: an output key used by an earlier row, or a text matched by an earlier case of a table;
  * - `not_allowed`: a field that this kind of row cannot have;
  * - `sensitive`: a source whose name looks sensitive (`Sensitive_Keys`) and that the row does not
  *   confirm in `confirmed` (decision of 2026-11-10: a sensitive source needs an explicit confirmation,
@@ -61,6 +61,12 @@ final class Mapping_Validator {
 	public const OPTION_MAX_LENGTH = 100;
 
 	/**
+	 * Maximum number of cases of the table of a `lookup` row, and of texts compared by `one_of` in a `condition`
+	 * row.
+	 */
+	public const MAX_CASES = 100;
+
+	/**
 	 * Fields every row has, in canonical order.
 	 */
 	private const COMMON_FIELDS = array( 'key', 'kind', 'type' );
@@ -69,9 +75,11 @@ final class Mapping_Validator {
 	 * Fields of each kind of row, after the common ones, in canonical order.
 	 */
 	private const KIND_FIELDS = array(
-		'field'    => array( 'sources', 'confirmed', 'options' ),
-		'fixed'    => array( 'values', 'options' ),
-		'template' => array( 'templates', 'confirmed' ),
+		'field'     => array( 'sources', 'confirmed', 'options' ),
+		'fixed'     => array( 'values', 'options' ),
+		'template'  => array( 'templates', 'confirmed' ),
+		'lookup'    => array( 'inputs', 'cases', 'default', 'confirmed' ),
+		'condition' => array( 'inputs', 'operator', 'matches', 'then', 'else', 'confirmed' ),
 	);
 
 	/**
@@ -198,6 +206,32 @@ final class Mapping_Validator {
 				if ( array() !== ( $row['confirmed'] ?? array() ) ) {
 					$out['confirmed'] = array_values( (array) $row['confirmed'] );
 				}
+			} elseif ( 'lookup' === $kind ) {
+				$out['inputs'] = self::normalize_map( $row['inputs'] ?? array(), static fn( $source ) => (string) $source );
+				$out['cases']  = array();
+				foreach ( (array) ( $row['cases'] ?? array() ) as $case ) {
+					$out['cases'][] = array(
+						'match'  => is_array( $case ) ? $case['match'] ?? '' : '',
+						'output' => is_array( $case ) ? $case['output'] ?? array() : array(),
+					);
+				}
+				if ( array_key_exists( 'default', $row ) ) {
+					$out['default'] = $row['default'];
+				}
+				if ( array() !== ( $row['confirmed'] ?? array() ) ) {
+					$out['confirmed'] = array_values( (array) $row['confirmed'] );
+				}
+			} elseif ( 'condition' === $kind ) {
+				$out['inputs']   = self::normalize_map( $row['inputs'] ?? array(), static fn( $source ) => (string) $source );
+				$out['operator'] = $row['operator'] ?? '';
+				foreach ( array( 'matches', 'then', 'else' ) as $field ) {
+					if ( array_key_exists( $field, $row ) ) {
+						$out[ $field ] = $row[ $field ];
+					}
+				}
+				if ( array() !== ( $row['confirmed'] ?? array() ) ) {
+					$out['confirmed'] = array_values( (array) $row['confirmed'] );
+				}
 			}
 
 			if ( array() !== ( $row['options'] ?? array() ) ) {
@@ -260,22 +294,19 @@ final class Mapping_Validator {
 			$errors[] = self::error( $index, 'type', 'not_allowed' );
 		}
 
-		$detail_field = match ( $kind ) {
-			'field'    => 'sources',
-			'template' => 'templates',
-			default    => 'values',
-		};
 		$detail = match ( $kind ) {
-			'field'    => self::sources_errors( $row['sources'] ?? null, array_key_exists( 'sources', $row ) ),
-			'template' => self::templates_errors( $row['templates'] ?? null, array_key_exists( 'templates', $row ) ),
-			default    => self::values_errors( $row['values'] ?? null, array_key_exists( 'values', $row ) ),
+			'field'    => self::field_errors( 'sources', self::sources_errors( $row['sources'] ?? null, array_key_exists( 'sources', $row ) ) ),
+			'template' => self::field_errors( 'templates', self::templates_errors( $row['templates'] ?? null, array_key_exists( 'templates', $row ) ) ),
+			'lookup'    => self::lookup_errors( $row ),
+			'condition' => self::condition_errors( $row ),
+			default    => self::field_errors( 'values', self::values_errors( $row['values'] ?? null, array_key_exists( 'values', $row ) ) ),
 		};
-		foreach ( $detail as $code ) {
-			$errors[] = self::error( $index, $detail_field, $code );
+		foreach ( $detail as $error ) {
+			$errors[] = self::error( $index, $error[0], $error[1] );
 		}
 
 		if ( 'fixed' !== $kind && array() === $detail ) {
-			foreach ( self::confirmation_errors( $row, self::row_sources( $row ), $detail_field ) as $error ) {
+			foreach ( self::confirmation_errors( $row, self::row_sources( $row ) ) as $error ) {
 				$errors[] = self::error( $index, $error[0], $error[1] );
 			}
 		}
@@ -405,11 +436,276 @@ final class Mapping_Validator {
 	}
 
 	/**
-	 * Sources a well-formed `field` or `template` row reads: every source of every chain, or of every
-	 * placeholder of every template.
+	 * Errors of the fields of a `lookup` row: inputs, cases and the optional default.
 	 *
 	 * @param array<mixed> $row The row.
-	 * @return array<string, true> Sources, as keys.
+	 * @return list<array{0: string, 1: string}> Field and code of every error.
+	 */
+	private static function lookup_errors( array $row ): array {
+		$errors = self::field_errors( 'inputs', self::inputs_errors( $row['inputs'] ?? null, array_key_exists( 'inputs', $row ) ) );
+
+		foreach ( self::cases_errors( $row['cases'] ?? null, array_key_exists( 'cases', $row ) ) as $code ) {
+			$errors[] = array( 'cases', $code );
+		}
+
+		if ( array_key_exists( 'default', $row ) ) {
+			$code = self::output_error( $row['default'], true );
+			if ( '' !== $code ) {
+				$errors[] = array( 'default', $code );
+			}
+		}
+
+		return $errors;
+	}
+
+	/**
+	 * Errors of the fields of a `condition` row: inputs, operator, the texts it compares and the outputs.
+	 *
+	 * @param array<mixed> $row The row.
+	 * @return list<array{0: string, 1: string}> Field and code of every error.
+	 */
+	private static function condition_errors( array $row ): array {
+		$errors = self::field_errors( 'inputs', self::inputs_errors( $row['inputs'] ?? null, array_key_exists( 'inputs', $row ) ) );
+
+		$operator = $row['operator'] ?? null;
+		if ( ! array_key_exists( 'operator', $row ) ) {
+			$errors[] = array( 'operator', 'required' );
+		} elseif ( ! is_string( $operator ) || ! in_array( $operator, Mapping::OPERATORS, true ) ) {
+			$errors[] = array( 'operator', 'unknown' );
+		} else {
+			$code = self::matches_error( $operator, $row['matches'] ?? null, array_key_exists( 'matches', $row ) );
+			if ( '' !== $code ) {
+				$errors[] = array( 'matches', $code );
+			}
+		}
+
+		foreach ( array( 'then', 'else' ) as $field ) {
+			if ( array_key_exists( $field, $row ) ) {
+				$code = self::output_error( $row[ $field ], true );
+				if ( '' !== $code ) {
+					$errors[] = array( $field, $code );
+				}
+			}
+		}
+
+		return $errors;
+	}
+
+	/**
+	 * Error of the texts compared by a `condition` row: none for `empty` and `not_empty`, a list of one text
+	 * for the others, a list of 1 to `MAX_CASES` distinct texts for `one_of`.
+	 *
+	 * @param string $operator Known operator.
+	 * @param mixed  $matches  Value of the field.
+	 * @param bool   $present  Whether the row has the field.
+	 * @return string Error code, or an empty string.
+	 */
+	private static function matches_error( string $operator, $matches, bool $present ): string {
+		if ( in_array( $operator, array( 'empty', 'not_empty' ), true ) ) {
+			return $present ? 'not_allowed' : '';
+		}
+
+		if ( ! $present ) {
+			return 'required';
+		}
+
+		if ( ! is_array( $matches ) || ! array_is_list( $matches ) ) {
+			return 'format';
+		}
+
+		if ( array() === $matches ) {
+			return 'empty';
+		}
+
+		if ( count( $matches ) > ( 'one_of' === $operator ? self::MAX_CASES : 1 ) ) {
+			return 'too_many';
+		}
+
+		$seen = array();
+		foreach ( $matches as $text ) {
+			$code = self::match_error( $text, $seen );
+			if ( '' !== $code ) {
+				return $code;
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Errors of the inputs of a `lookup` or `condition` row: a map of post types (or `*`) to one source identifier.
+	 *
+	 * @param mixed $inputs  Value of the field.
+	 * @param bool  $present Whether the row has the field.
+	 * @return list<string> Error codes, in order.
+	 */
+	private static function inputs_errors( $inputs, bool $present ): array {
+		if ( ! $present ) {
+			return array( 'required' );
+		}
+
+		if ( array() === $inputs ) {
+			return array( 'empty' );
+		}
+
+		if ( ! self::is_post_type_map( $inputs ) ) {
+			return array( 'format' );
+		}
+
+		$codes = array();
+		foreach ( $inputs as $source ) {
+			$code = self::source_error( $source );
+			if ( '' !== $code ) {
+				$codes[] = $code;
+			}
+		}
+
+		return $codes;
+	}
+
+	/**
+	 * Errors of the table of a `lookup` row: a non-empty list of cases `{ match, output }`. The text to match
+	 * is not empty, has no spaces at the ends (the input is compared without them) and is used once.
+	 *
+	 * @param mixed $cases   Value of the field.
+	 * @param bool  $present Whether the row has the field.
+	 * @return list<string> Error codes, in order.
+	 */
+	private static function cases_errors( $cases, bool $present ): array {
+		if ( ! $present ) {
+			return array( 'required' );
+		}
+
+		if ( ! is_array( $cases ) || ! array_is_list( $cases ) ) {
+			return array( 'format' );
+		}
+
+		if ( array() === $cases ) {
+			return array( 'empty' );
+		}
+
+		if ( count( $cases ) > self::MAX_CASES ) {
+			return array( 'too_many' );
+		}
+
+		$codes = array();
+		$seen  = array();
+		foreach ( $cases as $case ) {
+			if ( ! is_array( $case ) || array( 'match', 'output' ) !== self::sorted_keys( $case ) ) {
+				$codes[] = 'format';
+				continue;
+			}
+
+			$code = self::match_error( $case['match'], $seen );
+			if ( '' === $code ) {
+				$code = self::output_error( $case['output'], false );
+			}
+			if ( '' !== $code ) {
+				$codes[] = $code;
+			}
+		}
+
+		return $codes;
+	}
+
+	/**
+	 * Error of the text that a case of a `lookup` row matches, or of a text compared by a `condition` row.
+	 *
+	 * @param mixed              $text The text.
+	 * @param array<string,true> $seen Texts of the earlier cases, updated by the call.
+	 * @return string Error code, or an empty string.
+	 */
+	private static function match_error( $text, array &$seen ): string {
+		if ( ! is_string( $text ) ) {
+			return 'format';
+		}
+
+		if ( '' === $text ) {
+			return 'empty';
+		}
+
+		if ( trim( $text ) !== $text ) {
+			return 'format';
+		}
+
+		if ( strlen( $text ) > self::VALUE_MAX_LENGTH ) {
+			return 'too_long';
+		}
+
+		if ( isset( $seen[ $text ] ) ) {
+			return 'duplicate';
+		}
+
+		$seen[ $text ] = true;
+
+		return '';
+	}
+
+	/**
+	 * Error of an output of a `lookup` or `condition` row: an object with one field, `fixed` (a text, number or
+	 * boolean) or `source` (a source identifier); the default of a table and the outputs of a condition can
+	 * also be `input` (`true`: the input as it is).
+	 *
+	 * @param mixed $output      The output.
+	 * @param bool  $allow_input Whether the output can be the input (not the cases of a table).
+	 * @return string Error code, or an empty string.
+	 */
+	private static function output_error( $output, bool $allow_input ): string {
+		if ( ! is_array( $output ) || 1 !== count( $output ) ) {
+			return 'format';
+		}
+
+		$name  = (string) array_key_first( $output );
+		$value = reset( $output );
+
+		if ( 'fixed' === $name ) {
+			if ( ! is_scalar( $value ) ) {
+				return 'format';
+			}
+
+			return is_string( $value ) && strlen( $value ) > self::VALUE_MAX_LENGTH ? 'too_long' : '';
+		}
+
+		if ( 'source' === $name ) {
+			return self::source_error( $value );
+		}
+
+		return $allow_input && 'input' === $name && true === $value ? '' : 'format';
+	}
+
+	/**
+	 * Keys of an array, as texts, sorted.
+	 *
+	 * @param array<mixed> $value The array.
+	 * @return list<string>
+	 */
+	private static function sorted_keys( array $value ): array {
+		$keys = array_map( 'strval', array_keys( $value ) );
+		sort( $keys );
+
+		return $keys;
+	}
+
+	/**
+	 * The error codes of one field, with the name of the field.
+	 *
+	 * @param string   $field Field name.
+	 * @param string[] $codes Error codes.
+	 * @return list<array{0: string, 1: string}>
+	 *
+	 * @phpstan-param list<string> $codes
+	 */
+	private static function field_errors( string $field, array $codes ): array {
+		return array_map( static fn( string $code ): array => array( $field, $code ), $codes );
+	}
+
+	/**
+	 * Sources a well-formed `field`, `template`, `lookup` or `condition` row reads, with the field that holds
+	 * each one: every source of every chain, of every placeholder of every template, or the inputs and the
+	 * sources of the outputs (cases and default of a table, `then` and `else` of a condition).
+	 *
+	 * @param array<mixed> $row The row.
+	 * @return array<string, string> Source => field where it is first used.
 	 */
 	private static function row_sources( array $row ): array {
 		$sources = array();
@@ -417,7 +713,36 @@ final class Mapping_Validator {
 		if ( 'template' === $row['kind'] ) {
 			foreach ( (array) $row['templates'] as $template ) {
 				foreach ( Template::sources( Template::parse( $template )['parts'] ) as $source ) {
-					$sources[ $source ] = true;
+					$sources[ $source ] ??= 'templates';
+				}
+			}
+
+			return $sources;
+		}
+
+		if ( 'lookup' === $row['kind'] ) {
+			foreach ( (array) $row['inputs'] as $source ) {
+				$sources[ (string) $source ] ??= 'inputs';
+			}
+			foreach ( (array) $row['cases'] as $case ) {
+				if ( isset( $case['output']['source'] ) ) {
+					$sources[ (string) $case['output']['source'] ] ??= 'cases';
+				}
+			}
+			if ( isset( $row['default']['source'] ) ) {
+				$sources[ (string) $row['default']['source'] ] ??= 'default';
+			}
+
+			return $sources;
+		}
+
+		if ( 'condition' === $row['kind'] ) {
+			foreach ( (array) $row['inputs'] as $source ) {
+				$sources[ (string) $source ] ??= 'inputs';
+			}
+			foreach ( array( 'then', 'else' ) as $field ) {
+				if ( isset( $row[ $field ]['source'] ) ) {
+					$sources[ (string) $row[ $field ]['source'] ] ??= $field;
 				}
 			}
 
@@ -426,7 +751,7 @@ final class Mapping_Validator {
 
 		foreach ( (array) $row['sources'] as $chain ) {
 			foreach ( (array) $chain as $source ) {
-				$sources[ (string) $source ] = true;
+				$sources[ (string) $source ] ??= 'sources';
 			}
 		}
 
@@ -434,17 +759,16 @@ final class Mapping_Validator {
 	}
 
 	/**
-	 * Errors of the confirmations of a `field` or `template` row whose sources are well formed.
+	 * Errors of the confirmations of a row (any kind but `fixed`) whose sources are well formed.
 	 *
 	 * `confirmed` lists, once each, sources of the same row; every sensitive source of the row must be
 	 * in it. Confirming a source that is not sensitive costs nothing and is accepted.
 	 *
-	 * @param array<mixed>       $row     The row.
-	 * @param array<string,true> $sources Sources of the row.
-	 * @param string             $field   Field that holds the sources (`sources` or `templates`).
+	 * @param array<mixed>         $row     The row.
+	 * @param array<string,string> $sources Sources of the row, with the field that holds each one.
 	 * @return list<array{0: string, 1: string}> Field and code of every error.
 	 */
-	private static function confirmation_errors( array $row, array $sources, string $field ): array {
+	private static function confirmation_errors( array $row, array $sources ): array {
 		$errors    = array();
 		$confirmed = $row['confirmed'] ?? array();
 		if ( ! self::is_confirmation_list( $confirmed, $sources ) ) {
@@ -452,7 +776,7 @@ final class Mapping_Validator {
 			$confirmed = array();
 		}
 
-		foreach ( array_keys( $sources ) as $source ) {
+		foreach ( $sources as $source => $field ) {
 			if ( Sensitive_Keys::is_sensitive_source( (string) $source ) && ! in_array( (string) $source, (array) $confirmed, true ) ) {
 				$errors[] = array( $field, 'sensitive' );
 			}
@@ -464,8 +788,8 @@ final class Mapping_Validator {
 	/**
 	 * Whether a value is a list of distinct sources of the row.
 	 *
-	 * @param mixed              $confirmed Value of `confirmed`.
-	 * @param array<string,true> $sources   Sources of the row.
+	 * @param mixed                $confirmed Value of `confirmed`.
+	 * @param array<string,string> $sources   Sources of the row.
 	 * @return bool
 	 */
 	private static function is_confirmation_list( $confirmed, array $sources ): bool {

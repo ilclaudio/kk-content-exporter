@@ -51,9 +51,15 @@ final class Mapping {
 	public const MAX_DEPTH = 8;
 
 	/**
-	 * Rule kinds that exist today. `lookup` and `condition` come with steps 12c and 12d of phase 2.
+	 * Rule kinds that exist today.
 	 */
-	public const KINDS = array( 'field', 'fixed', 'template' );
+	public const KINDS = array( 'field', 'fixed', 'template', 'lookup', 'condition' );
+
+	/**
+	 * Operators of a `condition` row. The first two take no text, `one_of` takes a list of texts, the
+	 * others one text.
+	 */
+	public const OPERATORS = array( 'empty', 'not_empty', 'equals', 'not_equals', 'one_of', 'contains' );
 
 	/**
 	 * Output types of a `template` row: its result is always a text, plain or HTML (`auto` is plain text).

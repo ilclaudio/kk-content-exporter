@@ -527,4 +527,357 @@ class KKCE_Rule_Evaluator_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( array( 'present' => false, 'value' => null ), Rule_Evaluator::evaluate( $this->template( '', array( 'templates' => 'x' ) ), 'post', $reader ) );
 		$this->assertSame( array(), $asked );
 	}
+
+	/**
+	 * A `lookup` row with one input for every post type.
+	 *
+	 * @param string               $input    Source of the input.
+	 * @param array<string, mixed> $override Fields to change.
+	 * @return array<string, mixed>
+	 */
+	private function lookup( string $input, array $override = array() ): array {
+		return array_merge(
+			array(
+				'key'    => 'k',
+				'kind'   => 'lookup',
+				'type'   => 'auto',
+				'inputs' => array( '*' => $input ),
+				'cases'  => array(
+					array( 'match' => 'post', 'output' => array( 'fixed' => 'News' ) ),
+					array( 'match' => 'event', 'output' => array( 'source' => 'meta.category' ) ),
+				),
+			),
+			$override
+		);
+	}
+
+	/**
+	 * The output of the case whose text matches the input: a fixed text or the value of a source.
+	 */
+	public function test_a_lookup_gives_the_output_of_the_matching_case() {
+		$reader = $this->reader( array( 'core.type' => 'post', 'meta.category' => 'Concerts' ) );
+		$this->assertSame( array( 'present' => true, 'value' => 'News' ), Rule_Evaluator::evaluate( $this->lookup( 'core.type' ), 'post', $reader ) );
+
+		$reader = $this->reader( array( 'core.type' => 'event', 'meta.category' => 'Concerts' ) );
+		$this->assertSame( array( 'present' => true, 'value' => 'Concerts' ), Rule_Evaluator::evaluate( $this->lookup( 'core.type' ), 'event', $reader ) );
+	}
+
+	/**
+	 * The comparison is exact (case included) on the text of the input without spaces at the ends; `0` and
+	 * `false` are compared in their standard text form.
+	 */
+	public function test_a_lookup_compares_the_exact_text() {
+		$row = $this->lookup(
+			'meta.status',
+			array(
+				'cases' => array(
+					array( 'match' => 'Open', 'output' => array( 'fixed' => 'open' ) ),
+					array( 'match' => '0', 'output' => array( 'fixed' => 'zero' ) ),
+					array( 'match' => 'false', 'output' => array( 'fixed' => 'no' ) ),
+				),
+			)
+		);
+		$declared = $this->declared( array( 'meta.flag' => 'boolean' ) );
+
+		$this->assertSame( 'open', Rule_Evaluator::evaluate( $row, 'post', $this->reader( array( 'meta.status' => '  Open ' ) ) )['value'] );
+		$this->assertFalse( Rule_Evaluator::evaluate( $row, 'post', $this->reader( array( 'meta.status' => 'open' ) ) )['present'], 'Case matters.' );
+		$this->assertSame( 'zero', Rule_Evaluator::evaluate( $row, 'post', $this->reader( array( 'meta.status' => 0 ) ) )['value'] );
+		$this->assertSame( 'no', Rule_Evaluator::evaluate( array_merge( $row, array( 'inputs' => array( '*' => 'meta.flag' ) ) ), 'post', $this->reader( array( 'meta.flag' => false ) ), $declared )['value'] );
+	}
+
+	/**
+	 * Without a matching case: the default (none gives no value; a fixed text, a source, or the input as it is).
+	 */
+	public function test_a_lookup_without_a_matching_case_gives_the_default() {
+		$reader = $this->reader( array( 'core.type' => 'page', 'core.title' => 'About' ) );
+
+		$this->assertSame( array( 'present' => false, 'value' => null ), Rule_Evaluator::evaluate( $this->lookup( 'core.type' ), 'page', $reader ) );
+		$this->assertSame( 'Other', Rule_Evaluator::evaluate( $this->lookup( 'core.type', array( 'default' => array( 'fixed' => 'Other' ) ) ), 'page', $reader )['value'] );
+		$this->assertSame( 'About', Rule_Evaluator::evaluate( $this->lookup( 'core.type', array( 'default' => array( 'source' => 'core.title' ) ) ), 'page', $reader )['value'] );
+		$this->assertSame( 'page', Rule_Evaluator::evaluate( $this->lookup( 'core.type', array( 'default' => array( 'input' => true ) ) ), 'page', $reader )['value'] );
+	}
+
+	/**
+	 * An input that does not exist or is empty matches no case: the default is used.
+	 */
+	public function test_a_lookup_with_a_missing_or_empty_input_gives_the_default() {
+		$row = $this->lookup( 'meta.status', array( 'default' => array( 'fixed' => 'unknown' ) ) );
+
+		$this->assertSame( 'unknown', Rule_Evaluator::evaluate( $row, 'post', $this->reader( array() ) )['value'] );
+		$this->assertSame( 'unknown', Rule_Evaluator::evaluate( $row, 'post', $this->reader( array( 'meta.status' => '  ' ) ) )['value'] );
+
+		$input = $this->lookup( 'meta.status', array( 'default' => array( 'input' => true ) ) );
+		$this->assertFalse( Rule_Evaluator::evaluate( $input, 'post', $this->reader( array() ) )['present'], 'No input: no value.' );
+		$this->assertSame( '', Rule_Evaluator::evaluate( $input, 'post', $this->reader( array( 'meta.status' => '' ) ) )['value'], 'An empty input stays empty.' );
+		$this->assertSame( '', Rule_Evaluator::evaluate( $input, 'post', $this->reader( array( 'meta.status' => '   ' ) ) )['value'], 'A text of spaces is written empty.' );
+	}
+
+	/**
+	 * A list is not a valid input: the row has no value and no output is read.
+	 */
+	public function test_a_lookup_with_a_list_input_has_no_value() {
+		$asked  = array();
+		$reader = $this->reader( array( 'meta.tags' => array( 'post' ), 'meta.category' => 'C' ), $asked );
+		$row    = $this->lookup( 'meta.tags', array( 'default' => array( 'input' => true ) ) );
+
+		$this->assertSame( array( 'present' => false, 'value' => null ), Rule_Evaluator::evaluate( $row, 'post', $reader ) );
+		$this->assertSame( array( 'meta.tags' ), $asked );
+	}
+
+	/**
+	 * The input of the post type of the item replaces the general one.
+	 */
+	public function test_the_input_of_the_post_type_wins() {
+		$row    = $this->lookup( 'core.type', array( 'inputs' => array( '*' => 'core.type', 'event' => 'meta.kind' ) ) );
+		$reader = $this->reader( array( 'core.type' => 'event', 'meta.kind' => 'post' ) );
+
+		$this->assertSame( 'News', Rule_Evaluator::evaluate( $row, 'event', $reader )['value'] );
+		$this->assertSame( 'Concerts', Rule_Evaluator::evaluate( $row, 'post', $this->reader( array( 'core.type' => 'event', 'meta.category' => 'Concerts' ) ) )['value'] );
+	}
+
+	/**
+	 * An output source without a value gives no value; an empty one keeps its empty form.
+	 */
+	public function test_a_lookup_output_source_without_a_value() {
+		$row = $this->lookup( 'core.type' );
+
+		$this->assertFalse( Rule_Evaluator::evaluate( $row, 'event', $this->reader( array( 'core.type' => 'event' ) ) )['present'] );
+		$this->assertSame( array( 'present' => true, 'value' => '' ), Rule_Evaluator::evaluate( $row, 'event', $this->reader( array( 'core.type' => 'event', 'meta.category' => '' ) ) ) );
+	}
+
+	/**
+	 * Unconfirmed sensitive sources are never read: as input (the default is used), as output or as default.
+	 */
+	public function test_unconfirmed_sensitive_sources_of_a_lookup_are_never_read() {
+		$asked  = array();
+		$reader = $this->reader( array( 'meta.user_email' => 'post', 'meta.api_key' => 'secret' ), $asked );
+
+		$input = $this->lookup( 'meta.user_email', array( 'default' => array( 'fixed' => 'd' ) ) );
+		$this->assertSame( 'd', Rule_Evaluator::evaluate( $input, 'post', $reader )['value'] );
+
+		$output = $this->lookup( 'meta.user_email', array( 'confirmed' => array( 'meta.user_email' ), 'cases' => array( array( 'match' => 'post', 'output' => array( 'source' => 'meta.api_key' ) ) ) ) );
+		$this->assertFalse( Rule_Evaluator::evaluate( $output, 'post', $reader )['present'] );
+
+		$default = $this->lookup( 'core.type', array( 'default' => array( 'source' => 'meta.api_key' ) ) );
+		$this->assertFalse( Rule_Evaluator::evaluate( $default, 'page', $reader )['present'] );
+
+		$this->assertSame( array( 'meta.user_email', 'core.type' ), $asked );
+	}
+
+	/**
+	 * With `auto` the row takes the common type of its outputs (fixed values, sources, the input when the
+	 * default is the input), otherwise text; an explicit type wins.
+	 */
+	public function test_lookup_output_types() {
+		$reader   = $this->reader( array( 'core.type' => 'post', 'core.id' => 7, 'meta.count' => '12' ) );
+		$declared = $this->declared( array( 'core.id' => 'number', 'meta.count' => 'number', 'core.type' => 'string' ) );
+		$numbers  = array(
+			array( 'match' => 'post', 'output' => array( 'source' => 'core.id' ) ),
+			array( 'match' => 'event', 'output' => array( 'fixed' => 3 ) ),
+		);
+		$mapping  = array(
+			'version' => 1,
+			'rows'    => array(
+				$this->lookup( 'core.type', array( 'key' => 'number', 'cases' => $numbers, 'default' => array( 'source' => 'meta.count' ) ) ),
+				$this->lookup( 'core.type', array( 'key' => 'mixed', 'cases' => $numbers, 'default' => array( 'input' => true ) ) ),
+				$this->lookup( 'core.type', array( 'key' => 'forced', 'type' => 'string', 'cases' => $numbers ) ),
+				$this->lookup( 'core.type', array( 'key' => 'none' ) ),
+			),
+		);
+
+		$this->assertSame(
+			array(
+				'number' => 7,
+				'mixed'  => '7',
+				'forced' => '7',
+				'none'   => 'News',
+			),
+			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $reader, $declared )
+		);
+	}
+
+	/**
+	 * A damaged lookup row has no value.
+	 */
+	public function test_a_damaged_lookup_has_no_value() {
+		$reader = $this->reader( array( 'core.type' => 'post' ) );
+
+		$this->assertFalse( Rule_Evaluator::evaluate( $this->lookup( 'core.type', array( 'cases' => 'x' ) ), 'post', $reader )['present'] );
+		$this->assertFalse( Rule_Evaluator::evaluate( $this->lookup( 'core.type', array( 'inputs' => 'x' ) ), 'post', $reader )['present'] );
+		$this->assertFalse( Rule_Evaluator::evaluate( $this->lookup( 'core.type', array( 'cases' => array( 'x', array( 'match' => 'post' ) ) ) ), 'post', $reader )['present'] );
+	}
+
+	/**
+	 * A `condition` row with one input for every post type, "yes" when true and "no" otherwise.
+	 *
+	 * @param string               $operator Operator.
+	 * @param list<string>|null    $matches  Texts to compare, null for none.
+	 * @param array<string, mixed> $override Fields to change.
+	 * @return array<string, mixed>
+	 */
+	private function condition( string $operator, ?array $matches, array $override = array() ): array {
+		$row = array_merge(
+			array(
+				'key'      => 'k',
+				'kind'     => 'condition',
+				'type'     => 'auto',
+				'inputs'   => array( '*' => 'meta.x' ),
+				'operator' => $operator,
+				'matches'  => $matches,
+				'then'     => array( 'fixed' => 'yes' ),
+				'else'     => array( 'fixed' => 'no' ),
+			),
+			$override
+		);
+		if ( null === $matches ) {
+			unset( $row['matches'] );
+		}
+
+		return $row;
+	}
+
+	/**
+	 * The answer of every operator for a value: the "then" output when true, the "else" output otherwise.
+	 *
+	 * @dataProvider condition_provider
+	 *
+	 * @param string            $operator Operator.
+	 * @param list<string>|null $matches  Texts to compare.
+	 * @param mixed             $value    Value of the input (null: it does not exist).
+	 * @param string            $expected `yes` or `no`.
+	 */
+	public function test_condition_operators( string $operator, ?array $matches, $value, string $expected ) {
+		$reader = $this->reader( null === $value ? array() : array( 'meta.x' => $value ) );
+
+		$this->assertSame( array( 'present' => true, 'value' => $expected ), Rule_Evaluator::evaluate( $this->condition( $operator, $matches ), 'post', $reader ) );
+	}
+
+	/**
+	 * Data for test_condition_operators().
+	 *
+	 * @return array<string, array{0: string, 1: list<string>|null, 2: mixed, 3: string}>
+	 */
+	public function condition_provider(): array {
+		return array(
+			'empty: missing'              => array( 'empty', null, null, 'yes' ),
+			'empty: empty text'           => array( 'empty', null, '  ', 'yes' ),
+			'empty: empty list'           => array( 'empty', null, array(), 'yes' ),
+			'empty: zero is a value'      => array( 'empty', null, 0, 'no' ),
+			'not empty: false is a value' => array( 'not_empty', null, false, 'yes' ),
+			'not empty: list'             => array( 'not_empty', null, array( 'a' ), 'yes' ),
+			'not empty: missing'          => array( 'not_empty', null, null, 'no' ),
+			'equals: same text'           => array( 'equals', array( 'Open' ), ' Open ', 'yes' ),
+			'equals: case matters'        => array( 'equals', array( 'Open' ), 'open', 'no' ),
+			'equals: number as text'      => array( 'equals', array( '0' ), 0, 'yes' ),
+			'equals: missing'             => array( 'equals', array( 'Open' ), null, 'no' ),
+			'not equals: other text'      => array( 'not_equals', array( 'Open' ), 'Closed', 'yes' ),
+			'not equals: same text'       => array( 'not_equals', array( 'Open' ), 'Open', 'no' ),
+			'not equals: missing'         => array( 'not_equals', array( 'Open' ), null, 'yes' ),
+			'one of: listed'              => array( 'one_of', array( 'Theatre', 'Music' ), 'Music', 'yes' ),
+			'one of: not listed'          => array( 'one_of', array( 'Theatre', 'Music' ), 'Dance', 'no' ),
+			'contains: element of a list' => array( 'contains', array( 'Events' ), array( 'News', 'Events' ), 'yes' ),
+			'contains: not in the list'   => array( 'contains', array( 'Events' ), array( 'News' ), 'no' ),
+			'contains: single value'      => array( 'contains', array( 'Events' ), 'Events', 'yes' ),
+			'contains: part of a text'    => array( 'contains', array( 'Breaking' ), 'Breaking: storm hits city', 'yes' ),
+			'contains: text not found'    => array( 'contains', array( 'storm' ), 'Sunny day', 'no' ),
+			'contains: case matters'      => array( 'contains', array( 'breaking' ), 'Breaking news', 'no' ),
+			'contains: part of a number'  => array( 'contains', array( '20' ), 2026, 'yes' ),
+			'contains: part of an element' => array( 'contains', array( 'Event' ), array( 'Events' ), 'no' ),
+			'contains: missing'           => array( 'contains', array( 'Events' ), null, 'no' ),
+		);
+	}
+
+	/**
+	 * Equality operators do not compare a list: the row has no value.
+	 */
+	public function test_a_condition_does_not_compare_a_list_for_equality() {
+		$reader = $this->reader( array( 'meta.x' => array( 'Open' ) ) );
+
+		foreach ( array( 'equals', 'not_equals', 'one_of' ) as $operator ) {
+			$this->assertSame( array( 'present' => false, 'value' => null ), Rule_Evaluator::evaluate( $this->condition( $operator, array( 'Open' ) ), 'post', $reader ), $operator );
+		}
+	}
+
+	/**
+	 * Every output: nothing (no value), a fixed value, a source, the input as it is.
+	 */
+	public function test_condition_outputs() {
+		$reader = $this->reader( array( 'meta.x' => 'hidden', 'core.title' => 'T' ) );
+		$row    = $this->condition( 'equals', array( 'hidden' ) );
+
+		$this->assertFalse( Rule_Evaluator::evaluate( array_diff_key( $row, array( 'then' => true ) ), 'post', $reader )['present'], 'No "then": no value.' );
+		$this->assertSame( 'T', Rule_Evaluator::evaluate( array_merge( $row, array( 'then' => array( 'source' => 'core.title' ) ) ), 'post', $reader )['value'] );
+		$this->assertSame( 'hidden', Rule_Evaluator::evaluate( array_merge( $row, array( 'then' => array( 'input' => true ) ) ), 'post', $reader )['value'] );
+
+		$other = $this->reader( array( 'meta.x' => 'shown' ) );
+		$this->assertSame( 'shown', Rule_Evaluator::evaluate( array_merge( $row, array( 'else' => array( 'input' => true ) ) ), 'post', $other )['value'] );
+		$this->assertFalse( Rule_Evaluator::evaluate( array_diff_key( $row, array( 'else' => true ) ), 'post', $other )['present'], 'No "else": no value.' );
+		$this->assertFalse( Rule_Evaluator::evaluate( array_merge( $row, array( 'else' => array( 'input' => true ) ) ), 'post', $this->reader( array() ) )['present'], 'A missing input as output: no value.' );
+
+		$empty = $this->condition( 'empty', null, array( 'then' => array( 'input' => true ) ) );
+		$this->assertSame( '', Rule_Evaluator::evaluate( $empty, 'post', $this->reader( array( 'meta.x' => '  ' ) ) )['value'], 'A text of spaces is written empty.' );
+		$this->assertSame( array(), Rule_Evaluator::evaluate( $empty, 'post', $this->reader( array( 'meta.x' => array() ) ) )['value'], 'An empty list stays a list.' );
+	}
+
+	/**
+	 * The input of the post type of the item replaces the general one.
+	 */
+	public function test_the_condition_input_of_the_post_type_wins() {
+		$row    = $this->condition( 'not_empty', null, array( 'inputs' => array( '*' => 'meta.x', 'event' => 'meta.y' ) ) );
+		$reader = $this->reader( array( 'meta.x' => 'a' ) );
+
+		$this->assertSame( 'yes', Rule_Evaluator::evaluate( $row, 'post', $reader )['value'] );
+		$this->assertSame( 'no', Rule_Evaluator::evaluate( $row, 'event', $reader )['value'] );
+	}
+
+	/**
+	 * Unconfirmed sensitive sources are never read: an input counts as missing, an output gives no value.
+	 */
+	public function test_unconfirmed_sensitive_sources_of_a_condition_are_never_read() {
+		$asked  = array();
+		$reader = $this->reader( array( 'meta.user_email' => 'a@b.c', 'meta.api_key' => 'secret', 'meta.x' => 'a' ), $asked );
+
+		$this->assertSame( 'yes', Rule_Evaluator::evaluate( $this->condition( 'empty', null, array( 'inputs' => array( '*' => 'meta.user_email' ) ) ), 'post', $reader )['value'] );
+		$this->assertFalse( Rule_Evaluator::evaluate( $this->condition( 'not_empty', null, array( 'then' => array( 'source' => 'meta.api_key' ) ) ), 'post', $reader )['present'] );
+		$this->assertSame( array( 'meta.x' ), $asked );
+	}
+
+	/**
+	 * With `auto` the row takes the common type of its outputs (the input when an output is the input).
+	 */
+	public function test_condition_output_types() {
+		$reader   = $this->reader( array( 'meta.x' => 'a', 'core.id' => 7 ) );
+		$declared = $this->declared( array( 'core.id' => 'number', 'meta.x' => 'string' ) );
+		$mapping  = array(
+			'version' => 1,
+			'rows'    => array(
+				$this->condition( 'not_empty', null, array( 'key' => 'flag', 'then' => array( 'fixed' => true ), 'else' => array( 'fixed' => false ) ) ),
+				$this->condition( 'not_empty', null, array( 'key' => 'number', 'then' => array( 'source' => 'core.id' ), 'else' => array( 'fixed' => 0 ) ) ),
+				$this->condition( 'not_empty', null, array( 'key' => 'mixed', 'then' => array( 'source' => 'core.id' ), 'else' => array( 'input' => true ) ) ),
+				$this->condition( 'empty', null, array( 'key' => 'none' ) ),
+			),
+		);
+
+		$this->assertSame(
+			array(
+				'flag'   => true,
+				'number' => 7,
+				'mixed'  => '7',
+				'none'   => 'no',
+			),
+			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $reader, $declared )
+		);
+	}
+
+	/**
+	 * A damaged condition row has no value.
+	 */
+	public function test_a_damaged_condition_has_no_value() {
+		$reader = $this->reader( array( 'meta.x' => 'a' ) );
+
+		$this->assertFalse( Rule_Evaluator::evaluate( $this->condition( 'starts_with', array( 'a' ) ), 'post', $reader )['present'] );
+		$this->assertFalse( Rule_Evaluator::evaluate( $this->condition( 'equals', array( 'a' ), array( 'matches' => 'a' ) ), 'post', $reader )['present'] );
+		$this->assertFalse( Rule_Evaluator::evaluate( $this->condition( 'equals', null ), 'post', $reader )['present'] );
+		$this->assertFalse( Rule_Evaluator::evaluate( $this->condition( 'equals', array( 'a' ), array( 'inputs' => 'x' ) ), 'post', $reader )['present'] );
+	}
 }
