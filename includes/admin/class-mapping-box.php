@@ -84,6 +84,7 @@ final class Mapping_Box {
 			'maxChain'          => Mapping_Validator::MAX_CHAIN,
 			'valueMaxLength'    => Mapping_Validator::VALUE_MAX_LENGTH,
 			'templateMaxLength' => Template::MAX_LENGTH,
+			'maxCases'          => Mapping_Validator::MAX_CASES,
 		);
 		?>
 		<p class="description kkce-box-intro"><?php esc_html_e( 'The mapping decides what each item of the feed contains: every row adds one key to the JSON of every item, with the value it reads from the content or a fixed value. Every item has all the keys, in the order of the rows; a key without a value is written with null, so the program that reads the feed always finds the same keys.', 'kk-content-exporter' ); ?></p>
@@ -96,6 +97,8 @@ final class Mapping_Box {
 				<li><?php esc_html_e( 'Rule "Field": the value is read from a field of the content. With "Add fallback" another field is used when the first one is empty; with "Different for" a post type can read other fields.', 'kk-content-exporter' ); ?></li>
 				<li><?php esc_html_e( 'Rule "Fixed value": every item gets the same text, for example the name of the site; with "Different for" a post type can get another one.', 'kk-content-exporter' ); ?></li>
 				<li><?php esc_html_e( 'Rule "Template": a text that joins fields and words, for example "{core.title} – {meta.place}". "Insert field" writes a field between braces; {a|b|"text"} uses the first one with a value.', 'kk-content-exporter' ); ?></li>
+				<li><?php esc_html_e( 'Rule "Lookup table": reads a field and translates its value, for example the post type "post" into "News". Every line of the table gives a fixed text or another field; when no line matches, the default is used (empty by default: the key is null). The comparison is exact, capital letters included.', 'kk-content-exporter' ); ?></li>
+				<li><?php esc_html_e( 'Rule "Condition": checks one field (is empty, is not empty, is equal to, is different from, is one of, contains) and writes one output when the check is true and another when it is false, for example the excerpt or, when it is empty, the title. "Contains" looks for a text inside the value, or for one element of a list.', 'kk-content-exporter' ); ?></li>
 				<li><?php esc_html_e( 'Output type: how the value is written in the JSON (text, HTML, number, true or false, date and time, URL, list). "Automatic" uses the type of the field.', 'kk-content-exporter' ); ?></li>
 				<li><?php esc_html_e( 'Preview: as soon as there is a row, the JSON of a published item of each checked post type appears beside the rules and changes while you edit them.', 'kk-content-exporter' ); ?></li>
 			</ul>

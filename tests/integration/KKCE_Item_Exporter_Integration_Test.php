@@ -389,4 +389,45 @@ class KKCE_Item_Exporter_Integration_Test extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'nothing', $item );
 		$this->assertNull( $item['nothing'], 'No placeholder with a value gives null.' );
 	}
+
+	/**
+	 * A lookup table translates the post type of real items, uses a field as output and falls back to its
+	 * default; without a default and without a match the key is null.
+	 */
+	public function test_lookup_tables_on_real_items() {
+		$post    = get_post( self::factory()->post->create( array( 'post_status' => 'publish', 'post_title' => 'Concert' ) ) );
+		$page    = get_post( self::factory()->post->create( array( 'post_status' => 'publish', 'post_type' => 'page', 'post_title' => 'About' ) ) );
+		$cases   = array(
+			array( 'match' => 'post', 'output' => array( 'fixed' => 'News' ) ),
+			array( 'match' => 'nope', 'output' => array( 'source' => 'core.title' ) ),
+		);
+		$mapping = $this->mapping(
+			array(
+				array( 'key' => 'label', 'kind' => 'lookup', 'type' => 'auto', 'inputs' => array( '*' => 'core.type' ), 'cases' => $cases, 'default' => array( 'input' => true ) ),
+				array( 'key' => 'heading', 'kind' => 'lookup', 'type' => 'auto', 'inputs' => array( '*' => 'core.title' ), 'cases' => array( array( 'match' => 'About', 'output' => array( 'source' => 'core.id' ) ) ) ),
+			)
+		);
+
+		$keys = array_flip( array( 'label', 'heading' ) );
+		$this->assertSame( array( 'label' => 'News', 'heading' => null ), array_intersect_key( Item_Exporter::export( $post, $mapping ), $keys ) );
+		$this->assertSame( array( 'label' => 'page', 'heading' => $page->ID ), array_intersect_key( Item_Exporter::export( $page, $mapping ), $keys ) );
+	}
+
+	/**
+	 * A condition on real items: an empty excerpt is replaced by the title, and a post type gives a boolean.
+	 */
+	public function test_conditions_on_real_items() {
+		$with    = get_post( self::factory()->post->create( array( 'post_status' => 'publish', 'post_title' => 'Concert', 'post_excerpt' => 'Short text' ) ) );
+		$without = get_post( self::factory()->post->create( array( 'post_status' => 'publish', 'post_type' => 'page', 'post_title' => 'About', 'post_excerpt' => '' ) ) );
+		$mapping = $this->mapping(
+			array(
+				array( 'key' => 'teaser', 'kind' => 'condition', 'type' => 'string', 'inputs' => array( '*' => 'core.excerpt' ), 'operator' => 'empty', 'then' => array( 'source' => 'core.title' ), 'else' => array( 'input' => true ) ),
+				array( 'key' => 'is_page', 'kind' => 'condition', 'type' => 'auto', 'inputs' => array( '*' => 'core.type' ), 'operator' => 'equals', 'matches' => array( 'page' ), 'then' => array( 'fixed' => true ), 'else' => array( 'fixed' => false ) ),
+			)
+		);
+		$keys    = array_flip( array( 'teaser', 'is_page' ) );
+
+		$this->assertSame( array( 'teaser' => 'Short text', 'is_page' => false ), array_intersect_key( Item_Exporter::export( $with, $mapping ), $keys ) );
+		$this->assertSame( array( 'teaser' => 'About', 'is_page' => true ), array_intersect_key( Item_Exporter::export( $without, $mapping ), $keys ) );
+	}
 }

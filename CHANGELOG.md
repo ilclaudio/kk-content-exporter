@@ -82,6 +82,14 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
   (`{core.title} – {meta.place}`), fallbacks inside a placeholder (`{a|b|"text"}`), a different template per
   post type, plain text or HTML output, and an "Insert field" button. A key whose placeholders all have no
   value is written with null.
+- Rule "Lookup table" in the mapping: reads a field (a different one per post type if needed) and
+  translates its value through a table of lines "value → fixed text or field", compared exactly; when no
+  line matches, a default is used (nothing, a fixed text, a field or the value read). Lists cannot be read,
+  and the same value cannot appear twice in a table.
+- Rule "Condition" in the mapping: one check on one field (is empty, is not empty, is equal to, is different
+  from, is one of, contains) and an output for true and one for false (nothing, a fixed text, a field or the
+  value checked). "Contains" looks for a text inside the value, or for an element of a list, such as the
+  categories; the editor offers lists only for "is empty", "is not empty" and "contains".
 - The "Feed settings" and "Mapping" boxes explain what they are for; the second one also explains how the
   rows work.
 - Live preview in the "Mapping" box, shown as soon as there is a row: the JSON of one item for each checked post type, computed with the rules

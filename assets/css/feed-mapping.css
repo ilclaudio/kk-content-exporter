@@ -111,15 +111,23 @@
 	margin-top: 0.75em;
 }
 
-.kkce-mapping-value {
+.kkce-mapping-value,
+.kkce-mapping-default {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.5em 1em;
 	align-items: flex-end;
 }
 
-.kkce-mapping-options {
+.kkce-mapping-options,
+.kkce-mapping-default {
 	margin-top: 0.75em;
+}
+
+/* Lines of a lookup table: the text to match and the output side by side, wrapping on narrow boxes. */
+.kkce-mapping-case input[type="text"] {
+	width: 14em;
+	max-width: 100%;
 }
 
 .kkce-mapping-options label {

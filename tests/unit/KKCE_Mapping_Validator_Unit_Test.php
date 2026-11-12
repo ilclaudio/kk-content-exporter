@@ -270,8 +270,6 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	 */
 	public function unknown_kind_provider(): array {
 		return array(
-			'lookup'     => array( 'lookup' ),
-			'condition'  => array( 'condition' ),
 			'expression' => array( 'expression' ),
 			'wrong case' => array( 'Field' ),
 			'empty'      => array( '' ),
@@ -444,7 +442,7 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	public function test_all_the_errors_are_reported() {
 		$mapping = $this->mapping(
 			array(
-				$this->field_row( array( 'key' => '', 'kind' => 'lookup' ) ),
+				$this->field_row( array( 'key' => '', 'kind' => 'expression' ) ),
 				$this->field_row( array( 'sources' => array( '*' => array( 'user.email', 'x' ) ), 'type' => 'date' ) ),
 				$this->fixed_row(),
 			)
@@ -739,6 +737,346 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 				'confirmed' => array( 'core.author.url' ),
 			),
 			Mapping_Validator::normalize( $this->mapping( array( $row ) ) )['rows'][0]
+		);
+	}
+
+	/**
+	 * A valid `lookup` row.
+	 *
+	 * @param array<string, mixed> $override Values to change.
+	 * @return array<string, mixed>
+	 */
+	private function lookup_row( array $override = array() ): array {
+		return array_merge(
+			array(
+				'key'    => 'label',
+				'kind'   => 'lookup',
+				'type'   => 'string',
+				'inputs' => array(
+					'*'     => 'core.type',
+					'event' => 'meta.status',
+				),
+				'cases'  => array(
+					array( 'match' => 'post', 'output' => array( 'fixed' => 'News' ) ),
+					array( 'match' => 'event', 'output' => array( 'source' => 'meta.category' ) ),
+				),
+			),
+			$override
+		);
+	}
+
+	/**
+	 * A lookup row is valid with any output type and with every kind of default.
+	 */
+	public function test_a_lookup_row_and_its_defaults() {
+		foreach ( Mapping::TYPES as $type ) {
+			$this->assertSame( array(), $this->errors( $this->mapping( array( $this->lookup_row( array( 'type' => $type ) ) ) ) ), $type );
+		}
+
+		$defaults = array(
+			array( 'fixed' => 'Other' ),
+			array( 'fixed' => 0 ),
+			array( 'fixed' => false ),
+			array( 'source' => 'core.title' ),
+			array( 'input' => true ),
+		);
+		foreach ( $defaults as $default ) {
+			$this->assertSame( array(), $this->errors( $this->mapping( array( $this->lookup_row( array( 'default' => $default ) ) ) ) ), (string) json_encode( $default ) );
+		}
+	}
+
+	/**
+	 * The inputs are required, a non-empty map of post types to one source identifier each.
+	 */
+	public function test_lookup_inputs_are_required_and_well_formed() {
+		$row = $this->lookup_row();
+		unset( $row['inputs'] );
+		$this->assertSame( array( '0:inputs:required' ), $this->errors( $this->mapping( array( $row ) ) ) );
+
+		$cases = array(
+			'empty map'     => array( array(), 'empty' ),
+			'list'          => array( array( 'core.type' ), 'format' ),
+			'chain'         => array( array( '*' => array( 'core.type' ) ), 'format' ),
+			'bad source'    => array( array( '*' => 'type' ), 'format' ),
+			'unknown group' => array( array( '*' => 'other.type' ), 'unknown' ),
+			'bad post type' => array( array( 'Post' => 'core.type' ), 'format' ),
+		);
+		foreach ( $cases as $name => $case ) {
+			$this->assertSame( array( '0:inputs:' . $case[1] ), $this->errors( $this->mapping( array( $this->lookup_row( array( 'inputs' => $case[0] ) ) ) ) ), $name );
+		}
+	}
+
+	/**
+	 * The cases are required: a non-empty list of `match` + `output`, with distinct texts to match and a fixed
+	 * text or a source as output.
+	 */
+	public function test_lookup_cases_are_required_and_well_formed() {
+		$row = $this->lookup_row();
+		unset( $row['cases'] );
+		$this->assertSame( array( '0:cases:required' ), $this->errors( $this->mapping( array( $row ) ) ) );
+
+		$fixed = array( 'fixed' => 'x' );
+		$cases = array(
+			'empty list'         => array( array(), 'empty' ),
+			'map'                => array( array( 'a' => array( 'match' => 'a', 'output' => $fixed ) ), 'format' ),
+			'not an object'      => array( array( 'a' ), 'format' ),
+			'missing output'     => array( array( array( 'match' => 'a' ) ), 'format' ),
+			'other field'        => array( array( array( 'match' => 'a', 'output' => $fixed, 'note' => 'n' ) ), 'format' ),
+			'match not a text'   => array( array( array( 'match' => 1, 'output' => $fixed ) ), 'format' ),
+			'empty match'        => array( array( array( 'match' => '', 'output' => $fixed ) ), 'empty' ),
+			'spaces at the ends' => array( array( array( 'match' => ' a', 'output' => $fixed ) ), 'format' ),
+			'match too long'     => array( array( array( 'match' => str_repeat( 'a', 1001 ), 'output' => $fixed ) ), 'too_long' ),
+			'duplicate match'    => array( array( array( 'match' => 'a', 'output' => $fixed ), array( 'match' => 'a', 'output' => $fixed ) ), 'duplicate' ),
+			'empty output'       => array( array( array( 'match' => 'a', 'output' => array() ) ), 'format' ),
+			'two outputs'        => array( array( array( 'match' => 'a', 'output' => array( 'fixed' => 'x', 'source' => 'core.title' ) ) ), 'format' ),
+			'input as output'    => array( array( array( 'match' => 'a', 'output' => array( 'input' => true ) ) ), 'format' ),
+			'fixed not scalar'   => array( array( array( 'match' => 'a', 'output' => array( 'fixed' => array( 'x' ) ) ) ), 'format' ),
+			'fixed too long'     => array( array( array( 'match' => 'a', 'output' => array( 'fixed' => str_repeat( 'a', 1001 ) ) ) ), 'too_long' ),
+			'bad source'         => array( array( array( 'match' => 'a', 'output' => array( 'source' => 'title' ) ) ), 'format' ),
+			'unknown group'      => array( array( array( 'match' => 'a', 'output' => array( 'source' => 'other.title' ) ) ), 'unknown' ),
+		);
+		foreach ( $cases as $name => $case ) {
+			$this->assertSame( array( '0:cases:' . $case[1] ), $this->errors( $this->mapping( array( $this->lookup_row( array( 'cases' => $case[0] ) ) ) ) ), $name );
+		}
+
+		$many = array();
+		for ( $i = 0; $i <= Mapping_Validator::MAX_CASES; $i++ ) {
+			$many[] = array( 'match' => 'v' . $i, 'output' => $fixed );
+		}
+		$this->assertSame( array( '0:cases:too_many' ), $this->errors( $this->mapping( array( $this->lookup_row( array( 'cases' => $many ) ) ) ) ) );
+		array_pop( $many );
+		$this->assertSame( array(), $this->errors( $this->mapping( array( $this->lookup_row( array( 'cases' => $many ) ) ) ) ) );
+	}
+
+	/**
+	 * The default is optional (no default gives null); when present it is a fixed text, a source or the input.
+	 */
+	public function test_lookup_default_is_well_formed() {
+		$cases = array(
+			'not an object' => array( 'x', 'format' ),
+			'empty'         => array( array(), 'format' ),
+			'input false'   => array( array( 'input' => false ), 'format' ),
+			'null'          => array( array( 'null' => true ), 'format' ),
+			'bad source'    => array( array( 'source' => 'title' ), 'format' ),
+		);
+		foreach ( $cases as $name => $case ) {
+			$this->assertSame( array( '0:default:' . $case[1] ), $this->errors( $this->mapping( array( $this->lookup_row( array( 'default' => $case[0] ) ) ) ) ), $name );
+		}
+	}
+
+	/**
+	 * A lookup row has no options and no field of the other rules.
+	 */
+	public function test_a_lookup_row_has_no_options() {
+		$this->assertSame( array( '0:options:unknown_field' ), $this->errors( $this->mapping( array( $this->lookup_row( array( 'options' => array( 'raw' => true ) ) ) ) ) ) );
+		$this->assertSame( array( '0:sources:unknown_field' ), $this->errors( $this->mapping( array( $this->lookup_row( array( 'sources' => array( '*' => array( 'core.title' ) ) ) ) ) ) ) );
+	}
+
+	/**
+	 * A sensitive source needs its confirmation wherever it is used: input, output of a case, default.
+	 */
+	public function test_a_sensitive_source_in_a_lookup_needs_a_confirmation() {
+		$input = $this->lookup_row( array( 'inputs' => array( '*' => 'meta.user_email' ) ) );
+		$this->assertSame( array( '0:inputs:sensitive' ), $this->errors( $this->mapping( array( $input ) ) ) );
+		$input['confirmed'] = array( 'meta.user_email' );
+		$this->assertSame( array(), $this->errors( $this->mapping( array( $input ) ) ) );
+
+		$output = $this->lookup_row( array( 'cases' => array( array( 'match' => 'a', 'output' => array( 'source' => 'meta.api_key' ) ) ) ) );
+		$this->assertSame( array( '0:cases:sensitive' ), $this->errors( $this->mapping( array( $output ) ) ) );
+
+		$default = $this->lookup_row( array( 'default' => array( 'source' => 'core.author.url' ) ) );
+		$this->assertSame( array( '0:default:sensitive' ), $this->errors( $this->mapping( array( $default ) ) ) );
+		$default['confirmed'] = array( 'core.author.url' );
+		$this->assertSame( array(), $this->errors( $this->mapping( array( $default ) ) ) );
+
+		$default['confirmed'] = array( 'meta.other' );
+		$this->assertContains( '0:confirmed:format', $this->errors( $this->mapping( array( $default ) ) ) );
+	}
+
+	/**
+	 * The canonical form of a lookup row: common fields, inputs, cases, then default and confirmations when present.
+	 */
+	public function test_normalize_a_lookup_row() {
+		$row = $this->lookup_row(
+			array(
+				'confirmed' => array( 'core.author.url' ),
+				'default'   => array( 'source' => 'core.author.url' ),
+				'inputs'    => array( '*' => 'core.type' ),
+				'cases'     => array( array( 'output' => array( 'fixed' => 'News' ), 'match' => 'post' ) ),
+			)
+		);
+		unset( $row['type'] );
+
+		$this->assertSame(
+			array(
+				'key'       => 'label',
+				'kind'      => 'lookup',
+				'type'      => 'auto',
+				'inputs'    => array( '*' => 'core.type' ),
+				'cases'     => array( array( 'match' => 'post', 'output' => array( 'fixed' => 'News' ) ) ),
+				'default'   => array( 'source' => 'core.author.url' ),
+				'confirmed' => array( 'core.author.url' ),
+			),
+			Mapping_Validator::normalize( $this->mapping( array( $row ) ) )['rows'][0]
+		);
+
+		$plain = $this->lookup_row();
+		$this->assertArrayNotHasKey( 'default', Mapping_Validator::normalize( $this->mapping( array( $plain ) ) )['rows'][0], 'No default: null, nothing written.' );
+	}
+
+	/**
+	 * A valid `condition` row.
+	 *
+	 * @param array<string, mixed> $override Values to change.
+	 * @return array<string, mixed>
+	 */
+	private function condition_row( array $override = array() ): array {
+		return array_merge(
+			array(
+				'key'      => 'cancelled',
+				'kind'     => 'condition',
+				'type'     => 'boolean',
+				'inputs'   => array(
+					'*'     => 'meta.status',
+					'event' => 'meta.event_status',
+				),
+				'operator' => 'equals',
+				'matches'  => array( 'cancelled' ),
+				'then'     => array( 'fixed' => true ),
+				'else'     => array( 'fixed' => false ),
+			),
+			$override
+		);
+	}
+
+	/**
+	 * A condition row is valid with every operator and its texts, and with every kind of output, or none.
+	 */
+	public function test_a_condition_row_and_its_operators() {
+		$valid = array(
+			'empty'      => null,
+			'not_empty'  => null,
+			'equals'     => array( 'a' ),
+			'not_equals' => array( 'a' ),
+			'contains'   => array( 'a' ),
+			'one_of'     => array( 'a', 'b, c', 'd' ),
+		);
+		foreach ( $valid as $operator => $matches ) {
+			$row = $this->condition_row( array( 'operator' => $operator, 'matches' => $matches ) );
+			if ( null === $matches ) {
+				unset( $row['matches'] );
+			}
+			$this->assertSame( array(), $this->errors( $this->mapping( array( $row ) ) ), $operator );
+		}
+
+		foreach ( array( array( 'fixed' => 'x' ), array( 'source' => 'core.title' ), array( 'input' => true ) ) as $output ) {
+			$this->assertSame( array(), $this->errors( $this->mapping( array( $this->condition_row( array( 'then' => $output, 'else' => $output ) ) ) ) ), (string) json_encode( $output ) );
+		}
+
+		$row = $this->condition_row();
+		unset( $row['then'], $row['else'] );
+		$this->assertSame( array(), $this->errors( $this->mapping( array( $row ) ) ), 'No output: null.' );
+	}
+
+	/**
+	 * The inputs follow the same rules as the inputs of a lookup row.
+	 */
+	public function test_condition_inputs_are_required_and_well_formed() {
+		$row = $this->condition_row();
+		unset( $row['inputs'] );
+		$this->assertSame( array( '0:inputs:required' ), $this->errors( $this->mapping( array( $row ) ) ) );
+		$this->assertSame( array( '0:inputs:empty' ), $this->errors( $this->mapping( array( $this->condition_row( array( 'inputs' => array() ) ) ) ) ) );
+		$this->assertSame( array( '0:inputs:unknown' ), $this->errors( $this->mapping( array( $this->condition_row( array( 'inputs' => array( '*' => 'other.x' ) ) ) ) ) ) );
+	}
+
+	/**
+	 * The operator is required and known; the texts to compare fit the operator.
+	 */
+	public function test_condition_operator_and_matches() {
+		$row = $this->condition_row();
+		unset( $row['operator'] );
+		$this->assertSame( array( '0:operator:required' ), $this->errors( $this->mapping( array( $row ) ) ) );
+		$this->assertSame( array( '0:operator:unknown' ), $this->errors( $this->mapping( array( $this->condition_row( array( 'operator' => 'starts_with' ) ) ) ) ) );
+
+		$cases = array(
+			'texts for empty'         => array( 'empty', array( 'a' ), 'not_allowed' ),
+			'no text for equals'      => array( 'equals', null, 'required' ),
+			'two texts for equals'    => array( 'equals', array( 'a', 'b' ), 'too_many' ),
+			'two texts for contains'  => array( 'contains', array( 'a', 'b' ), 'too_many' ),
+			'no texts for one of'     => array( 'one_of', array(), 'empty' ),
+			'not a list'              => array( 'one_of', 'a', 'format' ),
+			'map'                     => array( 'one_of', array( 'x' => 'a' ), 'format' ),
+			'not a text'              => array( 'equals', array( 1 ), 'format' ),
+			'empty text'              => array( 'equals', array( '' ), 'empty' ),
+			'spaces at the ends'      => array( 'equals', array( 'a ' ), 'format' ),
+			'too long'                => array( 'equals', array( str_repeat( 'a', 1001 ) ), 'too_long' ),
+			'duplicate'               => array( 'one_of', array( 'a', 'a' ), 'duplicate' ),
+		);
+		foreach ( $cases as $name => $case ) {
+			$row = $this->condition_row( array( 'operator' => $case[0], 'matches' => $case[1] ) );
+			if ( null === $case[1] ) {
+				unset( $row['matches'] );
+			}
+			$this->assertSame( array( '0:matches:' . $case[2] ), $this->errors( $this->mapping( array( $row ) ) ), $name );
+		}
+
+		$many = array();
+		for ( $i = 0; $i <= Mapping_Validator::MAX_CASES; $i++ ) {
+			$many[] = 'v' . $i;
+		}
+		$this->assertSame( array( '0:matches:too_many' ), $this->errors( $this->mapping( array( $this->condition_row( array( 'operator' => 'one_of', 'matches' => $many ) ) ) ) ) );
+	}
+
+	/**
+	 * The outputs are a fixed value, a source or the input.
+	 */
+	public function test_condition_outputs_are_well_formed() {
+		foreach ( array( 'then', 'else' ) as $field ) {
+			foreach ( array( 'x', array(), array( 'input' => false ), array( 'source' => 'title' ), array( 'fixed' => 'a', 'input' => true ) ) as $output ) {
+				$this->assertSame( array( '0:' . $field . ':format' ), $this->errors( $this->mapping( array( $this->condition_row( array( $field => $output ) ) ) ) ), $field . ' ' . json_encode( $output ) );
+			}
+		}
+		$this->assertSame( array( '0:options:unknown_field' ), $this->errors( $this->mapping( array( $this->condition_row( array( 'options' => array( 'raw' => true ) ) ) ) ) ) );
+	}
+
+	/**
+	 * A sensitive source needs its confirmation: as input, or as output.
+	 */
+	public function test_a_sensitive_source_in_a_condition_needs_a_confirmation() {
+		$this->assertSame( array( '0:inputs:sensitive' ), $this->errors( $this->mapping( array( $this->condition_row( array( 'inputs' => array( '*' => 'meta.user_email' ) ) ) ) ) ) );
+		$this->assertSame( array( '0:then:sensitive' ), $this->errors( $this->mapping( array( $this->condition_row( array( 'then' => array( 'source' => 'meta.api_key' ) ) ) ) ) ) );
+
+		$row = $this->condition_row( array( 'else' => array( 'source' => 'core.author.url' ) ) );
+		$this->assertSame( array( '0:else:sensitive' ), $this->errors( $this->mapping( array( $row ) ) ) );
+		$row['confirmed'] = array( 'core.author.url' );
+		$this->assertSame( array(), $this->errors( $this->mapping( array( $row ) ) ) );
+	}
+
+	/**
+	 * The canonical form of a condition row: common fields, inputs, operator, then texts, outputs and
+	 * confirmations when present.
+	 */
+	public function test_normalize_a_condition_row() {
+		$row = $this->condition_row(
+			array(
+				'else'      => array( 'source' => 'core.author.url' ),
+				'confirmed' => array( 'core.author.url' ),
+			)
+		);
+		unset( $row['type'], $row['then'] );
+
+		$this->assertSame(
+			array(
+				'key'       => 'cancelled',
+				'kind'      => 'condition',
+				'type'      => 'auto',
+				'inputs'    => array( '*' => 'meta.status', 'event' => 'meta.event_status' ),
+				'operator'  => 'equals',
+				'matches'   => array( 'cancelled' ),
+				'else'      => array( 'source' => 'core.author.url' ),
+				'confirmed' => array( 'core.author.url' ),
+			),
+			Mapping_Validator::normalize( $this->mapping( array( array_reverse( $row, true ) ) ) )['rows'][0]
 		);
 	}
 }

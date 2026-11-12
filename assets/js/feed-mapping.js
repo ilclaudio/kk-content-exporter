@@ -9,7 +9,12 @@
  *   the next ones are fallbacks. The options of the fields (run shortcodes, raw content) are shown only
  *   when a field of the row accepts them, with their warnings;
  * - rule "Fixed value": a text for every post type, with the same exceptions; the output type of the row
- *   converts it (a number, true or false).
+ *   converts it (a number, true or false);
+ * - rule "Template": a text with fields between braces, for every post type, with the same exceptions;
+ * - rule "Lookup table": a field to read (for every post type, with the same exceptions), a table of lines
+ *   "value → fixed text or field", and a default used when no line matches (none: null);
+ * - rule "Condition": a field to check (with the same exceptions), one check, and the output written when
+ *   the check is true and when it is false.
  * Rows can be added, removed and moved. The script keeps the mapping in a hidden field
  * `kkce_feed[mapping]` that it creates itself: without JavaScript the field does not exist and the saved
  * mapping stays as it is. The checks made here only help while typing: the server checks the whole
@@ -41,6 +46,12 @@
 	const LABEL_REMOVE_EXCEPTION = __( 'Remove exception', 'kk-content-exporter' );
 	const LABEL_ADD_FALLBACK = __( 'Add fallback', 'kk-content-exporter' );
 	const LABEL_INSERT_FIELD = __( 'Insert field', 'kk-content-exporter' );
+	const LABEL_FIELD_TO_READ = __( 'Field to read', 'kk-content-exporter' );
+	const LABEL_TABLE = __( 'Table', 'kk-content-exporter' );
+	const LABEL_DEFAULT = __( 'When no line matches', 'kk-content-exporter' );
+	const LABEL_CHECK = __( 'Check', 'kk-content-exporter' );
+	const LABEL_THEN = __( 'If true, write', 'kk-content-exporter' );
+	const LABEL_ELSE = __( 'Otherwise, write', 'kk-content-exporter' );
 
 	/**
 	 * Output types of a row, in the order shown, with their labels.
@@ -63,6 +74,35 @@
 		[ 'field', LABEL_FIELD ],
 		[ 'fixed', __( 'Fixed value', 'kk-content-exporter' ) ],
 		[ 'template', __( 'Template', 'kk-content-exporter' ) ],
+		[ 'lookup', __( 'Lookup table', 'kk-content-exporter' ) ],
+		[ 'condition', __( 'Condition', 'kk-content-exporter' ) ],
+	];
+
+	/**
+	 * Checks of a condition, with their labels; the first two compare no text, `one_of` a list of texts.
+	 */
+	const OPERATORS = [
+		[ 'empty', __( 'is empty', 'kk-content-exporter' ) ],
+		[ 'not_empty', __( 'is not empty', 'kk-content-exporter' ) ],
+		[ 'equals', __( 'is equal to', 'kk-content-exporter' ) ],
+		[ 'not_equals', __( 'is different from', 'kk-content-exporter' ) ],
+		[ 'one_of', __( 'is one of', 'kk-content-exporter' ) ],
+		[ 'contains', __( 'contains', 'kk-content-exporter' ) ],
+	];
+
+	/**
+	 * Kinds of an output of a lookup table, with their labels; the default can also be nothing or the input.
+	 */
+	const LABEL_FIXED_TEXT = __( 'Fixed text', 'kk-content-exporter' );
+	const OUTPUTS = [
+		[ 'fixed', LABEL_FIXED_TEXT ],
+		[ 'source', LABEL_FIELD ],
+	];
+	const DEFAULTS = [
+		[ 'none', __( 'Nothing (null)', 'kk-content-exporter' ) ],
+		[ 'fixed', LABEL_FIXED_TEXT ],
+		[ 'source', LABEL_FIELD ],
+		[ 'input', __( 'The value read, unchanged', 'kk-content-exporter' ) ],
 	];
 
 
@@ -141,12 +181,38 @@
 		if ( 'template' === row.kind ) {
 			return isMap( row.templates );
 		}
+		if ( 'lookup' === row.kind ) {
+			return isMap( row.inputs ) && Array.isArray( row.cases ) && row.cases.every( function ( item ) {
+				return isMap( item ) && isMap( item.output );
+			} ) && ( undefined === row.default || isMap( row.default ) );
+		}
+		if ( 'condition' === row.kind ) {
+			return isMap( row.inputs ) && 'string' === typeof row.operator && ( undefined === row.matches || Array.isArray( row.matches ) ) && [ row.then, row.else ].every( function ( output ) {
+				return undefined === output || isMap( output );
+			} );
+		}
 		return false;
 	}
 
 	/**
+	 * Kind of an output of a lookup table: `fixed`, `source`, `input`, or `none` for no output.
+	 *
+	 * @param {Object|undefined} output Output.
+	 * @return {string} Kind.
+	 */
+	function outputKind( output ) {
+		if ( ! output ) {
+			return 'none';
+		}
+		if ( Object.prototype.hasOwnProperty.call( output, 'source' ) ) {
+			return 'source';
+		}
+		return true === output.input ? 'input' : 'fixed';
+	}
+
+	/**
 	 * Map of the scopes of an editable row: chains of a `field` row, values of a `fixed` row, templates of a
-	 * `template` row.
+	 * `template` row, inputs of a `lookup` row.
 	 *
 	 * @param {Object} row Row of the mapping.
 	 * @return {Object} Map of post types (or `*`).
@@ -154,6 +220,9 @@
 	function scopeMap( row ) {
 		if ( 'field' === row.kind ) {
 			return row.sources;
+		}
+		if ( 'lookup' === row.kind || 'condition' === row.kind ) {
+			return row.inputs;
 		}
 		return 'template' === row.kind ? row.templates : row.values;
 	}
@@ -203,13 +272,37 @@
 	}
 
 	/**
-	 * Every source of a `field` row (every chain) or of a `template` row (every template), without duplicates.
+	 * Every source of a `field` row (every chain), of a `template` row (every template) or of a `lookup` row
+	 * (inputs, outputs, default), without duplicates.
 	 *
 	 * @param {Object} row Row of the mapping.
 	 * @return {string[]} Source identifiers.
 	 */
 	function rowSources( row ) {
 		const found = [];
+		const add = function ( source ) {
+			if ( source && -1 === found.indexOf( String( source ) ) ) {
+				found.push( String( source ) );
+			}
+		};
+		if ( 'lookup' === row.kind ) {
+			Object.keys( row.inputs || {} ).forEach( function ( scope ) {
+				add( row.inputs[ scope ] );
+			} );
+			( row.cases || [] ).forEach( function ( item ) {
+				add( item.output && item.output.source );
+			} );
+			add( row.default && row.default.source );
+			return found;
+		}
+		if ( 'condition' === row.kind ) {
+			Object.keys( row.inputs || {} ).forEach( function ( scope ) {
+				add( row.inputs[ scope ] );
+			} );
+			add( row.then && row.then.source );
+			add( row.else && row.else.source );
+			return found;
+		}
 		if ( 'template' === row.kind ) {
 			Object.keys( row.templates || {} ).forEach( function ( scope ) {
 				templateSources( row.templates[ scope ] ).forEach( function ( source ) {
@@ -411,6 +504,53 @@
 				if ( ! Object.keys( out.sources ).length ) {
 					out.sources = { '*': [] };
 				}
+			} else if ( 'lookup' === row.kind ) {
+				// Inputs not chosen are left out (none at all: the server reports the empty inputs); the texts to
+				// match lose their spaces at the ends, as the input does; a new empty line is left out.
+				out.inputs = {};
+				scopesOf( row.inputs ).forEach( function ( scope ) {
+					if ( row.inputs[ scope ] ) {
+						out.inputs[ scope ] = row.inputs[ scope ];
+					}
+				} );
+				out.cases = row.cases.map( function ( item ) {
+					return { match: String( item.match || '' ).trim(), output: Object.assign( {}, item.output ) };
+				} ).filter( function ( item ) {
+					const value = 'source' === outputKind( item.output ) ? item.output.source : item.output.fixed;
+					return '' !== item.match || ( undefined !== value && '' !== value );
+				} );
+				if ( undefined === row.default ) {
+					delete out.default;
+				}
+			} else if ( 'condition' === row.kind ) {
+				// Inputs as in a table. The texts to compare are kept while the check changes, and written only for
+				// the checks that use them: trimmed, without empty lines.
+				out.inputs = {};
+				scopesOf( row.inputs ).forEach( function ( scope ) {
+					if ( row.inputs[ scope ] ) {
+						out.inputs[ scope ] = row.inputs[ scope ];
+					}
+				} );
+				const texts = ( row.matches || [] ).map( function ( text ) {
+					return String( text ).trim();
+				} );
+				if ( 'empty' === row.operator || 'not_empty' === row.operator ) {
+					delete out.matches;
+				} else if ( 'one_of' === row.operator ) {
+					out.matches = texts.filter( function ( text ) {
+						return '' !== text;
+					} );
+				} else {
+					out.matches = texts.slice( 0, 1 );
+					if ( ! out.matches.length ) {
+						out.matches = [ '' ];
+					}
+				}
+				[ 'then', 'else' ].forEach( function ( name ) {
+					if ( undefined === row[ name ] ) {
+						delete out[ name ];
+					}
+				} );
 			} else {
 				// Fixed values and templates: empty texts are left out.
 				const name = 'template' === row.kind ? 'templates' : 'values';
@@ -439,6 +579,13 @@
 				sources: __( 'Fields', 'kk-content-exporter' ),
 				values: __( 'Value', 'kk-content-exporter' ),
 				templates: __( 'Template', 'kk-content-exporter' ),
+				inputs: LABEL_FIELD_TO_READ,
+				cases: LABEL_TABLE,
+				default: LABEL_DEFAULT,
+				operator: LABEL_CHECK,
+				matches: __( 'Values to compare', 'kk-content-exporter' ),
+				then: LABEL_THEN,
+				else: LABEL_ELSE,
 				confirmed: __( 'Confirmation', 'kk-content-exporter' ),
 				options: __( 'Options', 'kk-content-exporter' ),
 			};
@@ -454,7 +601,10 @@
 				not_allowed: __( 'not allowed for this rule', 'kk-content-exporter' ),
 				sensitive: __( 'a field needs an explicit confirmation, asked when the feed is saved', 'kk-content-exporter' ),
 			};
-			const message = codes[ error.code ] || error.code;
+			let message = codes[ error.code ] || error.code;
+			if ( 'duplicate' === error.code && 'key' !== error.field ) {
+				message = __( 'the same value is written more than once', 'kk-content-exporter' );
+			}
 			const label = fields[ error.field ] || error.field;
 
 			if ( error.row < 0 ) {
@@ -797,17 +947,21 @@
 		/**
 		 * Select element of a field of a chain, grouped by post type.
 		 *
-		 * @param {string} current Selected source.
-		 * @param {Object} attrs   Properties of the select.
+		 * @param {string}   current Selected source.
+		 * @param {Object}   attrs   Properties of the select.
+		 * @param {Function} accept  Optional: whether a source of the catalog is offered.
 		 * @return {HTMLSelectElement} The select.
 		 */
-		function sourceSelect( current, attrs ) {
+		function sourceSelect( current, attrs, accept ) {
 			const node = el( 'select', attrs );
 			node.appendChild( el( 'option', { value: '' }, __( '— Choose a field —', 'kk-content-exporter' ) ) );
 
 			if ( '' !== current && null === findSource( current ) ) {
 				/* translators: %s: identifier of a field that the post types of the feed do not offer. */
 				node.appendChild( el( 'option', { value: current, selected: true }, sprintf( __( '%s (not offered by the checked post types)', 'kk-content-exporter' ), current ) ) );
+			} else if ( '' !== current && accept && ! accept( findSource( current ) ) ) {
+				/* translators: %s: label of a field that cannot be used in this place, for example a list. */
+				node.appendChild( el( 'option', { value: current, selected: true }, sprintf( __( '%s (cannot be used here)', 'kk-content-exporter' ), findSource( current ).label ) ) );
 			}
 
 			const groups = [ [ '', __( 'Common fields', 'kk-content-exporter' ) ] ];
@@ -818,7 +972,7 @@
 
 			groups.forEach( function ( group ) {
 				const sources = catalog.sources.filter( function ( source ) {
-					return source.post_type === group[ 0 ];
+					return source.post_type === group[ 0 ] && ( ! accept || accept( source ) );
 				} );
 				if ( ! sources.length ) {
 					return;
@@ -997,6 +1151,186 @@
 		}
 
 		/**
+		 * Whether the inputs of a row can be lists: only for the checks of a condition that do not compare texts.
+		 *
+		 * @param {Object} row Row.
+		 * @return {boolean} Whether lists are accepted.
+		 */
+		function acceptsLists( row ) {
+			return 'condition' === row.data.kind && -1 !== [ 'empty', 'not_empty', 'contains' ].indexOf( row.data.operator );
+		}
+
+		/**
+		 * Field read by a scope of a `lookup` or `condition` row. A table does not offer lists (a list cannot be
+		 * compared with a text); a condition offers them only for "is empty", "is not empty" and "contains", and
+		 * marks a list already chosen as not usable when another check is chosen.
+		 *
+		 * @param {Object} row   Row.
+		 * @param {string} scope Scope.
+		 * @return {HTMLElement} The group.
+		 */
+		function renderInput( row, scope ) {
+			const prefix = 'kkce-mapping-' + row.uid + '-' + scopeId( scope );
+			const label = scopeLabel( scope );
+			const group = el( 'div', { className: 'kkce-mapping-scope kkce-mapping-value' } );
+			const control = sourceSelect( String( row.data.inputs[ scope ] || '' ), { id: prefix + '-input', className: 'kkce-mapping-input', 'data-uid': String( row.uid ), 'data-scope': scope }, acceptsLists( row ) ? null : function ( source ) {
+				return 'list' !== source.type;
+			} );
+			/* translators: %s: name of the scope, for example "For all post types". */
+			group.appendChild( labelled( sprintf( __( 'Field to read (%s)', 'kk-content-exporter' ), label ), control ) );
+			if ( '*' !== scope ) {
+				/* translators: %s: post types the exception applies to, for example "For Posts". */
+				group.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove the exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
+			}
+			return group;
+		}
+
+		/**
+		 * Control of an output of a lookup table: a text field for a fixed text, a select for a field.
+		 *
+		 * @param {Object} row    Row.
+		 * @param {Object} output Output.
+		 * @param {string} id     Id of the control.
+		 * @param {string} label  Label of the control.
+		 * @param {string} index  Line of the table, or `default`.
+		 * @return {HTMLElement|null} The control, or null when the output has no value to choose.
+		 */
+		function outputControl( row, output, id, label, index ) {
+			const kind = outputKind( output );
+			if ( 'source' === kind ) {
+				return labelled( label, sourceSelect( String( output.source || '' ), { id: id, className: 'kkce-mapping-output-source', 'data-uid': String( row.uid ), 'data-index': index } ) );
+			}
+			if ( 'fixed' !== kind ) {
+				return null;
+			}
+			return labelled( label, el( 'input', {
+				type: 'text',
+				id: id,
+				className: 'regular-text kkce-mapping-output-fixed',
+				value: null === output.fixed || undefined === output.fixed ? '' : String( output.fixed ),
+				maxLength: data.valueMaxLength,
+				'data-uid': String( row.uid ),
+				'data-index': index,
+			} ) );
+		}
+
+		/**
+		 * Lines of the table of a `lookup` row and its default.
+		 *
+		 * @param {Object} row Row.
+		 * @return {HTMLElement} The group.
+		 */
+		function renderCases( row ) {
+			const prefix = 'kkce-mapping-' + row.uid;
+			const cases = row.data.cases;
+			const group = el( 'fieldset', { className: 'kkce-mapping-scope kkce-mapping-cases' } );
+			group.appendChild( el( 'legend', {}, LABEL_TABLE ) );
+
+			const items = el( 'ol', { className: 'kkce-mapping-chain' } );
+			cases.forEach( function ( item, index ) {
+				const id = prefix + '-case-' + index;
+				const line = el( 'li', { className: 'kkce-mapping-case' } );
+				const position = String( index );
+				line.appendChild( labelled( __( 'If the value is', 'kk-content-exporter' ), el( 'input', {
+					type: 'text',
+					id: id + '-match',
+					className: 'kkce-mapping-match',
+					value: String( item.match || '' ),
+					maxLength: data.valueMaxLength,
+					spellcheck: false,
+					'data-uid': String( row.uid ),
+					'data-index': position,
+				} ) ) );
+				line.appendChild( labelled( __( 'Write', 'kk-content-exporter' ), select( { id: id + '-kind', className: 'kkce-mapping-output-kind', 'data-uid': String( row.uid ), 'data-index': position }, OUTPUTS, outputKind( item.output ) ) ) );
+				const control = outputControl( row, item.output, id + '-output', 'source' === outputKind( item.output ) ? LABEL_FIELD : LABEL_FIXED_TEXT, position );
+				if ( control ) {
+					line.appendChild( control );
+				}
+
+				const actions = el( 'span', { className: 'kkce-mapping-chain-actions' } );
+				/* translators: %d: position of a line in the table of a lookup rule. */
+				actions.appendChild( button( row, 'case-up', LABEL_UP, { id: id + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move line %d up', 'kk-content-exporter' ), index + 1 ), 'data-index': position } ) );
+				/* translators: %d: position of a line in the table of a lookup rule. */
+				actions.appendChild( button( row, 'case-down', LABEL_DOWN, { id: id + '-down', disabled: index === cases.length - 1, ariaLabel: sprintf( __( 'Move line %d down', 'kk-content-exporter' ), index + 1 ), 'data-index': position } ) );
+				/* translators: %d: position of a line in the table of a lookup rule. */
+				actions.appendChild( button( row, 'case-remove', LABEL_REMOVE, { id: id + '-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove line %d', 'kk-content-exporter' ), index + 1 ), 'data-index': position } ) );
+				line.appendChild( actions );
+				items.appendChild( line );
+			} );
+			group.appendChild( items );
+
+			const tools = el( 'div', { className: 'kkce-mapping-scope-actions' } );
+			tools.appendChild( button( row, 'case-add', __( 'Add line', 'kk-content-exporter' ), { id: prefix + '-case-add', disabled: cases.length >= data.maxCases } ) );
+			group.appendChild( tools );
+
+			group.appendChild( renderOutput( row, 'default', LABEL_DEFAULT ) );
+
+			return group;
+		}
+
+		/**
+		 * An output that can also be nothing or the input: the default of a table, "then" and "else" of a
+		 * condition.
+		 *
+		 * @param {Object} row   Row.
+		 * @param {string} name  Field of the row (`default`, `then`, `else`).
+		 * @param {string} label Label of the choice.
+		 * @return {HTMLElement} The group.
+		 */
+		function renderOutput( row, name, label ) {
+			const prefix = 'kkce-mapping-' + row.uid + '-' + name;
+			const wrapper = el( 'div', { className: 'kkce-mapping-default' } );
+			const kind = outputKind( row.data[ name ] );
+			wrapper.appendChild( labelled( label, select( { id: prefix + '-kind', className: 'kkce-mapping-default-kind', 'data-uid': String( row.uid ), 'data-index': name }, DEFAULTS, kind ) ) );
+			const control = outputControl( row, row.data[ name ], prefix, 'source' === kind ? LABEL_FIELD : LABEL_FIXED_TEXT, name );
+			if ( control ) {
+				wrapper.appendChild( control );
+			}
+			return wrapper;
+		}
+
+		/**
+		 * Check of a `condition` row: the operator and the texts it compares, then the two outputs.
+		 *
+		 * @param {Object} row Row.
+		 * @return {HTMLElement} The group.
+		 */
+		function renderCheck( row ) {
+			const prefix = 'kkce-mapping-' + row.uid;
+			const group = el( 'fieldset', { className: 'kkce-mapping-scope kkce-mapping-check' } );
+			group.appendChild( el( 'legend', {}, LABEL_CHECK ) );
+
+			const line = el( 'div', { className: 'kkce-mapping-value' } );
+			line.appendChild( labelled( __( 'The field', 'kk-content-exporter' ), select( { id: prefix + '-operator', className: 'kkce-mapping-operator', 'data-uid': String( row.uid ) }, OPERATORS, row.data.operator ) ) );
+			const texts = row.data.matches || [];
+			if ( 'one_of' === row.data.operator ) {
+				line.appendChild( labelled( __( 'Values, one per line', 'kk-content-exporter' ), el( 'textarea', {
+					id: prefix + '-matches',
+					className: 'kkce-mapping-matches',
+					rows: 4,
+					value: texts.join( '\n' ),
+					spellcheck: false,
+					'data-uid': String( row.uid ),
+				} ) ) );
+			} else if ( 'empty' !== row.data.operator && 'not_empty' !== row.data.operator ) {
+				line.appendChild( labelled( __( 'Value', 'kk-content-exporter' ), el( 'input', {
+					type: 'text',
+					id: prefix + '-matches',
+					className: 'regular-text kkce-mapping-matches',
+					value: String( texts[ 0 ] || '' ),
+					maxLength: data.valueMaxLength,
+					spellcheck: false,
+					'data-uid': String( row.uid ),
+				} ) ) );
+			}
+			group.appendChild( line );
+			group.appendChild( renderOutput( row, 'then', LABEL_THEN ) );
+			group.appendChild( renderOutput( row, 'else', LABEL_ELSE ) );
+
+			return group;
+		}
+
+		/**
 		 * Control that adds an exception for a checked post type, when some is left.
 		 *
 		 * @param {Object} row Row.
@@ -1139,6 +1473,40 @@
 				if ( picker ) {
 					fieldset.appendChild( picker );
 				}
+				const warnings = renderOptions( row );
+				if ( warnings ) {
+					fieldset.appendChild( warnings );
+				}
+			} else if ( 'lookup' === row.data.kind ) {
+				if ( ! Object.prototype.hasOwnProperty.call( row.data.inputs, '*' ) ) {
+					row.data.inputs = Object.assign( { '*': '' }, row.data.inputs );
+				}
+				fieldset.appendChild( el( 'p', { className: 'description' }, __( 'The value of the field is compared with the lines of the table, exactly (capital letters included, spaces at the ends ignored); the first line that matches gives the output. Lists cannot be read.', 'kk-content-exporter' ) ) );
+				scopesOf( row.data.inputs ).forEach( function ( scope ) {
+					fieldset.appendChild( renderInput( row, scope ) );
+				} );
+				const picker = renderExceptionPicker( row );
+				if ( picker ) {
+					fieldset.appendChild( picker );
+				}
+				fieldset.appendChild( renderCases( row ) );
+				const warnings = renderOptions( row );
+				if ( warnings ) {
+					fieldset.appendChild( warnings );
+				}
+			} else if ( 'condition' === row.data.kind ) {
+				if ( ! Object.prototype.hasOwnProperty.call( row.data.inputs, '*' ) ) {
+					row.data.inputs = Object.assign( { '*': '' }, row.data.inputs );
+				}
+				fieldset.appendChild( el( 'p', { className: 'description' }, __( 'One check on one field: when it is true the first output is written, otherwise the second. Values are compared exactly (capital letters included, spaces at the ends ignored); "contains" looks for a text inside the value, or for one element of a list, such as the categories; lists can be checked only with "is empty", "is not empty" and "contains".', 'kk-content-exporter' ) ) );
+				scopesOf( row.data.inputs ).forEach( function ( scope ) {
+					fieldset.appendChild( renderInput( row, scope ) );
+				} );
+				const picker = renderExceptionPicker( row );
+				if ( picker ) {
+					fieldset.appendChild( picker );
+				}
+				fieldset.appendChild( renderCheck( row ) );
 				const warnings = renderOptions( row );
 				if ( warnings ) {
 					fieldset.appendChild( warnings );
@@ -1310,6 +1678,49 @@
 		}
 
 		/**
+		 * Actions on the lines of the table of a `lookup` row: add, move and remove.
+		 *
+		 * @param {Object} row    Row.
+		 * @param {string} action Action.
+		 * @param {number} index  Position of the line.
+		 */
+		function caseAction( row, action, index ) {
+			const cases = row.data.cases;
+			const base = 'kkce-mapping-' + row.uid + '-case-';
+
+			if ( 'case-add' === action ) {
+				if ( cases.length >= data.maxCases ) {
+					return;
+				}
+				cases.push( { match: '', output: { fixed: '' } } );
+				commit( true );
+				render( base + ( cases.length - 1 ) + '-match' );
+				announce( __( 'Line added to the table.', 'kk-content-exporter' ) );
+				return;
+			}
+
+			if ( 'case-remove' === action ) {
+				cases.splice( index, 1 );
+				commit( true );
+				render( cases.length ? base + Math.min( index, cases.length - 1 ) + '-match' : 'kkce-mapping-' + row.uid + '-case-add' );
+				announce( __( 'Line removed from the table.', 'kk-content-exporter' ) );
+				return;
+			}
+
+			const up = 'case-up' === action;
+			const target = up ? index - 1 : index + 1;
+			if ( target < 0 || target >= cases.length ) {
+				return;
+			}
+			cases.splice( target, 0, cases.splice( index, 1 )[ 0 ] );
+			commit( true );
+			const atEdge = up ? 0 === target : cases.length - 1 === target;
+			render( base + target + '-' + ( up !== atEdge ? 'up' : 'down' ) );
+			/* translators: %d: new position of the moved line in the table of a lookup rule. */
+			announce( sprintf( __( 'Line moved to position %d of the table.', 'kk-content-exporter' ), target + 1 ) );
+		}
+
+		/**
 		 * Actions on the chains of fields and on the exceptions of a row.
 		 *
 		 * @param {Object} row    Row.
@@ -1320,8 +1731,12 @@
 		function scopeAction( row, action, scope, index ) {
 			const prefix = 'kkce-mapping-' + row.uid;
 			const isField = 'field' === row.data.kind;
-			const isTemplate = 'template' === row.data.kind;
 			const map = scopeMap( row.data );
+
+			if ( 'case-add' === action || 'case-remove' === action || 'case-up' === action || 'case-down' === action ) {
+				caseAction( row, action, index );
+				return;
+			}
 
 			if ( 'insert' === action ) {
 				const area = document.getElementById( prefix + '-' + scopeId( scope ) + '-template' );
@@ -1357,7 +1772,8 @@
 				}
 				map[ postType ] = isField ? [] : '';
 				commit( true );
-				render( prefix + '-' + scopeId( postType ) + ( isField ? '-0-source' : ( isTemplate ? '-template' : '-value' ) ) );
+				const focus = { field: '-0-source', template: '-template', lookup: '-input', condition: '-input' }[ row.data.kind ] || '-value';
+				render( prefix + '-' + scopeId( postType ) + focus );
 				/* translators: %s: name of the exception, for example "For Posts". */
 				announce( sprintf( __( 'Exception added: %s.', 'kk-content-exporter' ), scopeLabel( postType ) ) );
 				return;
@@ -1458,7 +1874,39 @@
 				row.data.templates[ input.getAttribute( 'data-scope' ) ] = input.value;
 				commit( true );
 			}
+
+			if ( input.classList.contains( 'kkce-mapping-match' ) ) {
+				row.data.cases[ parseInt( input.getAttribute( 'data-index' ), 10 ) ].match = input.value;
+				commit( true );
+			}
+
+			if ( input.classList.contains( 'kkce-mapping-output-fixed' ) ) {
+				setOutput( row, input.getAttribute( 'data-index' ), { fixed: input.value } );
+				commit( true );
+			}
+
+			if ( input.classList.contains( 'kkce-mapping-matches' ) ) {
+				// Kept as typed (one text per line for "is one of"): the hidden field gets them trimmed.
+				row.data.matches = 'TEXTAREA' === input.tagName ? input.value.split( '\n' ) : [ input.value ];
+				commit( true );
+			}
 		} );
+
+		/**
+		 * Writes an output of a row: a line of a table (by its position), or a named output (`default`, `then`,
+		 * `else`).
+		 *
+		 * @param {Object} row      Row.
+		 * @param {string} position Position of the line, or name of the output.
+		 * @param {Object} output   Output.
+		 */
+		function setOutput( row, position, output ) {
+			if ( /^[0-9]+$/.test( position ) ) {
+				row.data.cases[ parseInt( position, 10 ) ].output = output;
+			} else {
+				row.data[ position ] = output;
+			}
+		}
 
 		list.addEventListener( 'change', function ( event ) {
 			const control = event.target;
@@ -1478,7 +1926,10 @@
 				return;
 			}
 
-			if ( control.classList.contains( 'kkce-mapping-fixed' ) || control.classList.contains( 'kkce-mapping-template' ) ) {
+			// Text fields are written while typing (input event): leaving them changes nothing.
+			if ( [ 'kkce-mapping-fixed', 'kkce-mapping-template', 'kkce-mapping-match', 'kkce-mapping-output-fixed', 'kkce-mapping-matches' ].some( function ( name ) {
+				return control.classList.contains( name );
+			} ) ) {
 				return;
 			}
 
@@ -1495,6 +1946,8 @@
 					field: { kind: 'field', sources: { '*': [] } },
 					fixed: { kind: 'fixed', values: { '*': '' } },
 					template: { kind: 'template', templates: { '*': '' } },
+					lookup: { kind: 'lookup', inputs: { '*': '' }, cases: [ { match: '', output: { fixed: '' } } ] },
+					condition: { kind: 'condition', inputs: { '*': '' }, operator: 'not_empty', then: { input: true } },
 				};
 				const next = ( row.stash && row.stash[ control.value ] ) || blank[ control.value ];
 				row.stash = Object.assign( {}, row.stash, { [ previous.kind ]: previous } );
@@ -1516,6 +1969,26 @@
 				if ( 0 === position && '' !== control.value ) {
 					proposeKey( row, control.value );
 				}
+			} else if ( control.classList.contains( 'kkce-mapping-input' ) ) {
+				const scope = control.getAttribute( 'data-scope' );
+				row.data.inputs[ scope ] = control.value;
+				if ( '*' === scope && '' !== control.value ) {
+					proposeKey( row, control.value );
+				}
+			} else if ( control.classList.contains( 'kkce-mapping-output-kind' ) ) {
+				row.data.cases[ parseInt( control.getAttribute( 'data-index' ), 10 ) ].output = 'source' === control.value ? { source: '' } : { fixed: '' };
+			} else if ( control.classList.contains( 'kkce-mapping-output-source' ) ) {
+				setOutput( row, control.getAttribute( 'data-index' ), { source: control.value } );
+			} else if ( control.classList.contains( 'kkce-mapping-default-kind' ) ) {
+				const name = control.getAttribute( 'data-index' ) || 'default';
+				const choices = { fixed: { fixed: '' }, source: { source: '' }, input: { input: true } };
+				if ( choices[ control.value ] ) {
+					row.data[ name ] = choices[ control.value ];
+				} else {
+					delete row.data[ name ];
+				}
+			} else if ( control.classList.contains( 'kkce-mapping-operator' ) ) {
+				row.data.operator = control.value;
 			} else if ( control.hasAttribute( 'data-option' ) ) {
 				row.data.options = Object.assign( {}, row.data.options );
 				row.data.options[ control.getAttribute( 'data-option' ) ] = control.checked;
@@ -1606,7 +2079,7 @@
 		} catch ( error ) {
 			return;
 		}
-		if ( ! data || ! data.catalog || ! Array.isArray( data.catalog.sources ) || ! data.field || ! data.keyPattern || ! data.maxChain || ! data.valueMaxLength || ! data.previewPath || ! data.itemsPath || ! data.templateMaxLength ) {
+		if ( ! data || ! data.catalog || ! Array.isArray( data.catalog.sources ) || ! data.field || ! data.keyPattern || ! data.maxChain || ! data.valueMaxLength || ! data.previewPath || ! data.itemsPath || ! data.templateMaxLength || ! data.maxCases ) {
 			return;
 		}
 
