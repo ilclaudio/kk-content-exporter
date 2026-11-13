@@ -449,6 +449,24 @@ class KKCE_Rule_Evaluator_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
+	 * An optional section is written only when every placeholder in it has a value; a literal fallback always
+	 * has one. The row has no value only when no placeholder at all has one.
+	 */
+	public function test_optional_sections_of_a_template() {
+		$both    = $this->reader( array( 'meta.city' => 'Roma', 'meta.address' => 'Via X' ) );
+		$city    = $this->reader( array( 'meta.city' => 'Roma', 'meta.address' => '  ' ) );
+		$address = $this->reader( array( 'meta.address' => 'Via X' ) );
+		$place   = $this->template( '{meta.city}[, {meta.address}]' );
+
+		$this->assertSame( 'Roma, Via X', Rule_Evaluator::evaluate( $place, 'post', $both )['value'] );
+		$this->assertSame( 'Roma', Rule_Evaluator::evaluate( $place, 'post', $city )['value'] );
+		$this->assertSame( ', Via X', Rule_Evaluator::evaluate( $place, 'post', $address )['value'] );
+		$this->assertSame( 'Roma', Rule_Evaluator::evaluate( $this->template( '{meta.city}[ – {meta.city} {meta.address}]' ), 'post', $city )['value'], 'Every placeholder of the section needs a value.' );
+		$this->assertSame( 'Roma (n.d.)', Rule_Evaluator::evaluate( $this->template( '{meta.city}[ ({meta.zip|"n.d."})]' ), 'post', $city )['value'] );
+		$this->assertSame( array( 'present' => false, 'value' => null ), Rule_Evaluator::evaluate( $this->template( 'Place[: {meta.none}]' ), 'post', $city ) );
+	}
+
+	/**
 	 * The template of the post type of the item replaces the general one.
 	 */
 	public function test_the_template_of_the_post_type_wins() {
@@ -488,6 +506,35 @@ class KKCE_Rule_Evaluator_Unit_Test extends KKCE_Unit_Test_Case {
 				$reader,
 				$declared
 			)
+		);
+	}
+
+	/**
+	 * `max_length` cuts a plain text output after the normalization, at a whole word with `…`; other types and
+	 * texts within the limit are not changed.
+	 */
+	public function test_max_length_cuts_plain_texts() {
+		$reader  = $this->reader( array( 'core.title' => 'Concerto di <b>musica</b> classica al teatro', 'core.id' => 1234567, 'core.content' => '<p>Long text here</p>' ) );
+		$mapping = array(
+			'version' => 1,
+			'rows'    => array(
+				$this->field( array( 'core.title' ), array( 'key' => 'field', 'type' => 'string', 'max_length' => 20 ) ),
+				$this->template( 'Event: {core.title}', array( 'key' => 'template', 'type' => 'auto', 'max_length' => 12 ) ),
+				$this->field( array( 'core.title' ), array( 'key' => 'short', 'type' => 'string', 'max_length' => 100 ) ),
+				$this->field( array( 'core.id' ), array( 'key' => 'number', 'type' => 'number', 'max_length' => 3 ) ),
+				$this->field( array( 'core.content' ), array( 'key' => 'html', 'type' => 'html', 'max_length' => 5 ) ),
+			),
+		);
+
+		$this->assertSame(
+			array(
+				'field'    => 'Concerto di musica…',
+				'template' => 'Event…',
+				'short'    => 'Concerto di musica classica al teatro',
+				'number'   => 1234567,
+				'html'     => '<p>Long text here</p>',
+			),
+			Rule_Evaluator::evaluate_mapping( $mapping, 'post', $reader )
 		);
 	}
 

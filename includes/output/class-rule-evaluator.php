@@ -102,7 +102,13 @@ final class Rule_Evaluator {
 
 			$result = self::evaluate( $row, $post_type, $read, $declared, $origin );
 			if ( $result['present'] ) {
-				$result = Normalizer::normalize( $result['value'], self::row_type( $row, $declared ), $origin );
+				$type   = self::row_type( $row, $declared );
+				$result = Normalizer::normalize( $result['value'], $type, $origin );
+
+				$limit = $row['max_length'] ?? null;
+				if ( $result['present'] && 'string' === $type && is_string( $result['value'] ) && is_int( $limit ) && $limit > 0 ) {
+					$result['value'] = Normalizer::truncate( $result['value'], $limit );
+				}
 			}
 
 			$item[ $row['key'] ] = $result['present'] ? $result['value'] : null;
@@ -244,41 +250,71 @@ final class Rule_Evaluator {
 		}
 
 		$confirmed    = is_array( $row['confirmed'] ?? null ) ? $row['confirmed'] : array();
-		$text         = '';
+		$texts        = array();
+		$missing      = array();
 		$placeholders = 0;
 		$found        = false;
 
-		foreach ( $parsed['parts'] as $part ) {
+		foreach ( $parsed['parts'] as $index => $part ) {
+			$texts[ $index ] = $part['text'];
 			if ( array() === $part['alternatives'] ) {
-				$text .= $part['text'];
 				continue;
 			}
 
 			++$placeholders;
-			foreach ( $part['alternatives'] as $alternative ) {
-				if ( isset( $alternative['literal'] ) ) {
-					$text .= $alternative['literal'];
-					$found = true;
-					break;
-				}
+			$value = self::placeholder( $part['alternatives'], $read, $confirmed, $declared, $origin );
+			if ( null === $value ) {
+				// An optional section is left out when one of its placeholders has no value.
+				$missing[ $part['section'] ] = true;
+				continue;
+			}
 
-				$source = $alternative['source'];
-				if ( ! self::can_read( $source, $confirmed ) ) {
-					continue;
-				}
+			$texts[ $index ] = $value;
+			$found           = true;
+		}
 
-				$value = $read( $source, array() );
-				if ( null === $value || self::is_empty( $value ) ) {
-					continue;
-				}
-
-				$text .= self::as_text( $value, null === $declared ? null : $declared( $source ), $origin );
-				$found = true;
-				break;
+		$text = '';
+		foreach ( $parsed['parts'] as $index => $part ) {
+			if ( 0 === $part['section'] || ! isset( $missing[ $part['section'] ] ) ) {
+				$text .= $texts[ $index ];
 			}
 		}
 
 		return $placeholders > 0 && ! $found ? self::absent() : self::present( $text );
+	}
+
+	/**
+	 * Text of a placeholder: its first alternative with a value, in standard text form.
+	 *
+	 * @param array<mixed>                     $alternatives Alternatives of the placeholder.
+	 * @param callable                         $read         Reads a source of the item.
+	 * @param array<mixed>                     $confirmed    Confirmed sources of the row.
+	 * @param (callable(string): ?string)|null $declared     Declared type of a source.
+	 * @param string                           $origin       Origin of the site.
+	 * @return string|null The text, or null when no alternative has a value.
+	 *
+	 * @phpstan-param callable(string, array<mixed>): mixed $read
+	 */
+	private static function placeholder( array $alternatives, callable $read, array $confirmed, ?callable $declared, string $origin ): ?string {
+		foreach ( $alternatives as $alternative ) {
+			if ( isset( $alternative['literal'] ) ) {
+				return $alternative['literal'];
+			}
+
+			$source = $alternative['source'] ?? null;
+			if ( ! is_string( $source ) || ! self::can_read( $source, $confirmed ) ) {
+				continue;
+			}
+
+			$value = $read( $source, array() );
+			if ( null === $value || self::is_empty( $value ) ) {
+				continue;
+			}
+
+			return self::as_text( $value, null === $declared ? null : $declared( $source ), $origin );
+		}
+
+		return null;
 	}
 
 	/**

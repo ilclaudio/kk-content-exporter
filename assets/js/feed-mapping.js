@@ -46,6 +46,7 @@
 	const LABEL_REMOVE_EXCEPTION = __( 'Remove exception', 'kk-content-exporter' );
 	const LABEL_ADD_FALLBACK = __( 'Add fallback', 'kk-content-exporter' );
 	const LABEL_INSERT_FIELD = __( 'Insert field', 'kk-content-exporter' );
+	const LABEL_MAX_LENGTH = __( 'Maximum length', 'kk-content-exporter' );
 	const LABEL_FIELD_TO_READ = __( 'Field to read', 'kk-content-exporter' );
 	const LABEL_TABLE = __( 'Table', 'kk-content-exporter' );
 	const LABEL_DEFAULT = __( 'When no line matches', 'kk-content-exporter' );
@@ -157,6 +158,20 @@
 			node.appendChild( el( 'option', { value: option[ 0 ], selected: option[ 0 ] === selected }, option[ 1 ] ) );
 		} );
 		return node;
+	}
+
+	/**
+	 * Whether a row gives a plain text, so that a maximum length can be set: a template that is not HTML, or
+	 * another rule (but a fixed value) with the text type.
+	 *
+	 * @param {Object} row Row of the mapping.
+	 * @return {boolean} Whether the output is plain text.
+	 */
+	function hasTextOutput( row ) {
+		if ( 'template' === row.kind ) {
+			return 'html' !== row.type;
+		}
+		return 'fixed' !== row.kind && 'string' === row.type;
 	}
 
 	/**
@@ -491,6 +506,10 @@
 				return row;
 			}
 			const out = Object.assign( {}, row );
+			// The maximum length belongs to the row: kept in memory, written only for a plain text output.
+			if ( ! hasTextOutput( row ) || undefined === row.max_length ) {
+				delete out.max_length;
+			}
 			if ( 'field' === row.kind ) {
 				out.sources = {};
 				scopesOf( row.sources ).forEach( function ( scope ) {
@@ -588,6 +607,7 @@
 				else: LABEL_ELSE,
 				confirmed: __( 'Confirmation', 'kk-content-exporter' ),
 				options: __( 'Options', 'kk-content-exporter' ),
+				max_length: LABEL_MAX_LENGTH,
 			};
 			const codes = {
 				required: __( 'missing', 'kk-content-exporter' ),
@@ -1441,6 +1461,22 @@
 			} ) : TYPES;
 			const type = isTemplate ? ( 'html' === row.data.type ? 'html' : 'string' ) : ( row.data.type || 'auto' );
 			fields.appendChild( labelled( __( 'Output type', 'kk-content-exporter' ), select( { id: prefix + '-type', className: 'kkce-mapping-type', 'data-uid': String( row.uid ) }, types, type ) ) );
+			if ( editable && hasTextOutput( Object.assign( {}, row.data, { type: type } ) ) ) {
+				const hint = el( 'span', { id: prefix + '-max-length-help', className: 'description' }, __( 'Characters; empty: no limit.', 'kk-content-exporter' ) );
+				const field = labelled( LABEL_MAX_LENGTH, el( 'input', {
+					type: 'number',
+					id: prefix + '-max-length',
+					className: 'small-text kkce-mapping-max-length',
+					min: 1,
+					max: data.maxLengthLimit,
+					step: 1,
+					value: undefined === row.data.max_length ? '' : String( row.data.max_length ),
+					ariaDescribedby: hint.id,
+					'data-uid': String( row.uid ),
+				} ) );
+				field.appendChild( hint );
+				fields.appendChild( field );
+			}
 			fieldset.appendChild( fields );
 			fieldset.appendChild( error );
 
@@ -1465,7 +1501,7 @@
 				if ( ! Object.prototype.hasOwnProperty.call( row.data.templates, '*' ) ) {
 					row.data.templates = Object.assign( { '*': '' }, row.data.templates );
 				}
-				fieldset.appendChild( el( 'p', { id: prefix + '-template-help', className: 'description' }, __( 'Write the text and put the fields between braces, for example {core.title}. {a|b|"text"} uses the first one with a value; write {{ and }} for a brace. "Insert field" writes a field where the cursor is.', 'kk-content-exporter' ) ) );
+				fieldset.appendChild( el( 'p', { id: prefix + '-template-help', className: 'description' }, __( 'Write the text and put the fields between braces, for example {core.title}. {a|b|"text"} uses the first one with a value; a part between square brackets, such as {meta.city}[, {meta.address}], is written only when all its fields have a value; write {{, }}, [[ and ]] for a brace or a bracket. "Insert field" writes a field where the cursor is.', 'kk-content-exporter' ) ) );
 				scopesOf( row.data.templates ).forEach( function ( scope ) {
 					fieldset.appendChild( renderTemplate( row, scope ) );
 				} );
@@ -1870,6 +1906,16 @@
 				commit( true );
 			}
 
+			if ( input.classList.contains( 'kkce-mapping-max-length' ) ) {
+				// Empty: no limit. A value that is not a whole number is sent as it is, so the server reports it.
+				if ( '' === input.value.trim() ) {
+					delete row.data.max_length;
+				} else {
+					row.data.max_length = /^[0-9]+$/.test( input.value.trim() ) ? parseInt( input.value.trim(), 10 ) : input.value;
+				}
+				commit( true );
+			}
+
 			if ( input.classList.contains( 'kkce-mapping-template' ) ) {
 				row.data.templates[ input.getAttribute( 'data-scope' ) ] = input.value;
 				commit( true );
@@ -1927,7 +1973,7 @@
 			}
 
 			// Text fields are written while typing (input event): leaving them changes nothing.
-			if ( [ 'kkce-mapping-fixed', 'kkce-mapping-template', 'kkce-mapping-match', 'kkce-mapping-output-fixed', 'kkce-mapping-matches' ].some( function ( name ) {
+			if ( [ 'kkce-mapping-fixed', 'kkce-mapping-template', 'kkce-mapping-match', 'kkce-mapping-output-fixed', 'kkce-mapping-matches', 'kkce-mapping-max-length' ].some( function ( name ) {
 				return control.classList.contains( name );
 			} ) ) {
 				return;
@@ -1954,6 +2000,11 @@
 				// The key and the output type belong to the row, not to the rule: they follow the change.
 				next.key = previous.key;
 				next.type = previous.type || 'auto';
+				if ( undefined !== previous.max_length ) {
+					next.max_length = previous.max_length;
+				} else {
+					delete next.max_length;
+				}
 				if ( 'template' === next.kind && 'html' !== next.type ) {
 					// A template gives a text: plain unless HTML was chosen.
 					next.type = 'string';
@@ -2079,7 +2130,7 @@
 		} catch ( error ) {
 			return;
 		}
-		if ( ! data || ! data.catalog || ! Array.isArray( data.catalog.sources ) || ! data.field || ! data.keyPattern || ! data.maxChain || ! data.valueMaxLength || ! data.previewPath || ! data.itemsPath || ! data.templateMaxLength || ! data.maxCases ) {
+		if ( ! data || ! data.catalog || ! Array.isArray( data.catalog.sources ) || ! data.field || ! data.keyPattern || ! data.maxChain || ! data.valueMaxLength || ! data.previewPath || ! data.itemsPath || ! data.templateMaxLength || ! data.maxCases || ! data.maxLengthLimit ) {
 			return;
 		}
 
