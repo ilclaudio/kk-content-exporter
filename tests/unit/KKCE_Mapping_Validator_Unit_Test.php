@@ -741,6 +741,62 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
+	 * `max_length` is a whole number from 1 to `MAX_LENGTH_LIMIT`, allowed only when the row gives a plain
+	 * text: a template that is not HTML, any other kind (but fixed) with the text type.
+	 */
+	public function test_max_length() {
+		$limit = Mapping_Validator::MAX_LENGTH_LIMIT;
+		$valid = array(
+			'field'          => $this->field_row( array( 'max_length' => 1 ) ),
+			'field at limit' => $this->field_row( array( 'max_length' => $limit ) ),
+			'template text'  => $this->template_row( array( 'max_length' => 80 ) ),
+			'template auto'  => $this->template_row( array( 'type' => 'auto', 'max_length' => 80 ) ),
+			'lookup'         => $this->lookup_row( array( 'max_length' => 80 ) ),
+			'condition'      => $this->condition_row( array( 'type' => 'string', 'max_length' => 80 ) ),
+		);
+		foreach ( $valid as $name => $row ) {
+			$this->assertSame( array(), $this->errors( $this->mapping( array( $row ) ) ), $name );
+		}
+
+		foreach ( array( 0, -5, $limit + 1, '80', 80.0, true, null, array( 80 ) ) as $value ) {
+			$this->assertSame( array( '0:max_length:format' ), $this->errors( $this->mapping( array( $this->field_row( array( 'max_length' => $value ) ) ) ) ), var_export( $value, true ) );
+		}
+
+		$not_allowed = array(
+			'field auto'    => $this->field_row( array( 'type' => 'auto', 'max_length' => 80 ) ),
+			'field html'    => $this->field_row( array( 'type' => 'html', 'max_length' => 80 ) ),
+			'field number'  => $this->field_row( array( 'type' => 'number', 'max_length' => 80 ) ),
+			'template html' => $this->template_row( array( 'type' => 'html', 'max_length' => 80 ) ),
+			'condition'     => $this->condition_row( array( 'max_length' => 80 ) ),
+		);
+		foreach ( $not_allowed as $name => $row ) {
+			$this->assertSame( array( '0:max_length:not_allowed' ), $this->errors( $this->mapping( array( $row ) ) ), $name );
+		}
+
+		$this->assertSame( array( '0:max_length:unknown_field' ), $this->errors( $this->mapping( array( $this->fixed_row( array( 'max_length' => 80 ) ) ) ) ), 'A fixed value is written by the admin: no limit.' );
+	}
+
+	/**
+	 * The canonical form keeps `max_length` at the end of the row.
+	 */
+	public function test_normalize_keeps_max_length() {
+		$row = $this->field_row( array( 'max_length' => 80, 'confirmed' => array( 'core.title' ) ) );
+
+		$this->assertSame( array( 'key', 'kind', 'type', 'sources', 'confirmed', 'max_length' ), array_keys( Mapping_Validator::normalize( $this->mapping( array( $row ) ) )['rows'][0] ) );
+		$this->assertSame( 80, Mapping_Validator::normalize( $this->mapping( array( $this->template_row( array( 'max_length' => 80 ) ) ) ) )['rows'][0]['max_length'] );
+		$this->assertArrayNotHasKey( 'max_length', Mapping_Validator::normalize( $this->mapping( array( $this->field_row() ) ) )['rows'][0] );
+	}
+
+	/**
+	 * Optional sections of a template are checked with the template: a malformed one is a format error.
+	 */
+	public function test_template_sections_are_checked() {
+		$this->assertSame( array(), $this->errors( $this->mapping( array( $this->template_row( array( 'templates' => array( '*' => '{core.title}[ – {meta.place}]' ) ) ) ) ) ) );
+		$this->assertSame( array( '0:templates:format' ), $this->errors( $this->mapping( array( $this->template_row( array( 'templates' => array( '*' => '{core.title}[ – n.d.]' ) ) ) ) ) ) );
+		$this->assertSame( array( '0:templates:unknown' ), $this->errors( $this->mapping( array( $this->template_row( array( 'templates' => array( '*' => '{core.title}[ – {other.place}]' ) ) ) ) ) ) );
+	}
+
+	/**
 	 * A valid `lookup` row.
 	 *
 	 * @param array<string, mixed> $override Values to change.

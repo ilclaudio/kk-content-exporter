@@ -521,4 +521,26 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( 400, $response->get_status() );
 		$this->assertSame( array( array( 'row' => 0, 'field' => 'matches', 'code' => 'required' ) ), $response->get_data()['data']['errors'] );
 	}
+
+	/**
+	 * The preview leaves out an optional section without a value and cuts a text to its maximum length;
+	 * a maximum length on HTML is refused.
+	 */
+	public function test_preview_of_optional_sections_and_max_length() {
+		wp_set_current_user( self::$admin );
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish', 'post_title' => 'Concerto di musica classica al teatro', 'post_excerpt' => '' ) );
+		$rows    = array(
+			array( 'key' => 'label', 'kind' => 'template', 'templates' => array( '*' => '{core.title}[ – {core.excerpt}]' ) ),
+			array( 'key' => 'short', 'kind' => 'field', 'type' => 'string', 'sources' => array( '*' => array( 'core.title' ) ), 'max_length' => 20 ),
+		);
+
+		$response = $this->preview( array( 'mapping' => $this->mapping( $rows ), 'post_types' => array( 'post' ), 'post_id' => $post_id ) );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array( 'label' => 'Concerto di musica classica al teatro', 'short' => 'Concerto di musica…' ), (array) $response->get_data()['items'][0]['data'] );
+
+		$rows[1]['type'] = 'html';
+		$response        = $this->preview( array( 'mapping' => $this->mapping( $rows ), 'post_types' => array( 'post' ), 'post_id' => $post_id ) );
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( array( array( 'row' => 1, 'field' => 'max_length', 'code' => 'not_allowed' ) ), $response->get_data()['data']['errors'] );
+	}
 }

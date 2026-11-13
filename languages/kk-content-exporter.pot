@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-12T22:28:21+01:00\n"
+"POT-Creation-Date: 2026-11-13T14:27:51+01:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: kk-content-exporter\n"
@@ -202,51 +202,55 @@ msgstr ""
 msgid "Mapping"
 msgstr ""
 
-#: includes/admin/class-mapping-box.php:90
+#: includes/admin/class-mapping-box.php:91
 msgid "The mapping decides what each item of the feed contains: every row adds one key to the JSON of every item, with the value it reads from the content or a fixed value. Every item has all the keys, in the order of the rows; a key without a value is written with null, so the program that reads the feed always finds the same keys."
 msgstr ""
 
-#: includes/admin/class-mapping-box.php:92
+#: includes/admin/class-mapping-box.php:93
 msgid "The mapping is not saved yet: in this development version the rows built here are lost when the feed is updated or the page is left."
 msgstr ""
 
-#: includes/admin/class-mapping-box.php:94
+#: includes/admin/class-mapping-box.php:95
 msgid "How the rows work"
 msgstr ""
 
-#: includes/admin/class-mapping-box.php:96
+#: includes/admin/class-mapping-box.php:97
 msgid "JSON key: the name of the key in every item, for example \"title\". It is proposed from the field you choose, and you can change it."
 msgstr ""
 
-#: includes/admin/class-mapping-box.php:97
+#: includes/admin/class-mapping-box.php:98
 msgid "Rule \"Field\": the value is read from a field of the content. With \"Add fallback\" another field is used when the first one is empty; with \"Different for\" a post type can read other fields."
 msgstr ""
 
-#: includes/admin/class-mapping-box.php:98
+#: includes/admin/class-mapping-box.php:99
 msgid "Rule \"Fixed value\": every item gets the same text, for example the name of the site; with \"Different for\" a post type can get another one."
 msgstr ""
 
-#: includes/admin/class-mapping-box.php:99
-msgid "Rule \"Template\": a text that joins fields and words, for example \"{core.title} – {meta.place}\". \"Insert field\" writes a field between braces; {a|b|\"text\"} uses the first one with a value."
-msgstr ""
-
 #: includes/admin/class-mapping-box.php:100
-msgid "Rule \"Lookup table\": reads a field and translates its value, for example the post type \"post\" into \"News\". Every line of the table gives a fixed text or another field; when no line matches, the default is used (empty by default: the key is null). The comparison is exact, capital letters included."
+msgid "Rule \"Template\": a text that joins fields and words, for example \"{core.title} – {meta.place}\". \"Insert field\" writes a field between braces; {a|b|\"text\"} uses the first one with a value; a part between square brackets, such as \"[, {meta.address}]\", is written only when its fields have a value."
 msgstr ""
 
 #: includes/admin/class-mapping-box.php:101
-msgid "Rule \"Condition\": checks one field (is empty, is not empty, is equal to, is different from, is one of, contains) and writes one output when the check is true and another when it is false, for example the excerpt or, when it is empty, the title. \"Contains\" looks for a text inside the value, or for one element of a list."
+msgid "Rule \"Lookup table\": reads a field and translates its value, for example the post type \"post\" into \"News\". Every line of the table gives a fixed text or another field; when no line matches, the default is used (empty by default: the key is null). The comparison is exact, capital letters included."
 msgstr ""
 
 #: includes/admin/class-mapping-box.php:102
-msgid "Output type: how the value is written in the JSON (text, HTML, number, true or false, date and time, URL, list). \"Automatic\" uses the type of the field."
+msgid "Rule \"Condition\": checks one field (is empty, is not empty, is equal to, is different from, is one of, contains) and writes one output when the check is true and another when it is false, for example the excerpt or, when it is empty, the title. \"Contains\" looks for a text inside the value, or for one element of a list."
 msgstr ""
 
 #: includes/admin/class-mapping-box.php:103
+msgid "Maximum length: with the text output type (always for a template that is not HTML), a longer text is cut at a whole word and ends with \"…\"."
+msgstr ""
+
+#: includes/admin/class-mapping-box.php:104
+msgid "Output type: how the value is written in the JSON (text, HTML, number, true or false, date and time, URL, list). \"Automatic\" uses the type of the field."
+msgstr ""
+
+#: includes/admin/class-mapping-box.php:105
 msgid "Preview: as soon as there is a row, the JSON of a published item of each checked post type appears beside the rules and changes while you edit them."
 msgstr ""
 
-#: includes/admin/class-mapping-box.php:108
+#: includes/admin/class-mapping-box.php:110
 msgid "The mapping editor needs JavaScript. Without it, saving the feed keeps the saved mapping unchanged."
 msgstr ""
 
@@ -493,638 +497,646 @@ msgid "Insert field"
 msgstr ""
 
 #: assets/js/feed-mapping.js:49
-msgid "Field to read"
+msgid "Maximum length"
 msgstr ""
 
 #: assets/js/feed-mapping.js:50
-msgid "Table"
+msgid "Field to read"
 msgstr ""
 
 #: assets/js/feed-mapping.js:51
-msgid "When no line matches"
+msgid "Table"
 msgstr ""
 
 #: assets/js/feed-mapping.js:52
-msgid "Check"
+msgid "When no line matches"
 msgstr ""
 
 #: assets/js/feed-mapping.js:53
-msgid "If true, write"
+msgid "Check"
 msgstr ""
 
 #: assets/js/feed-mapping.js:54
+msgid "If true, write"
+msgstr ""
+
+#: assets/js/feed-mapping.js:55
 msgid "Otherwise, write"
 msgstr ""
 
-#: assets/js/feed-mapping.js:60
+#: assets/js/feed-mapping.js:61
 msgid "Automatic (type of the field)"
 msgstr ""
 
-#: assets/js/feed-mapping.js:61
+#: assets/js/feed-mapping.js:62
 msgid "Text"
 msgstr ""
 
-#: assets/js/feed-mapping.js:62
+#: assets/js/feed-mapping.js:63
 msgid "HTML"
 msgstr ""
 
-#: assets/js/feed-mapping.js:63
+#: assets/js/feed-mapping.js:64
 msgid "Number"
 msgstr ""
 
-#: assets/js/feed-mapping.js:64
+#: assets/js/feed-mapping.js:65
 msgid "True or false"
 msgstr ""
 
-#: assets/js/feed-mapping.js:65
+#: assets/js/feed-mapping.js:66
 msgid "Date and time"
 msgstr ""
 
-#: assets/js/feed-mapping.js:66
+#: assets/js/feed-mapping.js:67
 msgid "URL"
 msgstr ""
 
-#: assets/js/feed-mapping.js:67
+#: assets/js/feed-mapping.js:68
 msgid "List"
 msgstr ""
 
-#: assets/js/feed-mapping.js:75
+#: assets/js/feed-mapping.js:76
 msgid "Fixed value"
 msgstr ""
 
-#: assets/js/feed-mapping.js:76
-#: assets/js/feed-mapping.js:581
+#: assets/js/feed-mapping.js:77
+#: assets/js/feed-mapping.js:600
 msgid "Template"
 msgstr ""
 
-#: assets/js/feed-mapping.js:77
+#: assets/js/feed-mapping.js:78
 msgid "Lookup table"
 msgstr ""
 
-#: assets/js/feed-mapping.js:78
+#: assets/js/feed-mapping.js:79
 msgid "Condition"
 msgstr ""
 
-#: assets/js/feed-mapping.js:85
+#: assets/js/feed-mapping.js:86
 msgid "is empty"
 msgstr ""
 
-#: assets/js/feed-mapping.js:86
+#: assets/js/feed-mapping.js:87
 msgid "is not empty"
 msgstr ""
 
-#: assets/js/feed-mapping.js:87
+#: assets/js/feed-mapping.js:88
 msgid "is equal to"
 msgstr ""
 
-#: assets/js/feed-mapping.js:88
+#: assets/js/feed-mapping.js:89
 msgid "is different from"
 msgstr ""
 
-#: assets/js/feed-mapping.js:89
+#: assets/js/feed-mapping.js:90
 msgid "is one of"
 msgstr ""
 
-#: assets/js/feed-mapping.js:90
+#: assets/js/feed-mapping.js:91
 msgid "contains"
 msgstr ""
 
-#: assets/js/feed-mapping.js:96
+#: assets/js/feed-mapping.js:97
 msgid "Fixed text"
 msgstr ""
 
-#: assets/js/feed-mapping.js:102
+#: assets/js/feed-mapping.js:103
 msgid "Nothing (null)"
 msgstr ""
 
-#: assets/js/feed-mapping.js:105
+#: assets/js/feed-mapping.js:106
 msgid "The value read, unchanged"
 msgstr ""
 
-#: assets/js/feed-mapping.js:337
+#: assets/js/feed-mapping.js:352
 msgid "Enter a key."
 msgstr ""
 
 #. translators: %d: maximum number of characters of a key.
-#: assets/js/feed-mapping.js:341
+#: assets/js/feed-mapping.js:356
 #, js-format
 msgid "Use at most %d characters."
 msgstr ""
 
-#: assets/js/feed-mapping.js:344
+#: assets/js/feed-mapping.js:359
 msgid "Use only letters, digits, underscores, dots and dashes."
 msgstr ""
 
-#: assets/js/feed-mapping.js:347
+#: assets/js/feed-mapping.js:362
 msgid "A key cannot be made only of digits."
 msgstr ""
 
-#: assets/js/feed-mapping.js:350
+#: assets/js/feed-mapping.js:365
 msgid "Another row already uses this key."
 msgstr ""
 
-#: assets/js/feed-mapping.js:376
+#: assets/js/feed-mapping.js:391
 msgid "No rows yet. Add a row to choose what the feed exports."
 msgstr ""
 
-#: assets/js/feed-mapping.js:377
+#: assets/js/feed-mapping.js:392
 msgid "Add row"
 msgstr ""
 
-#: assets/js/feed-mapping.js:576
-#: assets/js/feed-mapping.js:1433
+#: assets/js/feed-mapping.js:595
+#: assets/js/feed-mapping.js:1453
 msgid "JSON key"
 msgstr ""
 
-#: assets/js/feed-mapping.js:577
-#: assets/js/feed-mapping.js:1435
+#: assets/js/feed-mapping.js:596
+#: assets/js/feed-mapping.js:1455
 msgid "Rule"
 msgstr ""
 
-#: assets/js/feed-mapping.js:578
-#: assets/js/feed-mapping.js:1443
+#: assets/js/feed-mapping.js:597
+#: assets/js/feed-mapping.js:1463
 msgid "Output type"
 msgstr ""
 
-#: assets/js/feed-mapping.js:579
+#: assets/js/feed-mapping.js:598
 msgid "Fields"
 msgstr ""
 
-#: assets/js/feed-mapping.js:580
-#: assets/js/feed-mapping.js:1316
+#: assets/js/feed-mapping.js:599
+#: assets/js/feed-mapping.js:1336
 msgid "Value"
 msgstr ""
 
-#: assets/js/feed-mapping.js:586
+#: assets/js/feed-mapping.js:605
 msgid "Values to compare"
 msgstr ""
 
-#: assets/js/feed-mapping.js:589
+#: assets/js/feed-mapping.js:608
 msgid "Confirmation"
 msgstr ""
 
-#: assets/js/feed-mapping.js:590
+#: assets/js/feed-mapping.js:609
 msgid "Options"
 msgstr ""
 
-#: assets/js/feed-mapping.js:593
+#: assets/js/feed-mapping.js:613
 msgid "missing"
 msgstr ""
 
-#: assets/js/feed-mapping.js:594
+#: assets/js/feed-mapping.js:614
 msgid "empty: choose a field or enter a value"
 msgstr ""
 
-#: assets/js/feed-mapping.js:595
+#: assets/js/feed-mapping.js:615
 msgid "not valid"
 msgstr ""
 
-#: assets/js/feed-mapping.js:596
+#: assets/js/feed-mapping.js:616
 msgid "too long"
 msgstr ""
 
-#: assets/js/feed-mapping.js:597
+#: assets/js/feed-mapping.js:617
 msgid "too many entries"
 msgstr ""
 
-#: assets/js/feed-mapping.js:598
+#: assets/js/feed-mapping.js:618
 msgid "already used by another row"
 msgstr ""
 
-#: assets/js/feed-mapping.js:599
+#: assets/js/feed-mapping.js:619
 msgid "not known"
 msgstr ""
 
-#: assets/js/feed-mapping.js:600
+#: assets/js/feed-mapping.js:620
 msgid "not expected"
 msgstr ""
 
-#: assets/js/feed-mapping.js:601
+#: assets/js/feed-mapping.js:621
 msgid "not allowed for this rule"
 msgstr ""
 
-#: assets/js/feed-mapping.js:602
+#: assets/js/feed-mapping.js:622
 msgid "a field needs an explicit confirmation, asked when the feed is saved"
 msgstr ""
 
-#: assets/js/feed-mapping.js:606
+#: assets/js/feed-mapping.js:626
 msgid "the same value is written more than once"
 msgstr ""
 
-#: assets/js/feed-mapping.js:612
+#: assets/js/feed-mapping.js:632
 msgid "The mapping cannot be read."
 msgstr ""
 
 #. translators: 1: part of the mapping, 2: what is wrong with it.
-#: assets/js/feed-mapping.js:615
+#: assets/js/feed-mapping.js:635
 #, js-format
 msgid "Mapping, %1$s: %2$s"
 msgstr ""
 
-#: assets/js/feed-mapping.js:619
+#: assets/js/feed-mapping.js:639
 msgid "(no key)"
 msgstr ""
 
 #. translators: 1: position of the row, 2: output key of the row, 3: what is wrong with it.
-#: assets/js/feed-mapping.js:622
+#: assets/js/feed-mapping.js:642
 #, js-format
 msgid "Row %1$d (%2$s): %3$s"
 msgstr ""
 
 #. translators: 1: position of the row, 2: output key of the row, 3: setting of the row, 4: what is wrong with it.
-#: assets/js/feed-mapping.js:625
+#: assets/js/feed-mapping.js:645
 #, js-format
 msgid "Row %1$d (%2$s), %3$s: %4$s"
 msgstr ""
 
-#: assets/js/feed-mapping.js:640
+#: assets/js/feed-mapping.js:660
 msgid "Refresh"
 msgstr ""
 
-#: assets/js/feed-mapping.js:657
+#: assets/js/feed-mapping.js:677
 msgid "Preview"
 msgstr ""
 
-#: assets/js/feed-mapping.js:658
+#: assets/js/feed-mapping.js:678
 msgid "The JSON of one item for each checked post type, computed with the rules of this box (saved or not) as a visitor would get it. Only published items are used."
 msgstr ""
 
-#: assets/js/feed-mapping.js:685
+#: assets/js/feed-mapping.js:705
 msgid "The preview is not up to date: correct these points of the mapping."
 msgstr ""
 
-#: assets/js/feed-mapping.js:712
+#: assets/js/feed-mapping.js:732
 msgid "Latest modified item"
 msgstr ""
 
-#: assets/js/feed-mapping.js:715
-#: assets/js/feed-mapping.js:728
+#: assets/js/feed-mapping.js:735
+#: assets/js/feed-mapping.js:748
 msgid "(no title)"
 msgstr ""
 
 #. translators: 1: title of an item, 2: date of its last change, 3: ID of the item.
-#: assets/js/feed-mapping.js:717
+#: assets/js/feed-mapping.js:737
 #, js-format
 msgid "%1$s (%2$s, ID %3$d)"
 msgstr ""
 
 #. translators: %s: label of a post type.
-#: assets/js/feed-mapping.js:721
+#: assets/js/feed-mapping.js:741
 #, js-format
 msgid "Item of %s"
 msgstr ""
 
 #. translators: %s: label of a post type.
-#: assets/js/feed-mapping.js:726
+#: assets/js/feed-mapping.js:746
 #, js-format
 msgid "No published item of %s."
 msgstr ""
 
 #. translators: 1: title of the previewed item, 2: its ID.
-#: assets/js/feed-mapping.js:730
+#: assets/js/feed-mapping.js:750
 #, js-format
 msgid "%1$s (ID %2$d)"
 msgstr ""
 
-#: assets/js/feed-mapping.js:771
+#: assets/js/feed-mapping.js:791
 msgid "Check at least one post type to see the preview."
 msgstr ""
 
-#: assets/js/feed-mapping.js:779
+#: assets/js/feed-mapping.js:799
 msgid "Updating…"
 msgstr ""
 
 #. translators: %d: number of errors in the mapping.
-#: assets/js/feed-mapping.js:809
+#: assets/js/feed-mapping.js:829
 #, js-format
 msgid "The preview is not up to date: the mapping has %d error."
 msgid_plural "The preview is not up to date: the mapping has %d errors."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/js/feed-mapping.js:824
+#: assets/js/feed-mapping.js:844
 msgid "The preview could not be computed."
 msgstr ""
 
 #. translators: %s: time of the last update of the preview.
-#: assets/js/feed-mapping.js:832
+#: assets/js/feed-mapping.js:852
 #, js-format
 msgid "Updated at %s"
 msgstr ""
 
-#: assets/js/feed-mapping.js:937
+#: assets/js/feed-mapping.js:957
 msgid "For all post types"
 msgstr ""
 
 #. translators: %s: key of a post type that is not checked in the settings of the feed.
-#: assets/js/feed-mapping.js:941
+#: assets/js/feed-mapping.js:961
 #, js-format
 msgid "For %s (not checked)"
 msgstr ""
 
 #. translators: %s: label of a post type.
-#: assets/js/feed-mapping.js:944
+#: assets/js/feed-mapping.js:964
 #, js-format
 msgid "For %s"
 msgstr ""
 
-#: assets/js/feed-mapping.js:957
+#: assets/js/feed-mapping.js:977
 msgid "— Choose a field —"
 msgstr ""
 
 #. translators: %s: identifier of a field that the post types of the feed do not offer.
-#: assets/js/feed-mapping.js:961
+#: assets/js/feed-mapping.js:981
 #, js-format
 msgid "%s (not offered by the checked post types)"
 msgstr ""
 
 #. translators: %s: label of a field that cannot be used in this place, for example a list.
-#: assets/js/feed-mapping.js:964
+#: assets/js/feed-mapping.js:984
 #, js-format
 msgid "%s (cannot be used here)"
 msgstr ""
 
-#: assets/js/feed-mapping.js:967
+#: assets/js/feed-mapping.js:987
 msgid "Common fields"
 msgstr ""
 
 #. translators: %s: label of a post type.
-#: assets/js/feed-mapping.js:970
+#: assets/js/feed-mapping.js:990
 #, js-format
 msgid "Fields of %s"
 msgstr ""
 
 #. translators: %d: position of the row.
-#: assets/js/feed-mapping.js:1028
+#: assets/js/feed-mapping.js:1048
 #, js-format
 msgid "Row %d (no key)"
 msgstr ""
 
 #. translators: 1: position of the row, 2: output key of the row.
-#: assets/js/feed-mapping.js:1031
+#: assets/js/feed-mapping.js:1051
 #, js-format
 msgid "Row %1$d: %2$s"
 msgstr ""
 
 #. translators: %d: position of a fallback field in its chain (2 for the first fallback).
-#: assets/js/feed-mapping.js:1056
+#: assets/js/feed-mapping.js:1076
 #, js-format
 msgid "Otherwise, field %d"
 msgstr ""
 
 #. translators: 1: position of the field in its chain, 2: name of the chain, for example "For all post types".
-#: assets/js/feed-mapping.js:1061
+#: assets/js/feed-mapping.js:1081
 #, js-format
 msgid "Move field %1$d up (%2$s)"
 msgstr ""
 
 #. translators: 1: position of the field in its chain, 2: name of the chain, for example "For all post types".
-#: assets/js/feed-mapping.js:1063
+#: assets/js/feed-mapping.js:1083
 #, js-format
 msgid "Move field %1$d down (%2$s)"
 msgstr ""
 
 #. translators: 1: position of the field in its chain, 2: name of the chain, for example "For all post types".
-#: assets/js/feed-mapping.js:1065
+#: assets/js/feed-mapping.js:1085
 #, js-format
 msgid "Remove field %1$d (%2$s)"
 msgstr ""
 
 #. translators: %s: name of the chain, for example "For all post types".
-#: assets/js/feed-mapping.js:1075
+#: assets/js/feed-mapping.js:1095
 #, js-format
 msgid "Add a fallback field (%s)"
 msgstr ""
 
 #. translators: %s: post types the exception applies to, for example "For Posts".
-#: assets/js/feed-mapping.js:1078
-#: assets/js/feed-mapping.js:1110
-#: assets/js/feed-mapping.js:1147
-#: assets/js/feed-mapping.js:1183
+#: assets/js/feed-mapping.js:1098
+#: assets/js/feed-mapping.js:1130
+#: assets/js/feed-mapping.js:1167
+#: assets/js/feed-mapping.js:1203
 #, js-format
 msgid "Remove the exception: %s"
 msgstr ""
 
 #. translators: %s: name of the scope, for example "For all post types".
-#: assets/js/feed-mapping.js:1107
+#: assets/js/feed-mapping.js:1127
 #, js-format
 msgid "Value (%s)"
 msgstr ""
 
 #. translators: %s: name of the scope, for example "For all post types".
-#: assets/js/feed-mapping.js:1138
+#: assets/js/feed-mapping.js:1158
 #, js-format
 msgid "Template (%s)"
 msgstr ""
 
-#: assets/js/feed-mapping.js:1142
+#: assets/js/feed-mapping.js:1162
 msgid "Field to insert"
 msgstr ""
 
 #. translators: %s: name of the scope, for example "For all post types".
-#: assets/js/feed-mapping.js:1144
+#: assets/js/feed-mapping.js:1164
 #, js-format
 msgid "Insert the field in the template (%s)"
 msgstr ""
 
 #. translators: %s: name of the scope, for example "For all post types".
-#: assets/js/feed-mapping.js:1180
+#: assets/js/feed-mapping.js:1200
 #, js-format
 msgid "Field to read (%s)"
 msgstr ""
 
-#: assets/js/feed-mapping.js:1234
+#: assets/js/feed-mapping.js:1254
 msgid "If the value is"
 msgstr ""
 
-#: assets/js/feed-mapping.js:1244
+#: assets/js/feed-mapping.js:1264
 msgid "Write"
 msgstr ""
 
 #. translators: %d: position of a line in the table of a lookup rule.
-#: assets/js/feed-mapping.js:1252
+#: assets/js/feed-mapping.js:1272
 #, js-format
 msgid "Move line %d up"
 msgstr ""
 
 #. translators: %d: position of a line in the table of a lookup rule.
-#: assets/js/feed-mapping.js:1254
+#: assets/js/feed-mapping.js:1274
 #, js-format
 msgid "Move line %d down"
 msgstr ""
 
 #. translators: %d: position of a line in the table of a lookup rule.
-#: assets/js/feed-mapping.js:1256
+#: assets/js/feed-mapping.js:1276
 #, js-format
 msgid "Remove line %d"
 msgstr ""
 
-#: assets/js/feed-mapping.js:1263
+#: assets/js/feed-mapping.js:1283
 msgid "Add line"
 msgstr ""
 
-#: assets/js/feed-mapping.js:1304
+#: assets/js/feed-mapping.js:1324
 msgid "The field"
 msgstr ""
 
-#: assets/js/feed-mapping.js:1307
+#: assets/js/feed-mapping.js:1327
 msgid "Values, one per line"
 msgstr ""
 
-#: assets/js/feed-mapping.js:1352
+#: assets/js/feed-mapping.js:1372
 msgid "Different for"
 msgstr ""
 
-#: assets/js/feed-mapping.js:1353
+#: assets/js/feed-mapping.js:1373
 msgid "Add exception"
 msgstr ""
 
-#: assets/js/feed-mapping.js:1374
+#: assets/js/feed-mapping.js:1394
 msgid "Raw content"
 msgstr ""
 
-#: assets/js/feed-mapping.js:1376
+#: assets/js/feed-mapping.js:1396
 msgid "The text as stored in the database: blocks are not turned into HTML and links stay as they are."
 msgstr ""
 
-#: assets/js/feed-mapping.js:1383
+#: assets/js/feed-mapping.js:1403
 msgid "Run the shortcodes"
 msgstr ""
 
-#: assets/js/feed-mapping.js:1386
+#: assets/js/feed-mapping.js:1406
 msgid "Not used with the raw content."
 msgstr ""
 
-#: assets/js/feed-mapping.js:1387
+#: assets/js/feed-mapping.js:1407
 msgid "Off: shortcodes are removed. On: the shortcodes of other plugins run while the feed is read, as for a visitor; they can add content you do not expect or slow the feed down. Turn it on only for shortcodes you know."
 msgstr ""
 
-#: assets/js/feed-mapping.js:1396
+#: assets/js/feed-mapping.js:1416
 msgid "The author archive URL usually contains the login name of the author: it is exported only after an explicit confirmation, asked when the feed is saved."
 msgstr ""
 
 #. translators: %s: label of a field whose name looks sensitive or personal.
-#: assets/js/feed-mapping.js:1400
+#: assets/js/feed-mapping.js:1420
 #, js-format
 msgid "%s looks like sensitive or personal data: in a public feed anyone can read it. It is exported only after an explicit confirmation, asked when the feed is saved."
 msgstr ""
 
-#: assets/js/feed-mapping.js:1448
-msgid "This rule cannot be edited here yet and is kept unchanged."
-msgstr ""
-
-#: assets/js/feed-mapping.js:1468
-msgid "Write the text and put the fields between braces, for example {core.title}. {a|b|\"text\"} uses the first one with a value; write {{ and }} for a brace. \"Insert field\" writes a field where the cursor is."
+#: assets/js/feed-mapping.js:1465
+msgid "Characters; empty: no limit."
 msgstr ""
 
 #: assets/js/feed-mapping.js:1484
+msgid "This rule cannot be edited here yet and is kept unchanged."
+msgstr ""
+
+#: assets/js/feed-mapping.js:1504
+msgid "Write the text and put the fields between braces, for example {core.title}. {a|b|\"text\"} uses the first one with a value; a part between square brackets, such as {meta.city}[, {meta.address}], is written only when all its fields have a value; write {{, }}, [[ and ]] for a brace or a bracket. \"Insert field\" writes a field where the cursor is."
+msgstr ""
+
+#: assets/js/feed-mapping.js:1520
 msgid "The value of the field is compared with the lines of the table, exactly (capital letters included, spaces at the ends ignored); the first line that matches gives the output. Lists cannot be read."
 msgstr ""
 
-#: assets/js/feed-mapping.js:1501
+#: assets/js/feed-mapping.js:1537
 msgid "One check on one field: when it is true the first output is written, otherwise the second. Values are compared exactly (capital letters included, spaces at the ends ignored); \"contains\" looks for a text inside the value, or for one element of a list, such as the categories; lists can be checked only with \"is empty\", \"is not empty\" and \"contains\"."
 msgstr ""
 
 #. translators: %d: position of the row.
-#: assets/js/feed-mapping.js:1529
+#: assets/js/feed-mapping.js:1565
 #, js-format
 msgid "Move row %d up"
 msgstr ""
 
 #. translators: %d: position of the row.
-#: assets/js/feed-mapping.js:1531
+#: assets/js/feed-mapping.js:1567
 #, js-format
 msgid "Move row %d down"
 msgstr ""
 
 #. translators: %d: position of the row.
-#: assets/js/feed-mapping.js:1533
+#: assets/js/feed-mapping.js:1569
 #, js-format
 msgid "Remove row %d"
 msgstr ""
 
 #. translators: %d: maximum number of rows of a mapping.
-#: assets/js/feed-mapping.js:1579
+#: assets/js/feed-mapping.js:1615
 #, js-format
 msgid "A mapping can have at most %d rows."
 msgstr ""
 
 #. translators: %d: position of the new row.
-#: assets/js/feed-mapping.js:1640
+#: assets/js/feed-mapping.js:1676
 #, js-format
 msgid "Row %d added."
 msgstr ""
 
 #. translators: %d: position of the removed row.
-#: assets/js/feed-mapping.js:1661
+#: assets/js/feed-mapping.js:1697
 #, js-format
 msgid "Row %d removed."
 msgstr ""
 
 #. translators: %d: new position of the moved row.
-#: assets/js/feed-mapping.js:1677
+#: assets/js/feed-mapping.js:1713
 #, js-format
 msgid "Row moved to position %d."
 msgstr ""
 
-#: assets/js/feed-mapping.js:1698
+#: assets/js/feed-mapping.js:1734
 msgid "Line added to the table."
 msgstr ""
 
-#: assets/js/feed-mapping.js:1706
+#: assets/js/feed-mapping.js:1742
 msgid "Line removed from the table."
 msgstr ""
 
 #. translators: %d: new position of the moved line in the table of a lookup rule.
-#: assets/js/feed-mapping.js:1720
+#: assets/js/feed-mapping.js:1756
 #, js-format
 msgid "Line moved to position %d of the table."
 msgstr ""
 
 #. translators: %s: placeholder inserted in a template, for example {core.title}.
-#: assets/js/feed-mapping.js:1763
+#: assets/js/feed-mapping.js:1799
 #, js-format
 msgid "Inserted %s."
 msgstr ""
 
 #. translators: %s: name of the exception, for example "For Posts".
-#: assets/js/feed-mapping.js:1778
+#: assets/js/feed-mapping.js:1814
 #, js-format
 msgid "Exception added: %s."
 msgstr ""
 
 #. translators: %s: name of the exception, for example "For Posts".
-#: assets/js/feed-mapping.js:1793
+#: assets/js/feed-mapping.js:1829
 #, js-format
 msgid "Exception removed: %s."
 msgstr ""
 
-#: assets/js/feed-mapping.js:1807
+#: assets/js/feed-mapping.js:1843
 msgid "Fallback field added."
 msgstr ""
 
-#: assets/js/feed-mapping.js:1815
+#: assets/js/feed-mapping.js:1851
 msgid "Field removed from the chain."
 msgstr ""
 
 #. translators: %d: new position of the moved field in its chain.
-#: assets/js/feed-mapping.js:1830
+#: assets/js/feed-mapping.js:1866
 #, js-format
 msgid "Field moved to position %d of the chain."
 msgstr ""
 
 #. translators: 1: position of the row, 2: error message about its key.
-#: assets/js/feed-mapping.js:1924
+#: assets/js/feed-mapping.js:1970
 #, js-format
 msgid "Error in row %1$d: %2$s"
 msgstr ""
 
 #. translators: %s: name of the rule, for example "Fixed value".
-#: assets/js/feed-mapping.js:1963
+#: assets/js/feed-mapping.js:2014
 #, js-format
 msgid "Rule changed to %s. Only the settings of this rule are saved."
 msgstr ""
 
-#: assets/js/feed-mapping.js:2042
+#: assets/js/feed-mapping.js:2093
 msgid "The fields of the selected post types could not be loaded. The previous list is kept."
 msgstr ""

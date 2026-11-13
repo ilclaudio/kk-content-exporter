@@ -116,6 +116,34 @@ final class Normalizer {
 	}
 
 	/**
+	 * Text cut to at most `$limit` characters, `…` included (decision of 2026-11-13): at the last space of the
+	 * second half, without the spaces and punctuation at its end; without such a space, exactly. A text within
+	 * the limit is returned as it is.
+	 *
+	 * @param string $text  Text (UTF-8).
+	 * @param int    $limit Most characters, at least 1.
+	 * @return string
+	 */
+	public static function truncate( string $text, int $limit ): string {
+		$limit = max( 1, $limit );
+		if ( mb_strlen( $text, 'UTF-8' ) <= $limit ) {
+			return $text;
+		}
+
+		$room = $limit - 1;
+		$head = mb_substr( $text, 0, $room, 'UTF-8' );
+		$cut  = $head;
+
+		if ( 1 !== preg_match( '/\A\s/u', mb_substr( $text, $room, 1, 'UTF-8' ) ) && 1 === preg_match( '/\A(.*)\s/su', $head, $match ) && mb_strlen( $match[1], 'UTF-8' ) >= $room / 2 ) {
+			$cut = $match[1];
+		}
+
+		$cut = (string) preg_replace( '/[\s\p{P}]+\z/u', '', $cut );
+
+		return ( '' === $cut ? $head : $cut ) . '…';
+	}
+
+	/**
 	 * Plain text.
 	 *
 	 * @param mixed $value Value.

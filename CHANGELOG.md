@@ -82,6 +82,10 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
   (`{core.title} – {meta.place}`), fallbacks inside a placeholder (`{a|b|"text"}`), a different template per
   post type, plain text or HTML output, and an "Insert field" button. A key whose placeholders all have no
   value is written with null.
+- Optional parts in a template: text between square brackets (`{meta.city}[, {meta.address}]`) is written only
+  when all its fields have a value, so no separator is left alone; `[[` and `]]` write a bracket.
+- Maximum length of a row with a plain text output (Field, Template, Lookup table, Condition): a longer text
+  is cut at a whole word and ends with "…", which counts in the length.
 - Rule "Lookup table" in the mapping: reads a field (a different one per post type if needed) and
   translates its value through a table of lines "value → fixed text or field", compared exactly; when no
   line matches, a default is used (nothing, a fixed text, a field or the value read). Lists cannot be read,

@@ -291,4 +291,39 @@ class KKCE_Normalizer_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( 'number', Normalizer::type_of_value( 2.5 ) );
 		$this->assertSame( 'boolean', Normalizer::type_of_value( false ) );
 	}
+
+	/**
+	 * A text longer than the limit is cut at the last space of the second half, without the spaces and
+	 * punctuation at its end, and gets `…`: the result, `…` included, is never longer than the limit. A text
+	 * without such a space is cut exactly. Characters, not bytes, are counted.
+	 *
+	 * @dataProvider truncate_provider
+	 *
+	 * @param string $text     Text.
+	 * @param int    $limit    Most characters.
+	 * @param string $expected Result.
+	 */
+	public function test_truncate( string $text, int $limit, string $expected ) {
+		$this->assertSame( $expected, Normalizer::truncate( $text, $limit ) );
+		$this->assertLessThanOrEqual( $limit, mb_strlen( Normalizer::truncate( $text, $limit ), 'UTF-8' ) );
+	}
+
+	/**
+	 * Data for test_truncate().
+	 *
+	 * @return array<string, array{0: string, 1: int, 2: string}>
+	 */
+	public function truncate_provider(): array {
+		return array(
+			'within the limit'        => array( 'Concerto', 8, 'Concerto' ),
+			'whole words'             => array( 'Concerto di musica classica al teatro', 20, 'Concerto di musica…' ),
+			'cut on a space'          => array( 'Concerto di musica classica', 19, 'Concerto di musica…' ),
+			'punctuation removed'     => array( 'Roma, Milano e Torino', 7, 'Roma…' ),
+			'one long word'           => array( 'Supercalifragilistic', 10, 'Supercali…' ),
+			'space in the first half' => array( 'A verylongwordwithoutspaces', 12, 'A verylongw…' ),
+			'limit of one'            => array( 'Concerto', 1, '…' ),
+			'accented characters'     => array( 'Città è là più giù', 10, 'Città è…' ),
+			'line breaks are spaces'  => array( "Prima riga\nseconda riga", 14, 'Prima riga…' ),
+		);
+	}
 }

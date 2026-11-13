@@ -18,16 +18,20 @@ defined( 'ABSPATH' ) || exit;
  *   used. An alternative is a source or a literal text between double quotes, which cannot contain `"`, `|`,
  *   `{` or `}`. Spaces around the alternatives are ignored;
  * - `{{` and `}}`: a literal brace;
+ * - `[, {meta.address}]`: an optional section (decision of 2026-11-13), written only when every placeholder in
+ *   it has a value. A section holds at least one placeholder and cannot contain another section; `[[` and
+ *   `]]` are literal brackets;
  * - at most `MAX_LENGTH` characters and `MAX_PLACEHOLDERS` placeholders.
  *
- * Every part has the same shape: a text part has no alternatives, a placeholder has an empty text.
+ * Every part has the same shape: a text part has no alternatives, a placeholder has an empty text; `section`
+ * is 0 outside the optional sections, otherwise the number of the section, from 1.
  *
  * Pure logic: no WordPress function is called. The text is read into parts; whether the source groups are
  * known and whether a source is sensitive is checked by `Mapping_Validator`, the values are computed by
  * `Rule_Evaluator`.
  *
  * @phpstan-type Alternative array{source: string}|array{literal: string}
- * @phpstan-type Part array{text: string, alternatives: list<Alternative>}
+ * @phpstan-type Part array{text: string, alternatives: list<Alternative>, section: int}
  */
 final class Template {
 
@@ -50,7 +54,7 @@ final class Template {
 	 * Reads a template.
 	 *
 	 * @param mixed $template Text of the template.
-	 * @return array{parts: list<array{text: string, alternatives: list<array<string, string>>}>, error: string} The parts in order, and an empty error;
+	 * @return array{parts: list<array{text: string, alternatives: list<array<string, string>>, section: int}>, error: string} The parts in order, and an empty error;
 	 *                                                                 or no parts and the error code (`format`,
 	 *                                                                 `too_long`, `too_many`).
 	 *
@@ -68,6 +72,9 @@ final class Template {
 		$parts        = array();
 		$text         = '';
 		$placeholders = 0;
+		$sections     = 0;
+		$section      = 0;
+		$filled       = false;
 		$length       = strlen( $template );
 		$position     = 0;
 
@@ -75,7 +82,7 @@ final class Template {
 			$character = $template[ $position ];
 			$next      = $template[ $position + 1 ] ?? '';
 
-			if ( ( '{' === $character || '}' === $character ) && $next === $character ) {
+			if ( in_array( $character, array( '{', '}', '[', ']' ), true ) && $next === $character ) {
 				$text     .= $character;
 				$position += 2;
 				continue;
@@ -83,6 +90,22 @@ final class Template {
 
 			if ( '}' === $character ) {
 				return self::failure( 'format' );
+			}
+
+			if ( '[' === $character || ']' === $character ) {
+				// A section opens outside any section, and closes after at least one placeholder.
+				if ( ( '[' === $character ) === ( 0 !== $section ) || ( ']' === $character && ! $filled ) ) {
+					return self::failure( 'format' );
+				}
+
+				if ( '' !== $text ) {
+					$parts[] = self::text_part( $text, $section );
+					$text    = '';
+				}
+				$section = '[' === $character ? ++$sections : 0;
+				$filled  = false;
+				++$position;
+				continue;
 			}
 
 			if ( '{' !== $character ) {
@@ -106,15 +129,20 @@ final class Template {
 			}
 
 			if ( '' !== $text ) {
-				$parts[] = self::text_part( $text );
+				$parts[] = self::text_part( $text, $section );
 				$text    = '';
 			}
-			$parts[]  = self::placeholder_part( $alternatives );
+			$parts[]  = self::placeholder_part( $alternatives, $section );
+			$filled   = true;
 			$position = $end + 1;
 		}
 
+		if ( 0 !== $section ) {
+			return self::failure( 'format' );
+		}
+
 		if ( '' !== $text ) {
-			$parts[] = self::text_part( $text );
+			$parts[] = self::text_part( $text, 0 );
 		}
 
 		return array(
@@ -175,15 +203,17 @@ final class Template {
 	/**
 	 * A part of plain text.
 	 *
-	 * @param string $text Text.
-	 * @return array{text: string, alternatives: list<array<string, string>>}
+	 * @param string $text    Text.
+	 * @param int    $section Optional section of the part, 0 for none.
+	 * @return array{text: string, alternatives: list<array<string, string>>, section: int}
 	 *
 	 * @phpstan-return Part
 	 */
-	private static function text_part( string $text ): array {
+	private static function text_part( string $text, int $section ): array {
 		return array(
 			'text'         => $text,
 			'alternatives' => array(),
+			'section'      => $section,
 		);
 	}
 
@@ -191,15 +221,17 @@ final class Template {
 	 * A placeholder part.
 	 *
 	 * @param array<int, array<string, string>> $alternatives Alternatives, in order.
-	 * @return array{text: string, alternatives: list<array<string, string>>}
+	 * @param int                               $section      Optional section of the part, 0 for none.
+	 * @return array{text: string, alternatives: list<array<string, string>>, section: int}
 	 *
 	 * @phpstan-param list<Alternative> $alternatives
 	 * @phpstan-return Part
 	 */
-	private static function placeholder_part( array $alternatives ): array {
+	private static function placeholder_part( array $alternatives, int $section ): array {
 		return array(
 			'text'         => '',
 			'alternatives' => $alternatives,
+			'section'      => $section,
 		);
 	}
 
@@ -207,7 +239,7 @@ final class Template {
 	 * A template that cannot be used.
 	 *
 	 * @param string $error Error code.
-	 * @return array{parts: list<array{text: string, alternatives: list<array<string, string>>}>, error: string}
+	 * @return array{parts: list<array{text: string, alternatives: list<array<string, string>>, section: int}>, error: string}
 	 *
 	 * @phpstan-return array{parts: list<Part>, error: string}
 	 */

@@ -67,6 +67,11 @@ final class Mapping_Validator {
 	public const MAX_CASES = 100;
 
 	/**
+	 * Highest `max_length` of a row: the most characters of a plain text output.
+	 */
+	public const MAX_LENGTH_LIMIT = 10000;
+
+	/**
 	 * Fields every row has, in canonical order.
 	 */
 	private const COMMON_FIELDS = array( 'key', 'kind', 'type' );
@@ -75,11 +80,11 @@ final class Mapping_Validator {
 	 * Fields of each kind of row, after the common ones, in canonical order.
 	 */
 	private const KIND_FIELDS = array(
-		'field'     => array( 'sources', 'confirmed', 'options' ),
+		'field'     => array( 'sources', 'confirmed', 'options', 'max_length' ),
 		'fixed'     => array( 'values', 'options' ),
-		'template'  => array( 'templates', 'confirmed' ),
-		'lookup'    => array( 'inputs', 'cases', 'default', 'confirmed' ),
-		'condition' => array( 'inputs', 'operator', 'matches', 'then', 'else', 'confirmed' ),
+		'template'  => array( 'templates', 'confirmed', 'max_length' ),
+		'lookup'    => array( 'inputs', 'cases', 'default', 'confirmed', 'max_length' ),
+		'condition' => array( 'inputs', 'operator', 'matches', 'then', 'else', 'confirmed', 'max_length' ),
 	);
 
 	/**
@@ -238,6 +243,10 @@ final class Mapping_Validator {
 				$out['options'] = $row['options'];
 			}
 
+			if ( array_key_exists( 'max_length', $row ) ) {
+				$out['max_length'] = $row['max_length'];
+			}
+
 			$rows[] = $out;
 		}
 
@@ -317,7 +326,33 @@ final class Mapping_Validator {
 			}
 		}
 
+		if ( array_key_exists( 'max_length', $row ) && in_array( 'max_length', self::KIND_FIELDS[ $kind ], true ) ) {
+			$code = self::max_length_error( $row['max_length'], $kind, $row['type'] ?? 'auto' );
+			if ( '' !== $code ) {
+				$errors[] = self::error( $index, 'max_length', $code );
+			}
+		}
+
 		return $errors;
+	}
+
+	/**
+	 * Error of the `max_length` of a row: a whole number from 1 to `MAX_LENGTH_LIMIT`, only for a plain text
+	 * output (a template that is not HTML, or the text type).
+	 *
+	 * @param mixed  $max_length The value.
+	 * @param string $kind       Kind of the row.
+	 * @param mixed  $type       Output type of the row.
+	 * @return string Error code, or an empty string.
+	 */
+	private static function max_length_error( $max_length, string $kind, $type ): string {
+		if ( ! is_int( $max_length ) || $max_length < 1 || $max_length > self::MAX_LENGTH_LIMIT ) {
+			return 'format';
+		}
+
+		$text = 'template' === $kind ? 'html' !== $type : 'string' === $type;
+
+		return $text ? '' : 'not_allowed';
 	}
 
 	/**

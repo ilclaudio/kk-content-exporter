@@ -19,10 +19,10 @@ class KKCE_Template_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame(
 			array(
 				'parts' => array(
-					array( 'text' => 'News: ', 'alternatives' => array() ),
-					array( 'text' => '', 'alternatives' => array( array( 'source' => 'core.title' ) ) ),
-					array( 'text' => ' – {at} ', 'alternatives' => array() ),
-					array( 'text' => '', 'alternatives' => array( array( 'source' => 'meta.place' ), array( 'source' => 'meta.city' ), array( 'literal' => 'to be decided' ) ) ),
+					array( 'text' => 'News: ', 'alternatives' => array(), 'section' => 0 ),
+					array( 'text' => '', 'alternatives' => array( array( 'source' => 'core.title' ) ), 'section' => 0 ),
+					array( 'text' => ' – {at} ', 'alternatives' => array(), 'section' => 0 ),
+					array( 'text' => '', 'alternatives' => array( array( 'source' => 'meta.place' ), array( 'source' => 'meta.city' ), array( 'literal' => 'to be decided' ) ), 'section' => 0 ),
 				),
 				'error' => '',
 			),
@@ -34,7 +34,7 @@ class KKCE_Template_Unit_Test extends KKCE_Unit_Test_Case {
 	 * A template without placeholders is one text part; an empty template has no parts.
 	 */
 	public function test_text_only_and_empty_templates() {
-		$this->assertSame( array( 'parts' => array( array( 'text' => 'Site A', 'alternatives' => array() ) ), 'error' => '' ), Template::parse( 'Site A' ) );
+		$this->assertSame( array( 'parts' => array( array( 'text' => 'Site A', 'alternatives' => array(), 'section' => 0 ) ), 'error' => '' ), Template::parse( 'Site A' ) );
 		$this->assertSame( array( 'parts' => array(), 'error' => '' ), Template::parse( '' ) );
 	}
 
@@ -80,7 +80,36 @@ class KKCE_Template_Unit_Test extends KKCE_Unit_Test_Case {
 			'unclosed literal'       => array( '{core.title|"n.d.}' ),
 			'quote inside a literal' => array( '{"a"b"}' ),
 			'pipe inside a literal'  => array( '{"a|b"}' ),
+			'unclosed section'       => array( '{core.title}[, {meta.city}' ),
+			'closing bracket alone'  => array( 'a ] {core.title}' ),
+			'nested section'         => array( '[{core.title} [{core.slug}] ]' ),
+			'section without field'  => array( '{core.title}[, n.d.]' ),
+			'empty section'          => array( '{core.title}[]' ),
 		);
+	}
+
+	/**
+	 * Text between square brackets is an optional section: its parts carry the number of the section, from 1;
+	 * doubled brackets are literal brackets.
+	 */
+	public function test_optional_sections() {
+		$this->assertSame(
+			array(
+				'parts' => array(
+					array( 'text' => '', 'alternatives' => array( array( 'source' => 'meta.city' ) ), 'section' => 0 ),
+					array( 'text' => ', ', 'alternatives' => array(), 'section' => 1 ),
+					array( 'text' => '', 'alternatives' => array( array( 'source' => 'meta.address' ) ), 'section' => 1 ),
+					array( 'text' => ' [', 'alternatives' => array(), 'section' => 0 ),
+					array( 'text' => '', 'alternatives' => array( array( 'source' => 'meta.zip' ), array( 'literal' => '-' ) ), 'section' => 0 ),
+					array( 'text' => '] (', 'alternatives' => array(), 'section' => 0 ),
+					array( 'text' => '', 'alternatives' => array( array( 'source' => 'core.id' ) ), 'section' => 2 ),
+					array( 'text' => ')', 'alternatives' => array(), 'section' => 0 ),
+				),
+				'error' => '',
+			),
+			Template::parse( '{meta.city}[, {meta.address}] [[{meta.zip|"-"}]] ([{core.id}])' )
+		);
+		$this->assertSame( array( 'meta.city', 'meta.address' ), Template::sources( Template::parse( '{meta.city}[, {meta.address}]' )['parts'] ) );
 	}
 
 	/**
