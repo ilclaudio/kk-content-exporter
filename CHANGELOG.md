@@ -8,7 +8,12 @@ follows [Semantic Versioning](https://semver.org/). The version of the first ent
 
 Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
-## [0.0.2] - Unreleased
+## [0.0.3] - Unreleased
+No changes yet.
+
+## [0.0.2] - 2026-11-15
+### Changed
+- Development tooling: CI checks whitespace, builds the ZIP, audits the npm tools and runs the integration tests on WordPress 7.1.4 and 6.4.
 ### Fixed
 - A refused mapping shown again keeps its unfinished rows editable.
 - A sensitive field typed in a template shows its confirmation box at once.

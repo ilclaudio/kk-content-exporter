@@ -6,7 +6,7 @@ Tags: export, json, rest-api, feed, content
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.3
-Stable tag: 0.0.2
+Stable tag: 0.0.3
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -58,8 +58,11 @@ It protects your site: a feed cannot serve more items in a page than the maximum
 
 == Changelog ==
 
-= 0.0.2 =
+= 0.0.3 =
 * In development.
+
+= 0.0.2 =
+* Fixes in the mapping editor: refused drafts stay editable, sensitive fields typed in a template ask for confirmation at once.
 
 = 0.0.1 =
 * Feeds with one or more post types, settings page and uninstall cleanup.
