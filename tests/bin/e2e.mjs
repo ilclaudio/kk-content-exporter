@@ -12,6 +12,7 @@
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { requireDocker } from './docker.mjs';
 
 const require = createRequire( import.meta.url );
 const root = path.resolve( import.meta.dirname, '..', '..' );
@@ -43,6 +44,8 @@ function run( file, args, message ) {
 		process.exit( result.status || 1 );
 	}
 }
+
+requireDocker();
 
 run(
 	bin( '@wordpress/env', 'wp-env' ),

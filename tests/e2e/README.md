@@ -29,7 +29,7 @@ composer run env:stop:all # stop this environment and the integration one
 ## Running
 
 ```sh
-composer run e2e                                   # whole suite, headless (about 4 minutes)
+composer run e2e                                   # whole suite, headless (about 4 minutes on Windows, 1 in CI)
 composer run e2e -- tests/e2e/specs/smoke.spec.js  # one file
 composer run e2e -- -g "previewed"                 # tests whose title matches
 composer run e2e:headed                            # with a visible browser

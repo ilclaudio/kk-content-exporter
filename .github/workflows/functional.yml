@@ -1,12 +1,17 @@
 # Integration and end-to-end tests in Docker (wp-env), with the same npm scripts used locally
 # (see "Quality checks" in AGENTS/ARCHITECTURE.md and tests/e2e/README.md).
-# Started by hand while its stability is observed; it becomes automatic after five clean runs in a row
-# (plan of the maintainer). The checks of ci.yml are not changed.
+# The integration job runs on every push and pull request to main and dev (decision of 2026-11-15, after
+# a first clean run of about two minutes); the end-to-end job runs only when the workflow is started by
+# hand, until it has five clean runs in a row. The checks of ci.yml are not changed.
 # Actions are pinned to a full commit SHA, with the tag in a comment (checked by
 # tests/unit/KKCE_CI_Workflow_Unit_Test.php); update the SHA and the comment together.
 name: Functional tests
 
 on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
   workflow_dispatch:
 
 permissions:
@@ -48,6 +53,8 @@ jobs:
 
   e2e:
     name: End-to-end (Playwright, Chromium)
+    # Started by hand only, for now.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:

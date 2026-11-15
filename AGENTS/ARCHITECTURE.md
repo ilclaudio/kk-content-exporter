@@ -228,14 +228,14 @@ root. All scripts are non-interactive and can be reused by a future CI.
 | `composer run phpcs` | PHPCS with `phpcs.xml.dist`; target: 0 errors and 0 warnings | Staged PHP files, errors only |
 | `composer run phpcbf` | Automatic PHPCS fixes | No |
 | `composer run phpstan` | PHPStan on the whole plugin at the level of `phpstan.neon.dist` (8), no baseline | Yes |
-| `composer run test:unit` | Unit suite (includes the contract tests on versions, PHPStan coverage and AGENTS documents) | Yes |
+| `composer run test:unit` | Unit suite (includes the contract tests listed in `tests/README.md`) | Yes |
 | `composer run test:all` | Unit suite, then the integration suite in Docker | No |
-| `composer run test:integration` (`npm run test:integration`) | Integration suite in the wp-env test environment (`.wp-env.tests.json`, port 8891, database `kkce_wordpress_test` created on start; `tests/bin/integration.mjs`) | No |
+| `composer run test:integration` (`npm run test:integration`) | Integration suite in the wp-env test environment (`.wp-env.tests.json`, port 8891, database `kkce_wordpress_test` created on start; `tests/bin/integration.mjs`, which first checks that Docker answers) | No |
 | `composer run env:start` / `env:stop` / `env:destroy`, and `env:tests:start` / `env:tests:stop` / `env:tests:destroy` for the integration environment, `env:stop:all` / `env:destroy:all` for both (npm scripts of the same name; `destroy` deletes without confirmation) | wp-env development environment for the E2E suite (`.wp-env.json`, WordPress 7.1.4, PHP 8.3, http://localhost:8890) | No |
 | `composer run e2e` (`npm run e2e`) | Starts the wp-env development environment when needed, then the Playwright E2E suite (`tests/bin/e2e.mjs`; `tests/e2e/`, Chromium, one worker, axe-core on the elements of the plugin); `composer run e2e:headed`, `e2e:ui`, `e2e:report` for debugging | No |
 | `composer run check` | `lint`, `phpcs`, `phpstan`, `test:unit` | — |
 | `composer run make-pot` | Regenerates `languages/kk-content-exporter.pot` | No |
-| `composer run i18n` | `make-pot`, `update-po`, `make-mo` | No |
+| `composer run i18n` | `make-pot`, `update-po`, `make-mo`, `make-json` | No |
 | `composer run hooks:install` | Activates `.githooks/` in the clone | — |
 | `composer run build:zip` | Builds `build/kk-content-exporter-<version>.zip` (clean tree, `check`, `.distignore`, package verification) | No |
 | `composer run svn:prepare` | Prepares the WordPress.org SVN working copy from the build (dry run by default, `-- --apply`; never commits) | No |
@@ -244,10 +244,11 @@ root. All scripts are non-interactive and can be reused by a future CI.
 
 The commit-msg hook also blocks AI attribution (`Co-Authored-By` trailers, "Generated with" lines) and
 first lines without an allowed prefix or of 72 characters or more. CI on GitHub Actions (`.github/workflows/ci.yml`)
-runs `composer run check` on PHP 8.3 and 8.4 and `composer audit --locked`; it must keep calling these
-Composer scripts. Its actions are pinned to a full commit SHA with the tag in a comment
-(`KKCE_CI_Workflow_Unit_Test`): to update one, read the commit of the new tag (`git ls-remote --tags`) and change
-the SHA and the comment together. The integration suite and Plugin Check are not in CI yet.
+runs `composer run check` on PHP 8.3 and 8.4 and `composer audit --locked`; `.github/workflows/functional.yml`
+runs the integration suite in wp-env on every push and pull request to `main` and `dev`, and the end-to-end
+suite when it is started by hand (*Run workflow*). Both must keep calling the scripts of the project. Their
+actions are pinned to a full commit SHA with the tag in a comment (`KKCE_CI_Workflow_Unit_Test`): to update
+one, read the commit of the new tag (`git ls-remote --tags`) and change the SHA and the comment together. Plugin Check is not in CI yet.
 
 
 ## References

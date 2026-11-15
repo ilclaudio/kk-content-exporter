@@ -50,10 +50,10 @@ end-to-end scripts of Composer call the npm scripts of `package.json` of the sam
 Arguments after `--` reach the test runner (PHPUnit or Playwright):
 
 ```sh
-composer run test:unit -- --filter KKCE_Autoloader_Unit_Test   # PHPUnit: one class or test
-composer run test:integration -- --filter KKCE_Feed_Editor  # PHPUnit in Docker
-composer run e2e -- tests/e2e/specs/lookup.spec.js                  # Playwright: one file
-composer run e2e -- -g "previewed"                                  # Playwright: tests whose title matches
+composer run test:unit -- --filter KKCE_Autoloader_Unit_Test     # PHPUnit: one class or test
+composer run test:integration -- --filter KKCE_Feed_Editor       # PHPUnit in Docker
+composer run e2e -- tests/e2e/specs/lookup.spec.js               # Playwright: one file
+composer run e2e -- -g "previewed"                               # Playwright: tests whose title matches
 ```
 
 If a PHPUnit filter matches nothing, PHPUnit prints `No tests executed!` and exits with `0`: always check
@@ -61,12 +61,12 @@ the number of tests run.
 
 ## What runs where
 
-| Check | `pre-commit` hook | CI on every push (`ci.yml`) | CI by hand (`functional.yml`) |
+| Check | `pre-commit` hook | CI on every push and pull request | CI started by hand |
 |---|---|---|---|
-| Lint, PHPCS, PHPStan, unit | Yes (lint and PHPCS on the staged files) | Yes, PHP 8.3 and 8.4 | No |
-| `composer audit` | No | Yes | No |
-| Integration (Docker) | No | No | Yes |
-| End-to-end | No | No | Yes |
+| Lint, PHPCS, PHPStan, unit | Yes (lint and PHPCS on the staged files) | Yes, PHP 8.3 and 8.4 (`ci.yml`) | No |
+| `composer audit` | No | Yes (`ci.yml`) | No |
+| Integration (Docker) | No | Yes (`functional.yml`) | Yes (`functional.yml`) |
+| End-to-end | No | No | Yes (`functional.yml`, *Run workflow*) |
 
 ## What the commit checks
 
@@ -84,7 +84,9 @@ and PHPStan), `KKCE_PHPStan_Config_Unit_Test` (every PHP file analyzed, level â‰
 (`.distignore` and package verification), `KKCE_Composer_Scripts_Unit_Test` (scripts work on a fresh
 clone), `KKCE_Git_Ignore_Unit_Test` (credentials, build output and private files ignored by Git),
 `KKCE_CI_Workflow_Unit_Test` (GitHub Actions pinned to a commit SHA, with the tag in a comment),
-`KKCE_E2E_Catalog_Unit_Test` (every end-to-end test listed in the *Test list* of `e2e/README.md`) and
+`KKCE_E2E_Catalog_Unit_Test` (every end-to-end test listed in the *Test list* of `e2e/README.md`),
+`KKCE_Integration_Config_Unit_Test` (the integration suite has only the Docker path, with the defaults of
+wp-env) and
 `KKCE_Secret_Scan_Unit_Test` (runs `.githooks/check-staged-secrets.sh --stdin` through Bash on invented
 secrets and on ordinary lines; Bash is needed, as for the Git hooks). When one fails, a file was
 updated and another forgotten: fix the data, not the test.
@@ -101,7 +103,7 @@ for a custom installation (PowerShell: `$env:KKCE_TEST_BASH = 'D:/Tools/Git/bin/
 | `bootstrap-integration.php` | Bootstrap of the integration suite (framework, database safety check, plugin loading) |
 | `unit/` | Unit tests; `unit/support/` holds `KKCE_Unit_Test_Case` |
 | `integration/` | Integration tests and the test-framework configuration |
-| `e2e/` | End-to-end tests: `specs/` (Playwright tests), `support/` (login, test data with WP-CLI, accessibility check) |
-| `bin/` | Node scripts of the test tools (`integration.mjs`: integration suite in the wp-env test environment) |
+| `e2e/` | End-to-end tests: `specs/` (Playwright tests), `support/` (global setup and login, test data with WP-CLI, helpers of the feed editor, accessibility check) |
+| `bin/` | Node scripts behind the Composer commands: `integration.mjs` (starts the wp-env test environment, runs the integration suite in it) and `e2e.mjs` (starts the development environment, runs Playwright); both first check that Docker answers (`docker.mjs`) |
 | `routes/` | Request collections for manual checks of the admin REST routes |
 | `phpstan/` | PHPStan bootstrap with the runtime constants |

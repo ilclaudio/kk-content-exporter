@@ -26,7 +26,8 @@ first start downloads WordPress and the Docker images, then it takes about a min
 it is already running), creates the database if it is missing and runs
 `vendor/bin/phpunit -c phpunit-integration.xml` inside the `cli` container, in the folder of the plugin,
 with the configuration of this folder. The WordPress test framework comes with wp-env (`WP_TESTS_DIR`).
-Without Docker Desktop running, the command stops with a message that says so.
+The script first checks that Docker answers: without Docker Desktop running it stops at once and says
+so (the end-to-end command does the same).
 
 The environment is independent from the one of the end-to-end tests (`.wp-env.json`, port 8890): own
 containers, own database. Local changes to it go in `.wp-env.tests.override.json` (ignored by Git).

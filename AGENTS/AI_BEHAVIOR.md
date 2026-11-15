@@ -72,6 +72,9 @@ write "verified" for a check that did not run.
   REST routes (status codes 200/400/401/403/404, schema, `permission_callback`), Application
   Password authentication, activation/uninstall, translations loading, optional integrations with the
   real ACF/CMB2/Polylang plugins.
+- **End-to-end**: what only a browser shows: the admin screens and their JavaScript (the mapping editor,
+  its preview, the save of a feed), the translations of the scripts, keyboard use and the accessibility
+  check of the elements of the plugin. Never the only test of permissions, REST or exported data.
 
 ### Test rules
 1. **Planning.** A plan for a feature, change or fix states which tests will be written or run and at
@@ -313,8 +316,8 @@ Before marking work complete:
 - Run the checks of `Verification` in `AGENTS/CODING_STANDARDS.md` that match the change; at minimum
   `composer run check` when the dependencies are installed.
 - PHPCS and PHPStan report no findings (targets in `AGENTS/CODING_STANDARDS.md`, *Verification*).
-- Run the matching test suites: unit always; integration when WordPress behavior is touched. State
-  which suites did not run and why.
+- Run the matching test suites: unit always; integration when WordPress behavior is touched; end-to-end
+  when the admin screens or their JavaScript change. State which suites did not run and why.
 - For `Bug` and `Security` fixes, the regression test exists and passes.
 - Re-check changed code for sanitization, escaping, capabilities, nonces and what is exported.
 - With `WP_DEBUG` enabled, the plugin activates and runs on the Local site without notices or warnings
