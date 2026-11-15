@@ -94,8 +94,10 @@ final class Mapping_Box {
 				'errors'   => $draft['errors'],
 				'readable' => null !== $draft['mapping'],
 			);
+			// The JSON text, not the decoded array: PHP decodes an empty object `{}` as an empty array, which
+			// would come back to the script as `[]` and make an unfinished row impossible to edit.
 			if ( null !== $draft['mapping'] ) {
-				$data['mapping'] = $draft['mapping'];
+				$data['draft']['mapping'] = $draft['mapping'];
 			}
 		}
 		?>
@@ -126,8 +128,8 @@ final class Mapping_Box {
 	 * so that the work is not lost (decision of 2026-11-13).
 	 *
 	 * @param int $post_id ID of the feed.
-	 * @return array{mapping: array<string, mixed>|null, errors: array<mixed>}|null The decoded mapping (null
-	 *         when the text cannot be shown as rows) and its errors; null without a draft.
+	 * @return array{mapping: string|null, errors: array<mixed>}|null The JSON text of the mapping (null when it
+	 *         cannot be shown as rows) and its errors; null without a draft.
 	 */
 	private static function refused_mapping( int $post_id ): ?array {
 		$key   = Feed_Editor::draft_key( $post_id );
@@ -142,7 +144,7 @@ final class Mapping_Box {
 		$usable  = is_array( $rows ) && array_is_list( $rows ) && array() === array_filter( $rows, static fn( $row ): bool => ! is_array( $row ) );
 
 		return array(
-			'mapping' => $usable ? $mapping : null,
+			'mapping' => $usable ? (string) $draft['mapping'] : null,
 			'errors'  => is_array( $draft['errors'] ?? null ) ? $draft['errors'] : array(),
 		);
 	}

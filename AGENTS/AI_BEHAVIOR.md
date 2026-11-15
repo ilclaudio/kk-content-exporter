@@ -83,10 +83,13 @@ write "verified" for a check that did not run.
    and run them again afterwards.
 3. **Bug fixes** (issue categories `Bug` and `Security`). Before fixing, write (or point to) a test
    that reproduces the defect and **fails**; show the failure; fix the code; check that the test passes;
-   keep it as a regression test.
-4. **New features and changes.** Add tests at the lowest level that can check the logic: unit first,
-   then integration. Changes to permissions, REST routes, nonces, capabilities and anything that decides
-   *what is exported* always need an integration test.
+   keep it as a regression test. Write it at the lightest level that reproduces the defect (rule 4).
+4. **New features and changes.** Prefer the lightest test that can check the behavior, in this order:
+   unit, then integration, then end-to-end. Use a heavier level only for what the lighter one cannot see
+   (a real WordPress for integration; a browser, the JavaScript of the admin screens, for end-to-end), and
+   when a change spans levels, test each part at its own level (for example the PHP side of a fix with an
+   integration test, its JavaScript side with an end-to-end test). Changes to permissions, REST routes,
+   nonces, capabilities and anything that decides *what is exported* always need an integration test.
 5. **Failing test.** Stop. Show the failure (assertion, expected, actual) and propose three ways
    forward: fix the code, update the test, or drop the change. Let the operator decide. Never mark a
    test skipped or incomplete to make a suite pass without approval.

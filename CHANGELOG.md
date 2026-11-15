@@ -9,7 +9,9 @@ follows [Semantic Versioning](https://semver.org/). The version of the first ent
 Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 ## [0.0.2] - Unreleased
-No changes yet.
+### Fixed
+- A refused mapping shown again keeps its unfinished rows editable.
+- A sensitive field typed in a template shows its confirmation box at once.
 
 ## [0.0.1] - 2026-11-15
 ### Added

@@ -162,6 +162,27 @@
 	}
 
 	/**
+	 * Mapping the editor starts from: a refused draft, read from its JSON text so that empty maps stay objects,
+	 * otherwise the saved mapping.
+	 *
+	 * @param {Object} data Initial data of the box.
+	 * @return {Object} Mapping with a list of rows.
+	 */
+	function initialMapping( data ) {
+		if ( data.draft && data.draft.readable && 'string' === typeof data.draft.mapping ) {
+			try {
+				const draft = JSON.parse( data.draft.mapping );
+				if ( draft && Array.isArray( draft.rows ) ) {
+					return draft;
+				}
+			} catch ( error ) {
+				// The server checked the text: a failure here leaves the saved mapping.
+			}
+		}
+		return data.mapping && Array.isArray( data.mapping.rows ) ? data.mapping : { version: 1, rows: [] };
+	}
+
+	/**
 	 * Whether a row gives a plain text, so that a maximum length can be set: a template that is not HTML, or
 	 * another rule (but a fixed value) with the text type.
 	 *
@@ -375,7 +396,7 @@
 	 * @param {Object}      data      Initial data.
 	 */
 	function MappingEditor( container, data ) {
-		const mapping = data.mapping && Array.isArray( data.mapping.rows ) ? data.mapping : { version: 1, rows: [] };
+		const mapping = initialMapping( data );
 		// Rules of the keys and limits come from the server (Mapping_Validator): nothing is copied here.
 		const keyPattern = new RegExp( data.keyPattern );
 		let nextId = 1;
@@ -1484,6 +1505,20 @@
 		}
 
 		/**
+		 * Puts in a slot the warnings and the confirmations of the fields of a row, replacing what it held.
+		 *
+		 * @param {HTMLElement} slot Element that holds them.
+		 * @param {Object}      row  Row.
+		 */
+		function fillWarnings( slot, row ) {
+			slot.textContent = '';
+			const warnings = renderOptions( row );
+			if ( warnings ) {
+				slot.appendChild( warnings );
+			}
+		}
+
+		/**
 		 * Builds the element of a row.
 		 *
 		 * @param {Object} row   Row.
@@ -1569,10 +1604,10 @@
 				if ( picker ) {
 					fieldset.appendChild( picker );
 				}
-				const warnings = renderOptions( row );
-				if ( warnings ) {
-					fieldset.appendChild( warnings );
-				}
+				// Redrawn alone while the template is typed (see the input handler), so the caret stays.
+				const slot = el( 'div', { className: 'kkce-mapping-warnings-slot' } );
+				fillWarnings( slot, row );
+				fieldset.appendChild( slot );
 			} else if ( 'lookup' === row.data.kind ) {
 				if ( ! Object.prototype.hasOwnProperty.call( row.data.inputs, '*' ) ) {
 					row.data.inputs = Object.assign( { '*': '' }, row.data.inputs );
@@ -1977,8 +2012,14 @@
 			}
 
 			if ( input.classList.contains( 'kkce-mapping-template' ) ) {
+				const before = rowSources( row.data ).join( ' ' );
 				row.data.templates[ input.getAttribute( 'data-scope' ) ] = input.value;
 				commit( true );
+				// A field typed by hand can need a confirmation: redraw the warnings of the row, not the row.
+				const slot = input.closest( 'li' ).querySelector( '.kkce-mapping-warnings-slot' );
+				if ( slot && rowSources( row.data ).join( ' ' ) !== before ) {
+					fillWarnings( slot, row );
+				}
 			}
 
 			if ( input.classList.contains( 'kkce-mapping-match' ) ) {

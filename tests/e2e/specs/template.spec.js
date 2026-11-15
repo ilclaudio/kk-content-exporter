@@ -37,6 +37,24 @@ test( 'an optional part is written only when its field has a value', async ( { p
 	await expect( box.getByRole( 'group', { name: /: label$/ } ).getByLabel( 'Template (For all post types)', { exact: true } ) ).toHaveValue( '{core.title}[ – {core.excerpt}] ({core.excerpt|"n.d."})' );
 } );
 
+test( 'a sensitive field typed in a template asks for its confirmation at once', async ( { page } ) => {
+	const data = createFixtures( 'template-sensitive', { post_types: [ 'post' ], posts: [ { title: 'E2E sensitive' } ] } );
+	const box = await openFeed( page, data.feed );
+
+	const row = await addRow( box, 'Template', 'author' );
+	const template = row.getByLabel( 'Template (For all post types)', { exact: true } );
+	await template.fill( 'By {core.author.url}' );
+
+	const confirm = row.getByRole( 'checkbox', { name: 'I understand, publish this value (Author archive URL)' } );
+	await expect( confirm ).toBeVisible();
+	await expect( template ).toBeFocused();
+	await confirm.check();
+	await expect( preview( box ) ).toContainText( '"author": "By http' );
+
+	await template.fill( 'By {core.title}' );
+	await expect( confirm ).toHaveCount( 0 );
+} );
+
 test( 'a text output is cut at a whole word; the limit is offered only for text', async ( { page } ) => {
 	const data = createFixtures( 'maxlength', {
 		post_types: [ 'post' ],

@@ -60,4 +60,16 @@ function cleanupFixtures() {
 	return lastJson( wp( [ 'eval-file', FIXTURES, 'cleanup' ] ) ).deleted;
 }
 
-module.exports = { wp, createFixtures, cleanupFixtures };
+/**
+ * Keeps a refused mapping for the administrator, as a refused save of the feed editor does: the next
+ * opening of the editor shows it with its errors.
+ *
+ * @param {number}   feed    ID of the feed.
+ * @param {string}   mapping JSON text of the refused mapping, as it was sent.
+ * @param {Object[]} errors  Errors (`row`, `field`, `code`).
+ */
+function setRefusedDraft( feed, mapping, errors ) {
+	wp( [ '--user=admin', 'eval-file', FIXTURES, 'draft', String( feed ), mapping, JSON.stringify( errors ) ] );
+}
+
+module.exports = { wp, createFixtures, cleanupFixtures, setRefusedDraft };

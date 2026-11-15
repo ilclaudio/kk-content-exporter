@@ -160,14 +160,15 @@ class KKCE_Mapping_Box_Integration_Test extends WP_UnitTestCase {
 	 */
 	public function test_the_box_shows_the_refused_mapping_once() {
 		$feed  = $this->feed( array( 'post' ), array( array( 'key' => 'saved', 'kind' => 'fixed', 'values' => array( '*' => 'x' ) ) ) );
-		$rows  = array( array( 'key' => 'refused', 'kind' => 'field', 'sources' => array( '*' => array( 'meta.nothing' ) ) ) );
-		$error = array( 'row' => 0, 'field' => 'sources', 'code' => 'unknown' );
-		set_transient( Feed_Editor::draft_key( $feed ), array( 'mapping' => (string) wp_json_encode( array( 'version' => 1, 'rows' => $rows ) ), 'errors' => array( $error ) ), 600 );
+		// An unfinished Fixed value is sent with an empty map: the text keeps it as an object.
+		$text  = '{"version":1,"rows":[{"key":"refused","kind":"fixed","type":"string","values":{}}]}';
+		$error = array( 'row' => 0, 'field' => 'values', 'code' => 'empty' );
+		set_transient( Feed_Editor::draft_key( $feed ), array( 'mapping' => $text, 'errors' => array( $error ) ), 600 );
 
 		$data = $this->data( $this->box( $feed ) );
 
-		$this->assertSame( $rows, $data['mapping']['rows'] );
-		$this->assertSame( array( 'errors' => array( $error ), 'readable' => true ), $data['draft'] );
+		$this->assertSame( array( 'saved' ), array_column( $data['mapping']['rows'], 'key' ), 'The saved mapping stays in the data.' );
+		$this->assertSame( array( 'errors' => array( $error ), 'readable' => true, 'mapping' => $text ), $data['draft'], 'The draft is given as its JSON text.' );
 		$this->assertFalse( get_transient( Feed_Editor::draft_key( $feed ) ), 'Shown once.' );
 		$this->assertSame( array( 'saved' ), array_column( $this->data( $this->box( $feed ) )['mapping']['rows'], 'key' ) );
 	}
