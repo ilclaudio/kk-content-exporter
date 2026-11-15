@@ -1,5 +1,7 @@
 # Continuous integration: calls the same Composer scripts used locally and by the Git hooks
-# (see "Quality checks" in AGENTS/ARCHITECTURE.md). The integration suite is not run here yet.
+# (see "Quality checks" in AGENTS/ARCHITECTURE.md), checks the whitespace of the repository, builds the
+# release ZIP, audits the npm test tools and runs the integration suite in Docker (wp-env) on WordPress 7.1.4
+# and on the minimum version 6.4. The end-to-end suite is in functional.yml (started by hand).
 # Actions are pinned to a full commit SHA, with the tag in a comment (checked by
 # tests/unit/KKCE_CI_Workflow_Unit_Test.php); update the SHA and the comment together.
 name: CI
@@ -54,3 +56,96 @@ jobs:
 
       - name: Audit the locked dependencies
         run: composer audit --locked
+
+  repository:
+    name: Whitespace and conflict markers
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Check every versioned file against an empty tree
+        run: git diff --check "$(git hash-object -t tree /dev/null)" HEAD -- .
+
+  package:
+    name: Release ZIP
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+
+      - name: Install the development tools
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      # The checks of the code run in the job "check": the build only verifies the package.
+      - name: Build and verify the package
+        run: composer run build:zip -- --skip-checks
+
+  npm-audit:
+    name: npm audit (test tools)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      # Only critical vulnerabilities fail: the known moderate and high ones are in a part of wp-env that
+      # the project does not use (see the issue in the private backlog).
+      - name: Audit the locked npm dependencies
+        run: npm audit --audit-level=critical
+
+  integration:
+    name: Integration (WordPress ${{ matrix.wordpress }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The version of .wp-env.tests.json.
+          - wordpress: '7.1.4'
+            core: ''
+          # The minimum version declared by the plugin.
+          - wordpress: '6.4.14'
+            core: 'https://wordpress.org/wordpress-6.4.14.zip'
+    env:
+      WP_ENV_CORE: ${{ matrix.core }}
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install the development tools
+        run: |
+          composer install --no-interaction --no-progress --prefer-dist
+          npm ci
+
+      - name: Integration suite in the wp-env test environment
+        run: npm run test:integration
+
+      - name: Stop the environment
+        if: always()
+        run: npx wp-env stop --config=.wp-env.tests.json

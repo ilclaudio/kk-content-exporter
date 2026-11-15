@@ -16,7 +16,8 @@ import { spawnSync } from 'node:child_process';
 export function requireDocker() {
 	const result = spawnSync( 'docker', [ 'info', '--format', '{{.ServerVersion}}' ], { encoding: 'utf8' } );
 
-	if ( null !== result.error || 0 !== result.status ) {
+	// `error` is undefined when the command ran, set when it could not start (Docker not installed).
+	if ( result.error || 0 !== result.status ) {
 		console.error( 'Docker does not answer: start Docker Desktop (or the Docker daemon) and run the command again.' );
 		process.exit( 1 );
 	}

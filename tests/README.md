@@ -65,8 +65,11 @@ the number of tests run.
 |---|---|---|---|
 | Lint, PHPCS, PHPStan, unit | Yes (lint and PHPCS on the staged files) | Yes, PHP 8.3 and 8.4 (`ci.yml`) | No |
 | `composer audit` | No | Yes (`ci.yml`) | No |
-| Integration (Docker) | No | Yes (`functional.yml`) | Yes (`functional.yml`) |
-| End-to-end | No | No | Yes (`functional.yml`, *Run workflow*) |
+| Whitespace and conflict markers (`git diff --check` on every file) | No | Yes (`ci.yml`) | No |
+| Release ZIP built and verified | No | Yes (`ci.yml`) | No |
+| `npm audit` of the test tools (fails on critical only) | No | Yes (`ci.yml`) | No |
+| Integration (Docker), WordPress 7.1.4 and 6.4.14 | No | Yes (`ci.yml`) | No |
+| End-to-end | No | No | Yes (workflow *End-to-end tests*, `functional.yml`: *Run workflow*) |
 
 ## What the commit checks
 

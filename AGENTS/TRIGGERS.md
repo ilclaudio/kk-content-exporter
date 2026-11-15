@@ -198,4 +198,3 @@ When an issue is resolved:
 3. Add `Regression test` (the test class and method) for `Bug` and `Security` issues, or the reason
    why none was added.
 4. Add commit/PR references when available (public references only).
-

@@ -244,9 +244,12 @@ root. All scripts are non-interactive and can be reused by a future CI.
 
 The commit-msg hook also blocks AI attribution (`Co-Authored-By` trailers, "Generated with" lines) and
 first lines without an allowed prefix or of 72 characters or more. CI on GitHub Actions (`.github/workflows/ci.yml`)
-runs `composer run check` on PHP 8.3 and 8.4 and `composer audit --locked`; `.github/workflows/functional.yml`
-runs the integration suite in wp-env on every push and pull request to `main` and `dev`, and the end-to-end
-suite when it is started by hand (*Run workflow*). Both must keep calling the scripts of the project. Their
+runs `composer run check` on PHP 8.3 and 8.4, `composer audit --locked`, `git diff --check` on every versioned
+file, the build of the release ZIP (`build:zip -- --skip-checks`) and `npm audit --audit-level=critical` (the
+known moderate and high findings are in the Playground runtime of wp-env, not used) and the integration suite in
+wp-env on WordPress 7.1.4 and on the minimum 6.4 (`WP_ENV_CORE`), on every push and pull request to `main` and
+`dev`. `.github/workflows/functional.yml` (workflow *End-to-end tests*; the file keeps its name because GitHub
+offers *Run workflow* only for the files of the default branch) runs the end-to-end suite when started by hand. Both must keep calling the scripts of the project. Their
 actions are pinned to a full commit SHA with the tag in a comment (`KKCE_CI_Workflow_Unit_Test`): to update
 one, read the commit of the new tag (`git ls-remote --tags`) and change the SHA and the comment together. Plugin Check is not in CI yet.
 

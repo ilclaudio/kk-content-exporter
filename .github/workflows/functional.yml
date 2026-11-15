@@ -1,60 +1,20 @@
-# Integration and end-to-end tests in Docker (wp-env), with the same npm scripts used locally
-# (see "Quality checks" in AGENTS/ARCHITECTURE.md and tests/e2e/README.md).
-# The integration job runs on every push and pull request to main and dev (decision of 2026-11-15, after
-# a first clean run of about two minutes); the end-to-end job runs only when the workflow is started by
-# hand, until it has five clean runs in a row. The checks of ci.yml are not changed.
+# End-to-end tests in Docker (wp-env) with Playwright, with the same npm script used locally
+# (see "Quality checks" in AGENTS/ARCHITECTURE.md and tests/e2e/README.md). Started by hand (*Run workflow*):
+# whether they become automatic is an open issue. The file keeps its name because GitHub offers
+# *Run workflow* only for the workflow files of the default branch.
 # Actions are pinned to a full commit SHA, with the tag in a comment (checked by
 # tests/unit/KKCE_CI_Workflow_Unit_Test.php); update the SHA and the comment together.
-name: Functional tests
+name: End-to-end tests
 
 on:
-  push:
-    branches: [ main, dev ]
-  pull_request:
-    branches: [ main, dev ]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  integration:
-    name: Integration (wp-env)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - name: Check out the code
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-
-      - name: Set up PHP
-        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
-        with:
-          php-version: '8.3'
-          tools: composer:v2
-          coverage: none
-
-      - name: Set up Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '24'
-          cache: npm
-
-      - name: Install the development tools
-        run: |
-          composer install --no-interaction --no-progress --prefer-dist
-          npm ci
-
-      - name: Integration suite in the wp-env test environment
-        run: npm run test:integration
-
-      - name: Stop the environment
-        if: always()
-        run: npx wp-env stop --config=.wp-env.tests.json
-
   e2e:
     name: End-to-end (Playwright, Chromium)
-    # Started by hand only, for now.
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
