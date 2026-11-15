@@ -8,157 +8,25 @@ follows [Semantic Versioning](https://semver.org/). The version of the first ent
 
 Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
-## [Unreleased]
+## [0.0.2] - Unreleased
+No changes yet.
 
+## [0.0.1] - 2026-11-15
 ### Added
-
-- Private post type `kkce_feed` for the feed configurations: not public, not exposed in REST, managed
-  by administrators only.
-- Configuration meta of a feed (source post type, access, active flag, items per page): sanitized on
-  every write, hidden from REST and editable by administrators only. New feeds are public-access,
-  disabled, with 50 items per page. A stored access value that is not exactly `public` or `authenticated`
-  is treated as authenticated.
-- Capability `kkce_read_export`, granted to administrators on activation (idempotent) and kept on
-  deactivation.
-- The list of the feeds shows the slug, the source post type, the access and the status of every feed.
-  Italian translation of the new strings.
-- Editor of a feed: a "Feed settings" box with the slug, the source post type, the access, the active flag
-  and the items per page. Saving requires a nonce and the capability to edit the feed. A value that is not
-  valid keeps its previous value and is reported in a notice; the other values are saved. A slug that is
-  reserved, malformed or used by another feed is refused. A feed can be enabled only with a slug and a source
-  post type. Quick Edit is removed from the feeds. A feed restored from the trash starts disabled, and a feed
-  cannot be enabled on a slug that is malformed, reserved or used by another feed.
-- Settings page (Content Exporter > Settings): endpoints on/off, authentication required for all feeds,
-  maximum items per page (100 by default, no upper limit; a feed cannot exceed it) and removal of the data
-  on uninstall. The page reports a REST API blocked for anonymous requests and authenticated feeds on a
-  site without Application Passwords. Italian translation of the new strings.
-- Uninstall: when the setting is on, deleting the plugin removes the feeds with their settings, the plugin
-  settings and the capability `kkce_read_export`; otherwise nothing is removed.
-- A feed reads one or more post types: the editor shows one checkbox per public post type, and the list of
-  the feeds shows all of them. A list with a post type that is not available is refused as a whole and the
-  previous one is kept; a feed can be enabled only with at least one post type. Feeds saved with a single
-  post type keep working. A saved post type that is no longer available (for example its plugin was
-  deactivated) stays checked, marked as not available, and is kept until it is unchecked. Italian
-  translation of the new strings.
-- The editor of a feed shows the full address of the feed under the slug field and updates it while the slug
-  is typed (it follows the permalink settings of the site); a slug that cannot be used is reported at once.
-  The editor warns before leaving the page with unsaved changes in the feed settings.
-- Format of the mapping of a feed (versioned JSON: output key, rule kind `field` or `fixed`, expected type)
-  with its validation and the hidden meta `_kkce_mapping`. A mapping that is not valid
-  is never stored. A source whose name looks sensitive (a password, a token, a key of a service, an e-mail
-  address) must be confirmed explicitly in its row, otherwise the mapping is not stored.
-- Catalog of the sources a mapping can use, with the core fields of WordPress common to every post type:
-  ID, slug, title, content, excerpt (the one written by hand), permalink, short link, publish and modified
-  dates (UTC), author ID, display name and archive URL (to confirm explicitly), post type slug and label.
-  The author e-mail and login are never offered. Italian translation of the new strings.
-- Evaluation of the mapping rules `field` (a chain of sources per post type; the first source with a value
-  wins, and `0` or `false` are values) and `fixed`, and export of an item as an anonymous visitor, so a
-  preview or an authenticated feed never shows what only a logged-in user sees. Not used by any screen or
-  endpoint yet.
-- Normalization of the exported values to the type of their row: plain text (tags removed, entities
-  decoded), HTML, number, boolean, date in UTC ISO 8601 (dates without time kept as `YYYY-MM-DD`), absolute
-  http or https URL, list. With the `auto` type a key keeps the same JSON type for every item. A value that
-  cannot be converted gives `null`.
-- The mapping is a contract: every exported item has every key of the mapping, in the same order, with
-  `null` when there is no value (an empty text stays `""`, an empty list `[]`).
-- Content and excerpt are exported as clean HTML: blocks rendered without their comments, paragraphs for
-  content written with the classic editor, relative links and images made absolute. Shortcodes run only
-  when the row asks for it (otherwise they are removed), embeds are not resolved (no request to external
-  sites), and a raw variant gives the stored text. Other plugins' content filters are not run.
-- Admin-only REST routes for the mapping editor (`kkce-admin/v1`): the catalog of the sources for the
-  post types of a feed, and the preview of a mapping, saved or not, on a published item. Only users who
-  can edit feeds reach them; the preview shows what a visitor would get, and never a draft, private or
-  password-protected item, or an item of another post type.
-- "Mapping" box in the feed editor (first part): rows with the output key, the field to read (grouped by
-  post type) and the output type; rows can be added, removed and moved, by keyboard too. The fields follow
-  the post types checked in the settings box. Without JavaScript the saved mapping stays unchanged.
-- "Mapping" box, second part: a row reads a chain of fields (the first one with a value wins, the next ones
-  are fallbacks), can use a different chain for a single post type, or writes a fixed value (also different
-  per post type). Content and excerpt offer "Run the shortcodes" and "Raw content" with their warnings, and
-  fields that need a confirmation show a warning.
-- Rule "Template" in the mapping: a text that joins fields and words, with the fields between braces
-  (`{core.title} – {meta.place}`), fallbacks inside a placeholder (`{a|b|"text"}`), a different template per
-  post type, plain text or HTML output, and an "Insert field" button. A key whose placeholders all have no
-  value is written with null.
-- Optional parts in a template: text between square brackets (`{meta.city}[, {meta.address}]`) is written only
-  when all its fields have a value, so no separator is left alone; `[[` and `]]` write a bracket.
-- The mapping is saved with the feed. It is checked against the fields of the checked post types; when it has
-  an error nothing of it is saved, the previous mapping stays in use, and the refused mapping is kept for a few
-  minutes so that the editor can show it again with its errors. A feed without mapping rows is saved disabled.
-- The list of the feeds marks a feed whose mapping confirms sensitive fields ("Exports sensitive fields"), and
-  the settings page lists the enabled feeds that export them.
-- After a refused save the "Mapping" box shows the refused mapping again, as it was sent, with the list of its
-  errors, so the work is not lost. A sensitive field is confirmed in its row with "I understand, publish this
-  value". The box no longer warns that the mapping is not saved.
-- The preview checks the mapping against the fields of the checked post types: a field that does not exist, a
-  list read by a lookup table or compared as a text by a condition, and an option that no field of the row
-  accepts are reported on their row. A mapping over the size limit is reported as too large.
-- Maximum length of a row with a plain text output (Field, Template, Lookup table, Condition): a longer text
-  is cut at a whole word and ends with "…", which counts in the length.
-- Rule "Lookup table" in the mapping: reads a field (a different one per post type if needed) and
-  translates its value through a table of lines "value → fixed text or field", compared exactly; when no
-  line matches, a default is used (nothing, a fixed text, a field or the value read). Lists cannot be read,
-  and the same value cannot appear twice in a table.
-- Rule "Condition" in the mapping: one check on one field (is empty, is not empty, is equal to, is different
-  from, is one of, contains) and an output for true and one for false (nothing, a fixed text, a field or the
-  value checked). "Contains" looks for a text inside the value, or for an element of a list, such as the
-  categories; the editor offers lists only for "is empty", "is not empty" and "contains".
-- The "Feed settings" and "Mapping" boxes explain what they are for; the second one also explains how the
-  rows work.
-- Live preview in the "Mapping" box, shown as soon as there is a row: the JSON of one item for each checked post type, computed with the rules
-  of the box (saved or not) as a visitor would get it, updated shortly after every change. Another published
-  item can be chosen from the latest ones; errors of the mapping are listed by row. On a wide screen the
-  preview stays beside the rules.
-- A filter above the source post types when there are more than ten of them.
-- The feed editor asks for confirmation before leaving with unsaved changes in the mapping too.
-
-### Changed
-
-- Development tooling: disable the PHPCS meta-query performance heuristic centrally and remove its
-  redundant inline suppressions from integration tests.
-- The list of the feeds shows the relative address of the endpoint (for example `/wp-json/kkce/v1/news`, the
-  absolute one in the tooltip) instead of the slug, and no address for a feed without a usable slug.
-- The slug and at least one source post type of a feed are required: an empty slug is no longer taken from
-  the title, it is reported and the feed stays disabled.
-- The class autoloader accepts only plain identifiers in every part of a class name.
-- Development tooling: PHPStan now runs at level 8 (was 6).
-- Development tooling: the secret scan of the pre-commit hook recognizes more credential formats and is
-  covered by a test.
-- Development tooling: the GitHub Actions of the CI are pinned to commit SHAs.
-- Development tooling: the integration tests run in Docker (`composer run test:integration`, wp-env with
-  WordPress 7.1.4 and PHP 8.3) instead of a local `wordpress-develop` checkout and the database of a local
-  site, and end-to-end tests of the admin screens run with Playwright and
-  an axe-core accessibility check (`composer run e2e`); both start their Docker environment when needed, and
-  Composer commands start, stop and delete the environments. None of these tools is shipped.
-
-### Fixed
-
-- The accessible names of the buttons of the mapping editor ("Move up", "Move down", "Add fallback", "Remove
-  exception", "Insert field") start with their visible text, so voice control finds them (WCAG 2.5.3).
-- The texts of the mapping are limited in characters, as the editor counts them, so accented texts are no
-  longer refused below the limit; every line of "is one of" is checked in the editor.
-- Malformed feed slugs are refused before text sanitization can silently rename them; the saved slug
-  is kept and the editor reports the existing format error.
-- Exported blocks and shortcodes use the current item's post context, with the previous user and loop
-  globals restored even when rendering fails.
-- Plain text keeps literal comparison signs; integer text outside the PHP integer range and dates
-  containing null bytes give `null`.
-- Image `srcset` URLs keep embedded commas, including data URLs, while relative candidates become absolute.
-- Scanner tests prefer Git Bash on Windows and accept a `KKCE_TEST_BASH` executable override.
-- Integration tests keep uploads in the repository cache instead of the WordPress framework checkout.
-
+- Plugin bootstrap, autoloader and lifecycle hooks.
+- Feeds (private post type `kkce_feed`) with slug, one or more post types, access, active flag and items per page.
+- Capability `kkce_read_export` for administrators.
+- List of the feeds with endpoint, post types, access and status.
+- Settings page: endpoints on/off, authentication for all feeds, maximum items per page, data removal on uninstall, diagnostics.
+- Uninstall that removes the data only when the setting is on.
+- Mapping of a feed: rules Field, Fixed value, Template, Lookup table and Condition, with exceptions per post type.
+- Mapping editor in the feed editor, with live preview, help texts and save.
+- Core WordPress fields as sources; author e-mail and login never offered.
+- Sensitive fields exported only after an explicit confirmation, and marked in the list and the settings.
+- Values normalized to the output type; content and excerpt as clean HTML; optional maximum text length.
+- Every key always present in every item, `null` when there is no value.
+- Italian translation.
+- Development tooling: PHPCS, PHPStan level 8, PHPUnit, Git hooks with secret scan, CI with actions pinned to SHAs, AI context.
+- Development tooling: integration tests in Docker (wp-env) and Playwright end-to-end tests with axe-core.
 ### Security
-
-- Block WordPress HTTP API requests throughout content rendering, including dynamic blocks and opted-in
-  shortcodes, and remove the temporary guard even when rendering fails.
-
-## [0.0.1] - 2026-11-06
-
-### Added
-
-- Plugin bootstrap: main file with the complete header, `KKCE_VERSION`, autoloader of the `KKCE`
-  namespace, activation, deactivation and uninstall entry points.
-- Internationalization: English source strings, `.pot` template and Italian (`it_IT`) translation.
-- Development tooling: PHPCS (WordPress Coding Standards, PHPCompatibilityWP), PHPStan level 6,
-  PHPUnit unit (Brain Monkey) and integration (WordPress test suite) suites, Git hooks.
-- AI collaboration context in `AGENTS.md`, `CLAUDE.md` and `AGENTS/`.
+- No external HTTP request while content is rendered.

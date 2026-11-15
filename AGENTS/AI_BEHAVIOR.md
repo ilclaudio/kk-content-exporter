@@ -280,7 +280,7 @@ First-party code that receives full attention: `kk-content-exporter.php`, `unins
 ### What to update after a change
 - Feature implemented: `AGENTS/PROJECT.md` (scope) and `AGENTS/ARCHITECTURE.md` (structure, hooks,
   endpoints), `readme.txt` (description, FAQ), `README.md` when development changes, `CHANGELOG.md`
-  (*Unreleased* section), user guides, and the related issue status.
+  (section of the version in progress), user guides, and the related issue status.
 - Bug fixed: `AGENTS/ISSUES_RESOLVED.md` (with the regression test) and `CHANGELOG.md`; `AGENTS/ARCHITECTURE.md`
   only if runtime behavior changed.
 - End-to-end test added, changed or removed: its row in the *Test list* of `tests/e2e/README.md` (file,
@@ -300,9 +300,10 @@ Update the documentation affected by a change in the same task as the code.
   short description (max 150 characters), Description, Installation, FAQ, Screenshots (when there
   are), Changelog, Upgrade Notice. It is written for site administrators; no development details.
 - `README.md` is for developers: requirements, tooling, commands, links.
-- `CHANGELOG.md` follows Keep a Changelog: `## [Unreleased]` while working, then
-  `## [x.y.z] - YYYY-MM-DD` with `Added` / `Changed` / `Fixed` / `Removed` / `Security`; the
-  `== Changelog ==` of `readme.txt` carries a short summary of the same entries.
+- `CHANGELOG.md` follows Keep a Changelog: `## [x.y.z] - Unreleased` while working on the version of
+  `VERSION.txt`, then `## [x.y.z] - YYYY-MM-DD` at release, with `Added` / `Changed` / `Fixed` /
+  `Removed` / `Security`. Entries are terse: one short line each, what changed for the reader, no
+  implementation details. The `== Changelog ==` of `readme.txt` carries an even shorter summary.
 - Guides (mapping, authentication, JSON examples, incremental reading limits) go in `docs/` as
   Markdown when the release (Phase 5) requires them; they must not expose private material from `DEV/`.
 
