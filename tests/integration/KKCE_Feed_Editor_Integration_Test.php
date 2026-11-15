@@ -72,7 +72,8 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	private function submit( int $feed_id, array $fields, array $options = array() ): void {
 		$nonce_for = $options['nonce_for'] ?? $feed_id;
 
-		$_POST = array( 'kkce_feed' => $fields );
+		// WordPress adds slashes to the request: the editor removes them.
+		$_POST = wp_slash( array( 'kkce_feed' => $fields ) );
 		if ( $nonce_for ) {
 			$_POST['kkce_feed_nonce'] = wp_create_nonce( 'kkce_save_feed_' . $nonce_for );
 		}
@@ -102,9 +103,49 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 				'access'     => 'authenticated',
 				'active'     => '1',
 				'per_page'   => '20',
+				'mapping'    => $this->mapping_json(),
 			),
 			$override
 		);
+	}
+
+	/**
+	 * JSON text of a mapping, by default one valid row.
+	 *
+	 * @param array<int, array<string, mixed>>|null $rows Rows.
+	 * @return string
+	 */
+	private function mapping_json( ?array $rows = null ): string {
+		$rows ??= array(
+			array(
+				'key'     => 'title',
+				'kind'    => 'field',
+				'type'    => 'string',
+				'sources' => array( '*' => array( 'core.title' ) ),
+			),
+		);
+
+		return (string) wp_json_encode( array( 'version' => 1, 'rows' => $rows ) );
+	}
+
+	/**
+	 * Draft of a refused mapping kept for the current user and a feed.
+	 *
+	 * @param int $feed Feed ID.
+	 * @return mixed
+	 */
+	private function draft( int $feed ) {
+		return get_transient( 'kkce_mapping_draft_' . get_current_user_id() . '_' . $feed );
+	}
+
+	/**
+	 * Errors of the last save shown by the editor.
+	 *
+	 * @param int $feed Feed ID.
+	 * @return mixed
+	 */
+	private function notices( int $feed ) {
+		return get_transient( 'kkce_feed_errors_' . get_current_user_id() . '_' . $feed );
 	}
 
 	/**
@@ -892,5 +933,173 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$html = $this->box( $this->feed() );
 
 		$this->assertMatchesRegularExpression( '#\A\s*<input[^>]*kkce_feed_nonce[^>]*>(?:\s*<input[^>]*>)?\s*<p class="description kkce-box-intro">[^<]+</p>\s*<table class="form-table"#', $html );
+	}
+
+	/**
+	 * A valid mapping is saved in its canonical form, accents included, and leaves no draft.
+	 */
+	public function test_a_valid_mapping_is_saved() {
+		$feed = $this->feed();
+		$rows = array(
+			array( 'key' => 'title', 'kind' => 'field', 'sources' => array( '*' => array( 'core.title' ) ) ),
+			array( 'key' => 'site', 'kind' => 'fixed', 'type' => 'string', 'values' => array( '*' => 'Città "A"' ) ),
+		);
+
+		$this->submit( $feed, $this->fields( array( 'mapping' => $this->mapping_json( $rows ) ) ) );
+
+		$mapping = Feed_Meta::mapping( $feed );
+		$this->assertSame( array( 'title', 'site' ), array_column( $mapping['rows'], 'key' ) );
+		$this->assertSame( 'auto', $mapping['rows'][0]['type'], 'Canonical form.' );
+		$this->assertSame( 'Città "A"', $mapping['rows'][1]['values']['*'] );
+		$this->assertFalse( $this->draft( $feed ) );
+		$this->assertTrue( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
+	}
+
+	/**
+	 * A refused mapping keeps the saved one; the refused text and its errors are kept as a draft for the user,
+	 * and the editor reports that the mapping was not saved. The other fields are saved.
+	 *
+	 * @dataProvider refused_mapping_provider
+	 *
+	 * @param string $json  Submitted text.
+	 * @param string $field Field of the first error.
+	 * @param string $code  Code of the first error.
+	 */
+	public function test_a_refused_mapping_keeps_the_saved_one( string $json, string $field, string $code ) {
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields() );
+
+		$this->submit( $feed, $this->fields( array( 'mapping' => $json, 'per_page' => '30' ) ) );
+
+		$this->assertSame( array( 'title' ), array_column( Feed_Meta::mapping( $feed )['rows'], 'key' ) );
+		$this->assertSame( 30, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ) );
+		$draft = $this->draft( $feed );
+		$this->assertIsArray( $draft );
+		$this->assertSame( 'too_large' === $code ? '' : $json, $draft['mapping'], 'A text too large is not kept.' );
+		$this->assertSame( $field, $draft['errors'][0]['field'] );
+		$this->assertSame( $code, $draft['errors'][0]['code'] );
+		$this->assertSame( 'not_saved', $this->notices( $feed )['mapping'] );
+	}
+
+	/**
+	 * Data for test_a_refused_mapping_keeps_the_saved_one().
+	 *
+	 * @return array<string, array{0: string, 1: string, 2: string}>
+	 */
+	public function refused_mapping_provider(): array {
+		$row = static fn( array $override ): string => (string) wp_json_encode( array( 'version' => 1, 'rows' => array( array_merge( array( 'key' => 'k', 'kind' => 'field', 'sources' => array( '*' => array( 'core.title' ) ) ), $override ) ) ) );
+
+		return array(
+			'unreadable'       => array( '{"version": 1, "rows": [', '', 'json' ),
+			'too large'        => array( str_repeat( 'è', 131073 ), '', 'too_large' ),
+			'format'           => array( $row( array( 'kind' => 'other' ) ), 'kind', 'unknown' ),
+			'unknown source'   => array( $row( array( 'sources' => array( '*' => array( 'meta.nothing' ) ) ) ), 'sources', 'unknown' ),
+			'sensitive source' => array( $row( array( 'sources' => array( '*' => array( 'core.author.url' ) ) ) ), 'sources', 'sensitive' ),
+		);
+	}
+
+	/**
+	 * A sensitive source is saved once its row confirms it.
+	 */
+	public function test_a_confirmed_sensitive_source_is_saved() {
+		$feed = $this->feed();
+		$rows = array( array( 'key' => 'author', 'kind' => 'field', 'sources' => array( '*' => array( 'core.author.url' ) ), 'confirmed' => array( 'core.author.url' ) ) );
+
+		$this->submit( $feed, $this->fields( array( 'mapping' => $this->mapping_json( $rows ) ) ) );
+
+		$this->assertSame( array( 'core.author.url' ), Feed_Meta::mapping( $feed )['rows'][0]['confirmed'] );
+	}
+
+	/**
+	 * An exception for a post type that the feed does not read is kept and not checked against the catalog.
+	 */
+	public function test_an_exception_for_an_unchecked_post_type_is_kept() {
+		$feed = $this->feed();
+		$rows = array( array( 'key' => 'k', 'kind' => 'field', 'sources' => array( '*' => array( 'core.title' ), 'post' => array( 'meta.gone' ) ) ) );
+
+		$this->submit( $feed, $this->fields( array( 'mapping' => $this->mapping_json( $rows ) ) ) );
+
+		$this->assertSame( array( 'meta.gone' ), Feed_Meta::mapping( $feed )['rows'][0]['sources']['post'] );
+	}
+
+	/**
+	 * A later valid save removes the draft of a refused mapping.
+	 */
+	public function test_a_valid_save_removes_the_draft() {
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields( array( 'mapping' => '[' ) ) );
+		$this->assertIsArray( $this->draft( $feed ) );
+
+		$this->submit( $feed, $this->fields() );
+
+		$this->assertFalse( $this->draft( $feed ) );
+	}
+
+	/**
+	 * Without the hidden field (no JavaScript) the saved mapping is not touched.
+	 */
+	public function test_without_the_mapping_field_the_mapping_is_unchanged() {
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields() );
+		$fields = $this->fields();
+		unset( $fields['mapping'] );
+
+		$this->submit( $feed, $fields );
+
+		$this->assertSame( array( 'title' ), array_column( Feed_Meta::mapping( $feed )['rows'], 'key' ) );
+		$this->assertTrue( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ), 'The saved rows count.' );
+	}
+
+	/**
+	 * Without the nonce or the capability the mapping is not saved and no draft is kept.
+	 */
+	public function test_the_mapping_needs_the_nonce_and_the_capability() {
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields(), array( 'nonce_for' => 0 ) );
+		$this->assertSame( array(), Feed_Meta::mapping( $feed )['rows'] );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		$this->submit( $feed, $this->fields() );
+		$this->assertSame( array(), Feed_Meta::mapping( $feed )['rows'] );
+		$this->assertFalse( $this->draft( $feed ) );
+	}
+
+	/**
+	 * A feed without mapping rows is saved disabled with an error; the rows of a refused mapping do not count,
+	 * the saved ones do.
+	 */
+	public function test_an_active_feed_needs_mapping_rows() {
+		$feed = $this->feed();
+
+		$this->submit( $feed, $this->fields( array( 'mapping' => $this->mapping_json( array() ) ) ) );
+		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ) );
+		$this->assertSame( 'no_rows', $this->notices( $feed )['active'] );
+
+		$this->submit( $feed, $this->fields( array( 'mapping' => '[' ) ) );
+		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ), 'A refused mapping has no rows.' );
+
+		$this->submit( $feed, $this->fields() );
+		$this->submit( $feed, $this->fields( array( 'mapping' => '[' ) ) );
+		$this->assertTrue( Feed_Meta::sanitize_active( get_post_meta( $feed, '_kkce_active', true ) ), 'The saved rows still count.' );
+	}
+
+	/**
+	 * A mapping whose saved form (accents as `\uXXXX`) is over the limit is refused as too large: the saved
+	 * mapping is kept and the feed stays as it was, never with an empty mapping.
+	 */
+	public function test_a_mapping_too_large_once_saved_keeps_the_saved_one() {
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields() );
+		$rows = array();
+		for ( $i = 0; $i < 100; $i++ ) {
+			$rows[] = array( 'key' => 'k' . $i, 'kind' => 'fixed', 'type' => 'string', 'values' => array( '*' => str_repeat( 'è', 1000 ) ) );
+		}
+
+		$this->submit( $feed, $this->fields( array( 'mapping' => (string) json_encode( array( 'version' => 1, 'rows' => $rows ), JSON_UNESCAPED_UNICODE ) ) ) );
+
+		$this->assertSame( array( 'title' ), array_column( Feed_Meta::mapping( $feed )['rows'], 'key' ) );
+		$this->assertSame( 'too_large', $this->draft( $feed )['errors'][0]['code'] );
+		$this->assertSame( '', $this->draft( $feed )['mapping'] );
+		$this->assertSame( 'not_saved', $this->notices( $feed )['mapping'] );
 	}
 }

@@ -390,4 +390,30 @@ class KKCE_Feed_Form_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( 'reserved', $result['errors']['slug'] );
 		$this->assertTrue( $result['values']['active'] );
 	}
+
+	/**
+	 * A feed can be active only with at least one row of mapping: without rows it is saved disabled with the
+	 * error `no_rows` (decision of 2026-11-10, applied with the save of the mapping).
+	 */
+	public function test_an_active_feed_needs_mapping_rows() {
+		$result = Feed_Form::process( $this->input(), $this->context() );
+
+		$without = Feed_Form::require_rows( $result, false );
+		$this->assertFalse( $without['values']['active'] );
+		$this->assertSame( 'no_rows', $without['errors']['active'] );
+
+		$this->assertSame( $result, Feed_Form::require_rows( $result, true ), 'With rows nothing changes.' );
+	}
+
+	/**
+	 * The rule adds no error when the feed is not asked to be active, or is already refused for another
+	 * reason.
+	 */
+	public function test_the_rows_rule_keeps_other_outcomes() {
+		$disabled = Feed_Form::process( $this->input( array( 'active' => false ) ), $this->context() );
+		$this->assertSame( $disabled, Feed_Form::require_rows( $disabled, false ) );
+
+		$incomplete = Feed_Form::process( $this->input( array( 'slug' => '' ) ), $this->context( array( 'current' => array( 'slug' => '', 'post_types' => array(), 'access' => 'public', 'active' => false, 'per_page' => 50 ) ) ) );
+		$this->assertSame( 'incomplete', Feed_Form::require_rows( $incomplete, false )['errors']['active'] );
+	}
 }

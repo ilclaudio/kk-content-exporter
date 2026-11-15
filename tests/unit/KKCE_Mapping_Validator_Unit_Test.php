@@ -741,6 +741,23 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
+	 * The texts of a row are limited in characters, as the editor counts them, not in bytes: accented texts at
+	 * the limit are accepted (decision of 2026-11-13).
+	 */
+	public function test_text_limits_count_characters() {
+		$at_limit = str_repeat( 'è', Mapping_Validator::VALUE_MAX_LENGTH );
+		$over     = $at_limit . 'è';
+		$fixed    = array( 'fixed' => $at_limit );
+
+		$this->assertSame( array(), $this->errors( $this->mapping( array( $this->fixed_row( array( 'values' => array( '*' => $at_limit ) ) ) ) ) ), 'Fixed value.' );
+		$this->assertSame( array(), $this->errors( $this->mapping( array( $this->lookup_row( array( 'cases' => array( array( 'match' => $at_limit, 'output' => $fixed ) ) ) ) ) ) ), 'Table line.' );
+		$this->assertSame( array(), $this->errors( $this->mapping( array( $this->condition_row( array( 'matches' => array( $at_limit ) ) ) ) ) ), 'Compared text.' );
+		$this->assertSame( array(), $this->errors( $this->mapping( array( $this->field_row( array( 'options' => array( 'format' => str_repeat( 'è', 100 ) ) ) ) ) ) ), 'Option.' );
+		$this->assertSame( array( '0:values:too_long' ), $this->errors( $this->mapping( array( $this->fixed_row( array( 'values' => array( '*' => $over ) ) ) ) ) ) );
+		$this->assertSame( array( '0:matches:too_long' ), $this->errors( $this->mapping( array( $this->condition_row( array( 'matches' => array( $over ) ) ) ) ) ) );
+	}
+
+	/**
 	 * `max_length` is a whole number from 1 to `MAX_LENGTH_LIMIT`, allowed only when the row gives a plain
 	 * text: a template that is not HTML, any other kind (but fixed) with the text type.
 	 */

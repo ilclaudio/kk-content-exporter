@@ -73,6 +73,15 @@ final class Catalog {
 	}
 
 	/**
+	 * Post types of the feed, in its order.
+	 *
+	 * @return list<string>
+	 */
+	public function post_types(): array {
+		return $this->post_types;
+	}
+
+	/**
 	 * Source that the mapping can use for a post type of the feed.
 	 *
 	 * @param string $id        Source identifier.

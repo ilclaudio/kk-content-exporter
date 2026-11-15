@@ -11,8 +11,10 @@ use KKCE\Feed_Form;
 use KKCE\Feed_Meta;
 use KKCE\Feed_Post_Type;
 use KKCE\Feed_Validator;
+use KKCE\Output\Catalog_Validator;
 use KKCE\Plugin;
 use KKCE\Settings;
+use KKCE\Sources\Catalog_Factory;
 use WP_Post;
 
 defined( 'ABSPATH' ) || exit;
@@ -75,6 +77,11 @@ final class Feed_Editor {
 	private const NOTICE_LIFETIME = 60;
 
 	/**
+	 * Seconds a refused mapping is kept for the editor (decision of 2026-11-13: "a few minutes").
+	 */
+	private const DRAFT_LIFETIME = 600;
+
+	/**
 	 * ID of the feed processed by the current request, 0 when none.
 	 *
 	 * @var int
@@ -94,6 +101,13 @@ final class Feed_Editor {
 	 * @var array<string, string>
 	 */
 	private static array $pending_errors = array();
+
+	/**
+	 * Mapping sent with the request being saved: its text, its errors and its rows; null without the field.
+	 *
+	 * @var array{text: string, errors: list<array{row: int, field: string, code: string}>, rows: int}|null
+	 */
+	private static ?array $pending_mapping = null;
 
 	/**
 	 * Registers the settings box. Hooked on `add_meta_boxes_kkce_feed`.
@@ -355,9 +369,17 @@ final class Feed_Editor {
 			)
 		);
 
-		self::$pending_id     = $post_id;
-		self::$pending_values = $result['values'];
-		self::$pending_errors = $result['errors'];
+		$mapping = self::submitted_mapping( $result['values']['post_types'] );
+		$rows    = null !== $mapping && array() === $mapping['errors'] ? $mapping['rows'] : count( Feed_Meta::mapping( $post_id )['rows'] );
+		$result  = Feed_Form::require_rows( $result, $rows > 0 );
+		if ( null !== $mapping && array() !== $mapping['errors'] ) {
+			$result['errors']['mapping'] = 'not_saved';
+		}
+
+		self::$pending_id      = $post_id;
+		self::$pending_values  = $result['values'];
+		self::$pending_errors  = $result['errors'];
+		self::$pending_mapping = $mapping;
 
 		$data['post_name'] = $result['values']['slug'];
 
@@ -391,6 +413,21 @@ final class Feed_Editor {
 		update_post_meta( $post_id, Feed_Meta::META_ACCESS, $values['access'] );
 		update_post_meta( $post_id, Feed_Meta::META_ACTIVE, $values['active'] );
 		update_post_meta( $post_id, Feed_Meta::META_PER_PAGE, $values['per_page'] );
+
+		$mapping = self::$pending_mapping;
+		if ( null !== $mapping && array() === $mapping['errors'] ) {
+			Feed_Meta::save_mapping( $post_id, $mapping['text'] );
+			delete_transient( self::draft_key( $post_id ) );
+		} elseif ( null !== $mapping ) {
+			set_transient(
+				self::draft_key( $post_id ),
+				array(
+					'mapping' => $mapping['text'],
+					'errors'  => $mapping['errors'],
+				),
+				self::DRAFT_LIFETIME
+			);
+		}
 
 		if ( array() === self::$pending_errors ) {
 			delete_transient( self::notice_key( $post_id ) );
@@ -526,9 +563,10 @@ final class Feed_Editor {
 	 * @return void
 	 */
 	private static function reset_pending(): void {
-		self::$pending_id     = 0;
-		self::$pending_values = null;
-		self::$pending_errors = array();
+		self::$pending_id      = 0;
+		self::$pending_values  = null;
+		self::$pending_errors  = array();
+		self::$pending_mapping = null;
 	}
 
 	/**
@@ -539,6 +577,52 @@ final class Feed_Editor {
 	 */
 	private static function notice_key( int $post_id ): string {
 		return 'kkce_feed_errors_' . get_current_user_id() . '_' . $post_id;
+	}
+
+	/**
+	 * Mapping sent with the form, checked against the catalog of the post types the feed will have.
+	 *
+	 * The JSON text is kept as it was sent: it is either saved through the sanitizer of the meta, which writes
+	 * its canonical form, or kept as the draft that the editor shows again with its errors.
+	 *
+	 * @param string[] $post_types Post types of the feed after this save.
+	 * @return array{text: string, errors: list<array{row: int, field: string, code: string}>, rows: int}|null
+	 *         Null when the form has no mapping field (the editor works without JavaScript).
+	 *
+	 * @phpstan-param list<string> $post_types
+	 */
+	private static function submitted_mapping( array $post_types ): ?array {
+		// Nonce and capability are checked by filter_post_data(), the only caller.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		if ( ! isset( $_POST[ self::FIELD ]['mapping'] ) ) {
+			return null;
+		}
+
+		// A JSON document cannot go through a text sanitizer (tags and backslashes are part of it): it is decoded,
+		// checked by Catalog_Validator and saved through the sanitizer of the meta, which re-encodes it.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$raw    = wp_unslash( $_POST[ self::FIELD ]['mapping'] );
+		$text   = is_string( $raw ) ? $raw : '';
+		$result = Catalog_Validator::validate_text( $text, Catalog_Factory::for_post_types( $post_types ), 'wp_json_encode' );
+
+		// A text too large is not kept as a draft (it would be written to the options table as it is).
+		$too_large = in_array( 'too_large', array_column( $result['errors'], 'code' ), true );
+
+		return array(
+			'text'   => $too_large ? '' : $text,
+			'errors' => $result['errors'],
+			'rows'   => null === $result['mapping'] ? 0 : count( $result['mapping']['rows'] ),
+		);
+	}
+
+	/**
+	 * Key of the draft of a refused mapping, for the current user and a feed.
+	 *
+	 * @param int $post_id ID of the feed.
+	 * @return string
+	 */
+	public static function draft_key( int $post_id ): string {
+		return 'kkce_mapping_draft_' . get_current_user_id() . '_' . $post_id;
 	}
 
 	/**
@@ -569,6 +653,8 @@ final class Feed_Editor {
 			),
 			'per_page.not_integer', 'per_page.too_small' => __( 'Items per page must be a whole number of at least 1. The previous value was kept.', 'kk-content-exporter' ),
 			'active.incomplete'   => __( 'The feed was saved disabled: set a valid slug and at least one source post type first.', 'kk-content-exporter' ),
+			'active.no_rows'      => __( 'The feed was saved disabled: add at least one row to the mapping first.', 'kk-content-exporter' ),
+			'mapping.not_saved'   => __( 'The mapping was not saved: see the errors in the Mapping box. The previous mapping is still in use.', 'kk-content-exporter' ),
 			default               => '',
 		};
 	}

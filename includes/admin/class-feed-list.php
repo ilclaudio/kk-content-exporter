@@ -9,6 +9,7 @@ namespace KKCE\Admin;
 
 use KKCE\Feed_Meta;
 use KKCE\Feed_Post_Type;
+use KKCE\Output\Sensitive_Keys;
 use KKCE\Plugin;
 use WP_Post;
 
@@ -116,6 +117,9 @@ final class Feed_List {
 				break;
 			case self::COLUMN_STATUS:
 				self::print_text( self::status_label( get_post_meta( $post_id, Feed_Meta::META_ACTIVE, true ) ) );
+				if ( array() !== Sensitive_Keys::confirmed_sources( Feed_Meta::mapping( $post_id ) ) ) {
+					echo '<br><span class="kkce-sensitive">' . esc_html__( 'Exports sensitive fields', 'kk-content-exporter' ) . '</span>';
+				}
 				break;
 		}
 	}

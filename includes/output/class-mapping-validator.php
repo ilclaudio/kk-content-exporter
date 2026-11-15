@@ -46,7 +46,7 @@ final class Mapping_Validator {
 	public const MAX_CHAIN = 10;
 
 	/**
-	 * Maximum length of a fixed text.
+	 * Maximum length of a fixed text, in characters (as the editor counts them).
 	 */
 	public const VALUE_MAX_LENGTH = 1000;
 
@@ -56,7 +56,7 @@ final class Mapping_Validator {
 	public const MAX_OPTIONS = 10;
 
 	/**
-	 * Maximum length of the text of an option.
+	 * Maximum length of the text of an option, in characters.
 	 */
 	public const OPTION_MAX_LENGTH = 100;
 
@@ -663,7 +663,7 @@ final class Mapping_Validator {
 			return 'format';
 		}
 
-		if ( strlen( $text ) > self::VALUE_MAX_LENGTH ) {
+		if ( mb_strlen( $text, 'UTF-8' ) > self::VALUE_MAX_LENGTH ) {
 			return 'too_long';
 		}
 
@@ -698,7 +698,7 @@ final class Mapping_Validator {
 				return 'format';
 			}
 
-			return is_string( $value ) && strlen( $value ) > self::VALUE_MAX_LENGTH ? 'too_long' : '';
+			return is_string( $value ) && mb_strlen( $value, 'UTF-8' ) > self::VALUE_MAX_LENGTH ? 'too_long' : '';
 		}
 
 		if ( 'source' === $name ) {
@@ -875,7 +875,7 @@ final class Mapping_Validator {
 		foreach ( $values as $value ) {
 			if ( ! is_scalar( $value ) ) {
 				$codes[] = 'format';
-			} elseif ( is_string( $value ) && strlen( $value ) > self::VALUE_MAX_LENGTH ) {
+			} elseif ( is_string( $value ) && mb_strlen( $value, 'UTF-8' ) > self::VALUE_MAX_LENGTH ) {
 				$codes[] = 'too_long';
 			}
 		}
@@ -911,7 +911,7 @@ final class Mapping_Validator {
 		foreach ( $options as $name => $value ) {
 			if ( 1 !== preg_match( self::OPTION_PATTERN, (string) $name ) || ! is_scalar( $value ) ) {
 				$codes[] = 'format';
-			} elseif ( is_string( $value ) && strlen( $value ) > self::OPTION_MAX_LENGTH ) {
+			} elseif ( is_string( $value ) && mb_strlen( $value, 'UTF-8' ) > self::OPTION_MAX_LENGTH ) {
 				$codes[] = 'too_long';
 			}
 		}

@@ -27,7 +27,9 @@ defined( 'ABSPATH' ) || exit;
  * - a feed can be active only if it has a usable slug and at least one source post type, otherwise it
  *   is saved disabled. When the submitted slug is refused, the stored slug is kept (never renamed) but
  *   it is checked with the same rules: a stored slug that is malformed, reserved or used by another
- *   feed cannot serve an active feed.
+ *   feed cannot serve an active feed;
+ * - a feed can be active only with at least one row of mapping (`require_rows()`, applied by the editor once
+ *   the mapping of the request is checked).
  *
  * @phpstan-type FormInput array{slug: string, post_types: mixed, access: string, active: bool, per_page: string}
  * @phpstan-type FormValues array{slug: string, post_types: list<string>, access: string, active: bool, per_page: int}
@@ -39,6 +41,11 @@ final class Feed_Form {
 	 * Error: the feed was left disabled because it has no slug or no source post type.
 	 */
 	public const ERROR_INCOMPLETE = 'incomplete';
+
+	/**
+	 * Error: the feed was left disabled because its mapping has no row.
+	 */
+	public const ERROR_NO_ROWS = 'no_rows';
 
 	/**
 	 * Processes the submitted values.
@@ -105,6 +112,28 @@ final class Feed_Form {
 			'values' => $values,
 			'errors' => $errors,
 		);
+	}
+
+	/**
+	 * Applies the rule "an active feed has at least one row of mapping" to the result of `process()`.
+	 *
+	 * @param array<string, mixed> $result   Result of `process()`.
+	 * @param bool                 $has_rows Whether the mapping the feed will have after the save has rows.
+	 * @return array<string, mixed> The result, with the feed disabled and the error `no_rows` when it was
+	 *                              going to be active without rows.
+	 *
+	 * @phpstan-param array{values: FormValues, errors: array<string, string>} $result
+	 * @phpstan-return array{values: FormValues, errors: array<string, string>}
+	 */
+	public static function require_rows( array $result, bool $has_rows ): array {
+		if ( $has_rows || ! $result['values']['active'] ) {
+			return $result;
+		}
+
+		$result['values']['active'] = false;
+		$result['errors']['active'] = self::ERROR_NO_ROWS;
+
+		return $result;
 	}
 
 	/**

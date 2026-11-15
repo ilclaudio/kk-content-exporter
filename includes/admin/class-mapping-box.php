@@ -87,10 +87,19 @@ final class Mapping_Box {
 			'maxCases'          => Mapping_Validator::MAX_CASES,
 			'maxLengthLimit'    => Mapping_Validator::MAX_LENGTH_LIMIT,
 		);
+
+		$draft = self::refused_mapping( $post->ID );
+		if ( null !== $draft ) {
+			$data['draft'] = array(
+				'errors'   => $draft['errors'],
+				'readable' => null !== $draft['mapping'],
+			);
+			if ( null !== $draft['mapping'] ) {
+				$data['mapping'] = $draft['mapping'];
+			}
+		}
 		?>
 		<p class="description kkce-box-intro"><?php esc_html_e( 'The mapping decides what each item of the feed contains: every row adds one key to the JSON of every item, with the value it reads from the content or a fixed value. Every item has all the keys, in the order of the rows; a key without a value is written with null, so the program that reads the feed always finds the same keys.', 'kk-content-exporter' ); ?></p>
-		<?php // Removed when the feed editor saves the mapping (step 11 of the plan). ?>
-		<div class="notice notice-warning inline kkce-mapping-unsaved"><p><?php esc_html_e( 'The mapping is not saved yet: in this development version the rows built here are lost when the feed is updated or the page is left.', 'kk-content-exporter' ); ?></p></div>
 		<details class="kkce-mapping-help">
 			<summary><?php esc_html_e( 'How the rows work', 'kk-content-exporter' ); ?></summary>
 			<ul>
@@ -110,6 +119,32 @@ final class Mapping_Box {
 			<p><?php esc_html_e( 'The mapping editor needs JavaScript. Without it, saving the feed keeps the saved mapping unchanged.', 'kk-content-exporter' ); ?></p>
 		</noscript>
 		<?php
+	}
+
+	/**
+	 * Mapping refused by the last save of the current user, read once: the box shows it again with its errors,
+	 * so that the work is not lost (decision of 2026-11-13).
+	 *
+	 * @param int $post_id ID of the feed.
+	 * @return array{mapping: array<string, mixed>|null, errors: array<mixed>}|null The decoded mapping (null
+	 *         when the text cannot be shown as rows) and its errors; null without a draft.
+	 */
+	private static function refused_mapping( int $post_id ): ?array {
+		$key   = Feed_Editor::draft_key( $post_id );
+		$draft = get_transient( $key );
+		if ( ! is_array( $draft ) ) {
+			return null;
+		}
+		delete_transient( $key );
+
+		$mapping = Mapping::decode( $draft['mapping'] ?? null );
+		$rows    = $mapping['rows'] ?? null;
+		$usable  = is_array( $rows ) && array_is_list( $rows ) && array() === array_filter( $rows, static fn( $row ): bool => ! is_array( $row ) );
+
+		return array(
+			'mapping' => $usable ? $mapping : null,
+			'errors'  => is_array( $draft['errors'] ?? null ) ? $draft['errors'] : array(),
+		);
 	}
 
 	/**

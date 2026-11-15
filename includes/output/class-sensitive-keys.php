@@ -109,6 +109,27 @@ final class Sensitive_Keys {
 	}
 
 	/**
+	 * Sensitive sources that a mapping exports because its rows confirm them, once each, in order. A confirmed
+	 * source that is not sensitive is left out: confirming it costs nothing.
+	 *
+	 * @param array<mixed> $mapping Mapping (canonical form).
+	 * @return list<string>
+	 */
+	public static function confirmed_sources( array $mapping ): array {
+		$sources = array();
+
+		foreach ( is_array( $mapping['rows'] ?? null ) ? $mapping['rows'] : array() as $row ) {
+			foreach ( is_array( $row ) && is_array( $row['confirmed'] ?? null ) ? $row['confirmed'] : array() as $source ) {
+				if ( is_string( $source ) && self::is_sensitive_source( $source ) && ! in_array( $source, $sources, true ) ) {
+					$sources[] = $source;
+				}
+			}
+		}
+
+		return $sources;
+	}
+
+	/**
 	 * Lowercase words of a name.
 	 *
 	 * @param string $name Name.

@@ -294,4 +294,25 @@ class KKCE_Settings_Page_Integration_Test extends WP_UnitTestCase {
 
 		$this->assertStringContainsString( 'notice-warning', $this->page() );
 	}
+
+	/**
+	 * Enabled feeds whose mapping confirms sensitive fields are listed by title; disabled ones are not.
+	 */
+	public function test_diagnostics_list_the_feeds_that_export_sensitive_fields() {
+		add_filter( 'wp_is_application_passwords_available', '__return_true' );
+		$rows = array( array( 'key' => 'author', 'kind' => 'field', 'sources' => array( '*' => array( 'core.author.url' ) ), 'confirmed' => array( 'core.author.url' ) ) );
+		foreach ( array( 'Events <b>A</b>' => true, 'Old feed' => false ) as $title => $active ) {
+			$feed = $this->feed( 'public', $active );
+			wp_update_post( array( 'ID' => $feed, 'post_title' => $title ) );
+			Feed_Meta::save_mapping( $feed, (string) wp_json_encode( array( 'version' => 1, 'rows' => $rows ) ) );
+		}
+		$this->feed();
+
+		$messages = Settings_Page::diagnostics();
+
+		$this->assertCount( 1, $messages );
+		$this->assertStringContainsString( 'Events A', $messages[0] );
+		$this->assertStringNotContainsString( '<b>', $messages[0] );
+		$this->assertStringNotContainsString( 'Old feed', $messages[0] );
+	}
 }

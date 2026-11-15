@@ -9,6 +9,7 @@ namespace KKCE\Admin;
 
 use KKCE\Feed_Meta;
 use KKCE\Feed_Post_Type;
+use KKCE\Output\Sensitive_Keys;
 use KKCE\Settings;
 use WP_Error;
 use WP_REST_Server;
@@ -223,7 +224,56 @@ final class Settings_Page {
 			$messages[] = __( 'Some feeds require authentication, but Application Passwords are not available on this site: WordPress offers them only over HTTPS or in a local environment. Authenticated feeds cannot be read until then.', 'kk-content-exporter' );
 		}
 
+		$sensitive = self::active_feeds_with_sensitive_fields();
+		if ( array() !== $sensitive ) {
+			$messages[] = sprintf(
+				/* translators: %s: titles of the feeds, separated by commas. */
+				__( 'These enabled feeds export fields confirmed as sensitive or personal: %s. Check that this is intended, above all for public feeds.', 'kk-content-exporter' ),
+				implode( wp_get_list_item_separator(), $sensitive )
+			);
+		}
+
 		return $messages;
+	}
+
+	/**
+	 * Titles of the enabled feeds whose mapping confirms sensitive sources (the step 11 decision of
+	 * 2026-11-10: the administrator sees which feeds export them).
+	 *
+	 * @return list<string> Plain text titles.
+	 */
+	private static function active_feeds_with_sensitive_fields(): array {
+		$titles = array();
+
+		foreach ( self::diagnostic_feeds() as $feed_id ) {
+			if ( Feed_Meta::sanitize_active( get_post_meta( $feed_id, Feed_Meta::META_ACTIVE, true ) ) && array() !== Sensitive_Keys::confirmed_sources( Feed_Meta::mapping( $feed_id ) ) ) {
+				$titles[] = wp_strip_all_tags( get_the_title( $feed_id ) );
+			}
+		}
+
+		return $titles;
+	}
+
+	/**
+	 * IDs of the feeds that the diagnostics look at, at most `DIAGNOSTIC_FEEDS`.
+	 *
+	 * @return list<int>
+	 */
+	private static function diagnostic_feeds(): array {
+		return array_values(
+			array_map(
+				'intval',
+				get_posts(
+					array(
+						'post_type'     => Feed_Post_Type::POST_TYPE,
+						'post_status'   => 'any',
+						'numberposts'   => self::DIAGNOSTIC_FEEDS,
+						'fields'        => 'ids',
+						'no_found_rows' => true,
+					)
+				)
+			)
+		);
 	}
 
 	/**
@@ -259,17 +309,7 @@ final class Settings_Page {
 	private static function has_active_authenticated_feed(): bool {
 		$require_auth = Settings::get()['require_auth'];
 
-		$feeds = get_posts(
-			array(
-				'post_type'     => Feed_Post_Type::POST_TYPE,
-				'post_status'   => 'any',
-				'numberposts'   => self::DIAGNOSTIC_FEEDS,
-				'fields'        => 'ids',
-				'no_found_rows' => true,
-			)
-		);
-
-		foreach ( $feeds as $feed_id ) {
+		foreach ( self::diagnostic_feeds() as $feed_id ) {
 			if ( ! Feed_Meta::sanitize_active( get_post_meta( $feed_id, Feed_Meta::META_ACTIVE, true ) ) ) {
 				continue;
 			}

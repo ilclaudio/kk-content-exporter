@@ -7,6 +7,7 @@
 
 use KKCE\Feed_Post_Type;
 use KKCE\Output\Item_Exporter;
+use KKCE\Output\Mapping;
 use KKCE\Output\Mapping_Validator;
 use KKCE\Rest\Admin_Routes;
 use KKCE\Sources\Catalog;
@@ -523,6 +524,40 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The preview checks the mapping against the catalog of the requested post types: unknown sources and lists
+	 * where a text is compared are refused with the field that uses them.
+	 */
+	public function test_preview_checks_the_catalog() {
+		wp_set_current_user( self::$admin );
+		$rows = array(
+			array( 'key' => 'a', 'kind' => 'field', 'sources' => array( '*' => array( 'meta.nothing' ) ) ),
+			array( 'key' => 'b', 'kind' => 'template', 'templates' => array( '*' => '{core.title} {meta.nothing}' ) ),
+		);
+
+		$response = $this->preview( array( 'mapping' => $this->mapping( $rows ), 'post_types' => array( 'post' ) ) );
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame(
+			array(
+				array( 'row' => 0, 'field' => 'sources', 'code' => 'unknown' ),
+				array( 'row' => 1, 'field' => 'templates', 'code' => 'unknown' ),
+			),
+			$response->get_data()['data']['errors']
+		);
+	}
+
+	/**
+	 * A mapping longer than the limit in bytes is refused as too large, also when it is shorter in characters.
+	 */
+	public function test_preview_of_a_mapping_too_large() {
+		wp_set_current_user( self::$admin );
+		$text = str_repeat( 'è', intdiv( Mapping::MAX_BYTES, 2 ) + 1 );
+
+		$response = $this->preview( array( 'mapping' => $text, 'post_types' => array( 'post' ) ) );
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( array( array( 'row' => -1, 'field' => '', 'code' => 'too_large' ) ), $response->get_data()['data']['errors'] );
+	}
+
+	/**
 	 * The preview leaves out an optional section without a value and cuts a text to its maximum length;
 	 * a maximum length on HTML is refused.
 	 */
@@ -542,5 +577,19 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 		$response        = $this->preview( array( 'mapping' => $this->mapping( $rows ), 'post_types' => array( 'post' ), 'post_id' => $post_id ) );
 		$this->assertSame( 400, $response->get_status() );
 		$this->assertSame( array( array( 'row' => 1, 'field' => 'max_length', 'code' => 'not_allowed' ) ), $response->get_data()['data']['errors'] );
+	}
+
+	/**
+	 * Without exportable post types the preview says so, before checking the sources of the mapping against
+	 * an empty catalog.
+	 */
+	public function test_preview_without_post_types_does_not_check_the_sources() {
+		wp_set_current_user( self::$admin );
+		$rows = array( array( 'key' => 'place', 'kind' => 'field', 'sources' => array( '*' => array( 'meta.place' ) ) ) );
+
+		$response = $this->preview( array( 'mapping' => $this->mapping( $rows ), 'post_types' => array( 'attachment' ) ) );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'kkce_no_post_types', $response->get_data()['code'] );
 	}
 }

@@ -146,12 +146,46 @@ class KKCE_Mapping_Box_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Until the mapping is saved by the feed editor, the box says so: rows built here are not stored.
+	 * The mapping is saved with the feed: the box no longer warns that it is not.
 	 */
-	public function test_the_box_says_that_the_mapping_is_not_saved_yet() {
+	public function test_the_box_no_longer_says_that_the_mapping_is_not_saved() {
 		$html = $this->box( $this->feed() );
 
-		$this->assertMatchesRegularExpression( '#<div class="notice notice-warning inline kkce-mapping-unsaved"><p>[^<]+</p></div>#', $html );
+		$this->assertStringNotContainsString( 'kkce-mapping-unsaved', $html );
+		$this->assertArrayNotHasKey( 'draft', $this->data( $html ), 'No draft without a refused save.' );
+	}
+
+	/**
+	 * A refused mapping kept by the last save is shown instead of the saved one, with its errors, once.
+	 */
+	public function test_the_box_shows_the_refused_mapping_once() {
+		$feed  = $this->feed( array( 'post' ), array( array( 'key' => 'saved', 'kind' => 'fixed', 'values' => array( '*' => 'x' ) ) ) );
+		$rows  = array( array( 'key' => 'refused', 'kind' => 'field', 'sources' => array( '*' => array( 'meta.nothing' ) ) ) );
+		$error = array( 'row' => 0, 'field' => 'sources', 'code' => 'unknown' );
+		set_transient( Feed_Editor::draft_key( $feed ), array( 'mapping' => (string) wp_json_encode( array( 'version' => 1, 'rows' => $rows ) ), 'errors' => array( $error ) ), 600 );
+
+		$data = $this->data( $this->box( $feed ) );
+
+		$this->assertSame( $rows, $data['mapping']['rows'] );
+		$this->assertSame( array( 'errors' => array( $error ), 'readable' => true ), $data['draft'] );
+		$this->assertFalse( get_transient( Feed_Editor::draft_key( $feed ) ), 'Shown once.' );
+		$this->assertSame( array( 'saved' ), array_column( $this->data( $this->box( $feed ) )['mapping']['rows'], 'key' ) );
+	}
+
+	/**
+	 * A refused text that cannot be read as a mapping leaves the saved mapping in the box, with the errors.
+	 */
+	public function test_an_unreadable_refused_mapping_keeps_the_saved_one() {
+		$feed  = $this->feed( array( 'post' ), array( array( 'key' => 'saved', 'kind' => 'fixed', 'values' => array( '*' => 'x' ) ) ) );
+		$error = array( 'row' => -1, 'field' => '', 'code' => 'json' );
+		foreach ( array( '[', '{"version":1,"rows":{"a":1}}', '{"version":1,"rows":[5]}' ) as $text ) {
+			set_transient( Feed_Editor::draft_key( $feed ), array( 'mapping' => $text, 'errors' => array( $error ) ), 600 );
+
+			$data = $this->data( $this->box( $feed ) );
+
+			$this->assertSame( array( 'saved' ), array_column( $data['mapping']['rows'], 'key' ), $text );
+			$this->assertSame( array( 'errors' => array( $error ), 'readable' => false ), $data['draft'], $text );
+		}
 	}
 
 	/**

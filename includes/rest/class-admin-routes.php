@@ -9,9 +9,9 @@ namespace KKCE\Rest;
 
 use KKCE\Admin\Feed_Editor;
 use KKCE\Feed_Post_Type;
+use KKCE\Output\Catalog_Validator;
 use KKCE\Output\Item_Exporter;
 use KKCE\Output\Mapping;
-use KKCE\Output\Mapping_Validator;
 use KKCE\Sources\Catalog_Factory;
 use KKCE\Sources\Source;
 use WP_Error;
@@ -87,11 +87,12 @@ final class Admin_Routes {
 				'permission_callback' => array( self::class, 'can_edit_feeds' ),
 				'show_in_index'       => false,
 				'args'                => array(
+					// No maxLength: the schema counts characters, while the limit of a mapping is in bytes; the
+					// callback refuses a longer text before decoding it, with the error `too_large`.
 					'mapping'    => array(
 						'description' => __( 'JSON text of the mapping to preview.', 'kk-content-exporter' ),
 						'type'        => 'string',
 						'required'    => true,
-						'maxLength'   => Mapping::MAX_BYTES,
 					),
 					'post_types' => self::post_types_arg(),
 					'post_id'    => array(
@@ -208,28 +209,7 @@ final class Admin_Routes {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public static function preview( WP_REST_Request $request ) {
-		$decoded = Mapping::decode( $request->get_param( 'mapping' ) );
-		$errors  = null === $decoded
-			? array(
-				array(
-					'row'   => Mapping_Validator::MAPPING_ROW,
-					'field' => '',
-					'code'  => 'json',
-				),
-			)
-			: Mapping_Validator::validate( $decoded );
-
-		if ( null === $decoded || array() !== $errors ) {
-			return new WP_Error(
-				'kkce_invalid_mapping',
-				__( 'The mapping is not valid.', 'kk-content-exporter' ),
-				array(
-					'status' => 400,
-					'errors' => $errors,
-				)
-			);
-		}
-
+		// The post types come first: without them the catalog is empty and every source would look unknown.
 		list( $post_types ) = self::split_post_types( $request->get_param( 'post_types' ) );
 		if ( array() === $post_types ) {
 			return new WP_Error(
@@ -239,7 +219,18 @@ final class Admin_Routes {
 			);
 		}
 
-		$mapping = Mapping_Validator::normalize( $decoded );
+		$result  = Catalog_Validator::validate_text( $request->get_param( 'mapping' ), Catalog_Factory::for_post_types( $post_types ), 'wp_json_encode' );
+		$mapping = $result['mapping'];
+		if ( null === $mapping ) {
+			return new WP_Error(
+				'kkce_invalid_mapping',
+				__( 'The mapping is not valid.', 'kk-content-exporter' ),
+				array(
+					'status' => 400,
+					'errors' => $result['errors'],
+				)
+			);
+		}
 		$post_id = $request->get_param( 'post_id' );
 
 		if ( null !== $post_id ) {

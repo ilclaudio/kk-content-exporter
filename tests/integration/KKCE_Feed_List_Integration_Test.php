@@ -266,4 +266,18 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( $actions, $post );
 	}
 
+
+	/**
+	 * The status of a feed whose mapping confirms sensitive fields says that it exports them; other feeds do
+	 * not.
+	 */
+	public function test_the_status_marks_a_feed_that_exports_sensitive_fields() {
+		$rows      = array( array( 'key' => 'author', 'kind' => 'field', 'sources' => array( '*' => array( 'core.author.url' ) ), 'confirmed' => array( 'core.author.url' ) ) );
+		$sensitive = $this->feed( array( '_kkce_active' => '1' ) );
+		Feed_Meta::save_mapping( $sensitive, (string) wp_json_encode( array( 'version' => 1, 'rows' => $rows ) ) );
+		$plain = $this->feed( array( '_kkce_active' => '1' ), 'plain' );
+
+		$this->assertMatchesRegularExpression( '#^Active<br\s*/?><span class="kkce-sensitive">[^<]+</span>$#', $this->cell( 'kkce_status', $sensitive ) );
+		$this->assertSame( 'Active', $this->cell( 'kkce_status', $plain ) );
+	}
 }

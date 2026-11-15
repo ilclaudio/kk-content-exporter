@@ -121,4 +121,24 @@ class KKCE_Sensitive_Keys_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertTrue( Sensitive_Keys::is_sensitive_source( 'core.author.url' ), 'The author archive URL contains the user nicename (decision of 2026-11-10).' );
 		$this->assertFalse( Sensitive_Keys::is_sensitive_source( 'core.author.name' ) );
 	}
+
+	/**
+	 * The sensitive sources that a mapping confirms, once each, in order: a confirmed source that is not
+	 * sensitive, and a damaged mapping, give nothing.
+	 */
+	public function test_confirmed_sources_of_a_mapping() {
+		$mapping = array(
+			'version' => 1,
+			'rows'    => array(
+				array( 'key' => 'a', 'kind' => 'field', 'confirmed' => array( 'meta.api_key', 'core.title' ) ),
+				array( 'key' => 'b', 'kind' => 'template', 'confirmed' => array( 'core.author.url', 'meta.api_key' ) ),
+				array( 'key' => 'c', 'kind' => 'fixed' ),
+				'damaged',
+			),
+		);
+
+		$this->assertSame( array( 'meta.api_key', 'core.author.url' ), Sensitive_Keys::confirmed_sources( $mapping ) );
+		$this->assertSame( array(), Sensitive_Keys::confirmed_sources( array( 'version' => 1, 'rows' => array() ) ) );
+		$this->assertSame( array(), Sensitive_Keys::confirmed_sources( array( 'rows' => 'x' ) ) );
+	}
 }

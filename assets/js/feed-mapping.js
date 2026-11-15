@@ -18,7 +18,8 @@
  * Rows can be added, removed and moved. The script keeps the mapping in a hidden field
  * `kkce_feed[mapping]` that it creates itself: without JavaScript the field does not exist and the saved
  * mapping stays as it is. The checks made here only help while typing: the server checks the whole
- * mapping again when the feed is saved.
+ * mapping again when the feed is saved, and a refused mapping comes back with its errors (`data.draft`).
+ * A sensitive field is exported only when its row confirms it with the box "I understand, publish this value".
  *
  * The catalog of the sources comes from the page; when the checked post types change, a new one is asked
  * to the admin route `GET /kkce-admin/v1/catalog` with wp.apiFetch, which sends the REST nonce. The DOM is
@@ -400,6 +401,10 @@
 		const preview = createPreview();
 
 		container.textContent = '';
+		const refused = renderRefused();
+		if ( refused ) {
+			editor.appendChild( refused );
+		}
 		[ empty, list, addButton, limit ].forEach( function ( node ) {
 			editor.appendChild( node );
 		} );
@@ -408,6 +413,28 @@
 		[ layout, status, field ].forEach( function ( node ) {
 			container.appendChild( node );
 		} );
+
+		/**
+		 * Notice of the mapping refused by the last save, with its errors: the box shows that mapping again
+		 * (or the saved one, when the refused text could not be read).
+		 *
+		 * @return {HTMLElement|null} The notice, or null without a refused mapping.
+		 */
+		function renderRefused() {
+			if ( ! data.draft || ! Array.isArray( data.draft.errors ) ) {
+				return null;
+			}
+			const notice = el( 'div', { className: 'notice notice-error inline kkce-mapping-refused', role: 'alert' } );
+			notice.appendChild( el( 'p', {}, data.draft.readable
+				? __( 'This mapping was not saved: it is shown as you sent it. Fix the errors below and update the feed; until then the previous mapping is used.', 'kk-content-exporter' )
+				: __( 'The mapping you sent could not be read and was not saved: the saved mapping is shown.', 'kk-content-exporter' ) ) );
+			const items = el( 'ul' );
+			data.draft.errors.forEach( function ( error ) {
+				items.appendChild( el( 'li', {}, errorMessage( error ) ) );
+			} );
+			notice.appendChild( items );
+			return notice;
+		}
 
 		/**
 		 * Announces a message to screen readers.
@@ -619,7 +646,8 @@
 				unknown: __( 'not known', 'kk-content-exporter' ),
 				unknown_field: __( 'not expected', 'kk-content-exporter' ),
 				not_allowed: __( 'not allowed for this rule', 'kk-content-exporter' ),
-				sensitive: __( 'a field needs an explicit confirmation, asked when the feed is saved', 'kk-content-exporter' ),
+				sensitive: __( 'a field needs an explicit confirmation: check "I understand, publish this value"', 'kk-content-exporter' ),
+				list: __( 'a list cannot be used here: choose a field with a single value', 'kk-content-exporter' ),
 			};
 			let message = codes[ error.code ] || error.code;
 			if ( 'duplicate' === error.code && 'key' !== error.field ) {
@@ -630,6 +658,9 @@
 			if ( error.row < 0 ) {
 				if ( 'json' === error.code || 'not_object' === error.code ) {
 					return __( 'The mapping cannot be read.', 'kk-content-exporter' );
+				}
+				if ( 'too_large' === error.code ) {
+					return __( 'The mapping is too large: remove some rows or shorten the longest texts.', 'kk-content-exporter' );
 				}
 				/* translators: 1: part of the mapping, 2: what is wrong with it. */
 				return sprintf( __( 'Mapping, %1$s: %2$s', 'kk-content-exporter' ), label, message );
@@ -1310,6 +1341,21 @@
 		}
 
 		/**
+		 * Shows or hides the error of a list of texts with a line longer than the limit of the server.
+		 *
+		 * @param {HTMLElement} node  Element of the error.
+		 * @param {string[]}    lines Texts, one per line.
+		 */
+		function showLineError( node, lines ) {
+			const long = lines.some( function ( text ) {
+				return String( text ).trim().length > data.valueMaxLength;
+			} );
+			/* translators: %d: most characters of a value. */
+			node.textContent = long ? sprintf( __( 'A line is longer than %d characters: the mapping cannot be saved.', 'kk-content-exporter' ), data.valueMaxLength ) : '';
+			node.hidden = ! long;
+		}
+
+		/**
 		 * Check of a `condition` row: the operator and the texts it compares, then the two outputs.
 		 *
 		 * @param {Object} row Row.
@@ -1324,14 +1370,20 @@
 			line.appendChild( labelled( __( 'The field', 'kk-content-exporter' ), select( { id: prefix + '-operator', className: 'kkce-mapping-operator', 'data-uid': String( row.uid ) }, OPERATORS, row.data.operator ) ) );
 			const texts = row.data.matches || [];
 			if ( 'one_of' === row.data.operator ) {
-				line.appendChild( labelled( __( 'Values, one per line', 'kk-content-exporter' ), el( 'textarea', {
+				// A textarea has no limit per line: a line that is too long is reported here, as the server would.
+				const warning = el( 'p', { id: prefix + '-matches-error', className: 'kkce-mapping-error' } );
+				const field = labelled( __( 'Values, one per line', 'kk-content-exporter' ), el( 'textarea', {
 					id: prefix + '-matches',
 					className: 'kkce-mapping-matches',
 					rows: 4,
 					value: texts.join( '\n' ),
 					spellcheck: false,
+					ariaDescribedby: warning.id,
 					'data-uid': String( row.uid ),
-				} ) ) );
+				} ) );
+				field.appendChild( warning );
+				showLineError( warning, texts );
+				line.appendChild( field );
 			} else if ( 'empty' !== row.data.operator && 'not_empty' !== row.data.operator ) {
 				line.appendChild( labelled( __( 'Value', 'kk-content-exporter' ), el( 'input', {
 					type: 'text',
@@ -1407,17 +1459,24 @@
 					: __( 'Off: shortcodes are removed. On: the shortcodes of other plugins run while the feed is read, as for a visitor; they can add content you do not expect or slow the feed down. Turn it on only for shortcodes you know.', 'kk-content-exporter' ) ) );
 			}
 
-			rowSources( row.data ).forEach( function ( id ) {
+			const confirmed = Array.isArray( row.data.confirmed ) ? row.data.confirmed : [];
+			rowSources( row.data ).forEach( function ( id, index ) {
 				const source = findSource( id );
 				if ( ! source || ! source.needs_confirmation ) {
 					return;
 				}
-				if ( 'core.author.url' === source.id ) {
-					wrapper.appendChild( el( 'p', { className: 'kkce-mapping-warning' }, __( 'The author archive URL usually contains the login name of the author: it is exported only after an explicit confirmation, asked when the feed is saved.', 'kk-content-exporter' ) ) );
-					return;
-				}
+				const warningId = prefix + '-confirm-' + index + '-help';
+				const text = 'core.author.url' === source.id
+					? __( 'The author archive URL usually contains the login name of the author: it is exported only if you confirm it here.', 'kk-content-exporter' )
+					/* translators: %s: label of a field whose name looks sensitive or personal. */
+					: sprintf( __( '%s looks like sensitive or personal data: in a public feed anyone can read it. It is exported only if you confirm it here.', 'kk-content-exporter' ), source.label );
+				wrapper.appendChild( el( 'p', { id: warningId, className: 'kkce-mapping-warning' }, text ) );
+				const box = el( 'input', { type: 'checkbox', id: prefix + '-confirm-' + index, checked: -1 !== confirmed.indexOf( id ), 'data-uid': String( row.uid ), 'data-confirm': id, ariaDescribedby: warningId } );
+				const label = el( 'label', { htmlFor: box.id } );
+				label.appendChild( box );
 				/* translators: %s: label of a field whose name looks sensitive or personal. */
-				wrapper.appendChild( el( 'p', { className: 'kkce-mapping-warning' }, sprintf( __( '%s looks like sensitive or personal data: in a public feed anyone can read it. It is exported only after an explicit confirmation, asked when the feed is saved.', 'kk-content-exporter' ), source.label ) ) );
+				label.appendChild( document.createTextNode( ' ' + sprintf( __( 'I understand, publish this value (%s)', 'kk-content-exporter' ), source.label ) ) );
+				wrapper.appendChild( label );
 			} );
 
 			return wrapper.childNodes.length ? wrapper : null;
@@ -1934,6 +1993,10 @@
 			if ( input.classList.contains( 'kkce-mapping-matches' ) ) {
 				// Kept as typed (one text per line for "is one of"): the hidden field gets them trimmed.
 				row.data.matches = 'TEXTAREA' === input.tagName ? input.value.split( '\n' ) : [ input.value ];
+				const warning = document.getElementById( input.id + '-error' );
+				if ( warning ) {
+					showLineError( warning, row.data.matches );
+				}
 				commit( true );
 			}
 		} );
@@ -2040,6 +2103,15 @@
 				}
 			} else if ( control.classList.contains( 'kkce-mapping-operator' ) ) {
 				row.data.operator = control.value;
+			} else if ( control.hasAttribute( 'data-confirm' ) ) {
+				const id = control.getAttribute( 'data-confirm' );
+				const list = ( Array.isArray( row.data.confirmed ) ? row.data.confirmed : [] ).filter( function ( item ) {
+					return item !== id;
+				} );
+				if ( control.checked ) {
+					list.push( id );
+				}
+				row.data.confirmed = list;
 			} else if ( control.hasAttribute( 'data-option' ) ) {
 				row.data.options = Object.assign( {}, row.data.options );
 				row.data.options[ control.getAttribute( 'data-option' ) ] = control.checked;
@@ -2116,6 +2188,14 @@
 		commit( false );
 		render( '' );
 		preview.typesChanged();
+		if ( data.draft && data.draft.readable ) {
+			// A refused mapping shown again is not saved: leaving the page asks for confirmation. Sent after the
+			// other scripts of the page have bound their listeners.
+			touched = true;
+			window.setTimeout( function () {
+				field.dispatchEvent( new Event( 'change', { bubbles: true } ) );
+			} );
+		}
 	}
 
 	function init() {

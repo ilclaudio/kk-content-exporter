@@ -16,7 +16,7 @@ Exposes published content of a chosen post type as configurable, read-only JSON 
 
 KK Content Exporter lets an administrator choose a post type, configure one or more feeds and map the fields of the content to freely named JSON keys. Each feed is served by a read-only REST endpoint.
 
-**This is a development version.** Feeds can already be created and configured, but they are not served yet: the field mapping and the endpoints arrive before version 1.0.0.
+**This is a development version.** Feeds can already be created and configured, and their mapping of the WordPress core fields can be built, previewed and saved, but the feeds are not served yet: the endpoints, post meta, taxonomies, images, ACF and CMB2 fields arrive before version 1.0.0.
 
 Planned for version 1.0.0:
 

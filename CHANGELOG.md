@@ -46,8 +46,7 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 - Format of the mapping of a feed (versioned JSON: output key, rule kind `field` or `fixed`, expected type)
   with its validation and the hidden meta `_kkce_mapping`. A mapping that is not valid
   is never stored. A source whose name looks sensitive (a password, a token, a key of a service, an e-mail
-  address) must be confirmed explicitly in its row, otherwise the mapping is not stored. Not used by the
-  editor or by any endpoint yet.
+  address) must be confirmed explicitly in its row, otherwise the mapping is not stored.
 - Catalog of the sources a mapping can use, with the core fields of WordPress common to every post type:
   ID, slug, title, content, excerpt (the one written by hand), permalink, short link, publish and modified
   dates (UTC), author ID, display name and archive URL (to confirm explicitly), post type slug and label.
@@ -71,9 +70,8 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
   can edit feeds reach them; the preview shows what a visitor would get, and never a draft, private or
   password-protected item, or an item of another post type.
 - "Mapping" box in the feed editor (first part): rows with the output key, the field to read (grouped by
-  post type), the output type and what to do when there is no value; rows can be added, removed and moved,
-  by keyboard too. The fields follow the post types checked in the settings box. The mapping is not saved
-  yet, and without JavaScript the saved mapping stays unchanged.
+  post type) and the output type; rows can be added, removed and moved, by keyboard too. The fields follow
+  the post types checked in the settings box. Without JavaScript the saved mapping stays unchanged.
 - "Mapping" box, second part: a row reads a chain of fields (the first one with a value wins, the next ones
   are fallbacks), can use a different chain for a single post type, or writes a fixed value (also different
   per post type). Content and excerpt offer "Run the shortcodes" and "Raw content" with their warnings, and
@@ -84,6 +82,17 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
   value is written with null.
 - Optional parts in a template: text between square brackets (`{meta.city}[, {meta.address}]`) is written only
   when all its fields have a value, so no separator is left alone; `[[` and `]]` write a bracket.
+- The mapping is saved with the feed. It is checked against the fields of the checked post types; when it has
+  an error nothing of it is saved, the previous mapping stays in use, and the refused mapping is kept for a few
+  minutes so that the editor can show it again with its errors. A feed without mapping rows is saved disabled.
+- The list of the feeds marks a feed whose mapping confirms sensitive fields ("Exports sensitive fields"), and
+  the settings page lists the enabled feeds that export them.
+- After a refused save the "Mapping" box shows the refused mapping again, as it was sent, with the list of its
+  errors, so the work is not lost. A sensitive field is confirmed in its row with "I understand, publish this
+  value". The box no longer warns that the mapping is not saved.
+- The preview checks the mapping against the fields of the checked post types: a field that does not exist, a
+  list read by a lookup table or compared as a text by a condition, and an option that no field of the row
+  accepts are reported on their row. A mapping over the size limit is reported as too large.
 - Maximum length of a row with a plain text output (Field, Template, Lookup table, Condition): a longer text
   is cut at a whole word and ends with "…", which counts in the length.
 - Rule "Lookup table" in the mapping: reads a field (a different one per post type if needed) and
@@ -119,6 +128,8 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 ### Fixed
 
+- The texts of the mapping are limited in characters, as the editor counts them, so accented texts are no
+  longer refused below the limit; every line of "is one of" is checked in the editor.
 - Malformed feed slugs are refused before text sanitization can silently rename them; the saved slug
   is kept and the editor reports the existing format error.
 - Exported blocks and shortcodes use the current item's post context, with the previous user and loop
