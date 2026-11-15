@@ -59,7 +59,7 @@ class KKCE_Release_Build_Unit_Test extends KKCE_Unit_Test_Case {
 	 * @return array<string, array{0: string}>
 	 */
 	public static function data_development_paths() {
-		$paths = array( '.git/config', '.githooks/pre-commit', '.gitignore', '.distignore', '.editorconfig', 'AGENTS/PROJECT.md', 'AGENTS.md', 'CLAUDE.md', 'DEV/TODO/README.md', 'bin/build-zip.php', 'build/x.zip', 'tests/bootstrap-unit.php', 'tests/integration/wp-tests-config.local.php', 'vendor/autoload.php', 'composer.json', 'composer.lock', 'phpcs.xml.dist', 'phpstan.neon.dist', 'phpunit.xml', 'phpunit-integration.xml', 'README.md', 'VERSION.txt', 'languages/kk-content-exporter.pot~', '.phpunit.cache/x', '.env', '.idea/workspace.xml', 'includes/desktop.ini', 'includes/class-plugin.php~' );
+		$paths = array( '.git/config', '.githooks/pre-commit', '.gitignore', '.distignore', '.editorconfig', 'AGENTS/PROJECT.md', 'AGENTS.md', 'CLAUDE.md', 'DEV/TODO/README.md', 'bin/build-zip.php', 'build/x.zip', 'tests/bootstrap-unit.php', 'tests/integration/wp-tests-config.local.php', 'vendor/autoload.php', 'composer.json', 'composer.lock', 'phpcs.xml.dist', 'phpstan.neon.dist', 'phpunit.xml', 'phpunit-integration.xml', 'README.md', 'VERSION.txt', 'languages/kk-content-exporter.pot~', '.phpunit.cache/x', '.env', '.idea/workspace.xml', 'includes/desktop.ini', 'includes/class-plugin.php~', 'package.json', 'package-lock.json', '.wp-env.json', '.wp-env.tests.json', '.wp-env.override.json', 'node_modules/x/index.js', 'playwright.config.js', 'playwright-report/index.html', 'test-results/x/trace.zip' );
 		return array_combine( $paths, array_map( static fn( $path ) => array( $path ), $paths ) );
 	}
 
@@ -88,10 +88,10 @@ class KKCE_Release_Build_Unit_Test extends KKCE_Unit_Test_Case {
 	 * The safety net reports development files even without .distignore.
 	 */
 	public function test_forbidden_files_are_reported() {
-		$files = array( 'kk-content-exporter.php', 'tests/a.php', '.githooks/pre-commit', 'composer.json', 'AGENTS.md', 'includes/wp-tests-config.local.php', 'includes/class-plugin.php', 'vendor/autoload.php' );
+		$files = array( 'kk-content-exporter.php', 'tests/a.php', '.githooks/pre-commit', 'composer.json', 'AGENTS.md', 'includes/wp-tests-config.local.php', 'includes/class-plugin.php', 'vendor/autoload.php', 'package.json', 'package-lock.json', '.wp-env.json', 'playwright.config.js', 'playwright-report/index.html', 'test-results/a/trace.zip', 'assets/js/package.json.md' );
 
 		$this->assertSame(
-			array( 'tests/a.php', '.githooks/pre-commit', 'composer.json', 'AGENTS.md', 'includes/wp-tests-config.local.php', 'vendor/autoload.php' ),
+			array( 'tests/a.php', '.githooks/pre-commit', 'composer.json', 'AGENTS.md', 'includes/wp-tests-config.local.php', 'vendor/autoload.php', 'package.json', 'package-lock.json', '.wp-env.json', 'playwright.config.js', 'playwright-report/index.html', 'test-results/a/trace.zip' ),
 			kkce_release_forbidden_files( $files )
 		);
 	}

@@ -38,4 +38,45 @@ class KKCE_Composer_Scripts_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( array( '@make-pot', '@update-po', '@make-mo', '@make-json' ), $scripts['i18n'] );
 		$this->assertSame( 'wp i18n make-json languages', $scripts['make-json'] );
 	}
+
+	/**
+	 * Every test can be run with Composer: the scripts of the Docker environments and of the end-to-end suite
+	 * call the npm scripts, without the time limit of Composer (a first start or the whole suite last longer
+	 * than five minutes), and pass on the arguments.
+	 */
+	public function test_docker_and_e2e_scripts_call_npm() {
+		$composer = json_decode( $this->read_plugin_file( 'composer.json' ), true );
+		$npm      = json_decode( $this->read_plugin_file( 'package.json' ), true )['scripts'];
+		$expected = array(
+			'test:integration:docker' => 'test:integration',
+			'e2e'                     => 'e2e',
+			'env:start'               => 'env:start',
+			'env:stop'                => 'env:stop',
+			'env:destroy'             => 'env:destroy',
+			'env:tests:start'         => 'env:tests:start',
+			'env:tests:stop'          => 'env:tests:stop',
+			'env:tests:destroy'       => 'env:tests:destroy',
+			'e2e:headed'              => 'e2e:headed',
+			'e2e:ui'                  => 'e2e:ui',
+			'e2e:report'              => 'e2e:report',
+		);
+
+		foreach ( $expected as $name => $target ) {
+			$this->assertArrayHasKey( $target, $npm, "npm script {$target}" );
+			$this->assertSame( array( 'Composer\Config::disableProcessTimeout', "npm run {$target} --" ), $composer['scripts'][ $name ], $name );
+			$this->assertArrayHasKey( $name, $composer['scripts-descriptions'], "Description of {$name}" );
+		}
+	}
+
+	/**
+	 * One command stops, and one deletes, both Docker environments (end-to-end and integration).
+	 */
+	public function test_all_the_environments_can_be_stopped_and_deleted_at_once() {
+		$composer = json_decode( $this->read_plugin_file( 'composer.json' ), true );
+
+		$this->assertSame( array( '@env:stop', '@env:tests:stop' ), $composer['scripts']['env:stop:all'] );
+		$this->assertSame( array( '@env:destroy', '@env:tests:destroy' ), $composer['scripts']['env:destroy:all'] );
+		$this->assertArrayHasKey( 'env:stop:all', $composer['scripts-descriptions'] );
+		$this->assertArrayHasKey( 'env:destroy:all', $composer['scripts-descriptions'] );
+	}
 }

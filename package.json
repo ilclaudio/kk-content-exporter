@@ -1,0 +1,27 @@
+{
+	"name": "kk-content-exporter-tests",
+	"private": true,
+	"description": "Development test tools of the KK Content Exporter plugin (wp-env, Playwright). Never shipped.",
+	"license": "GPL-3.0-or-later",
+	"engines": {
+		"node": ">=22.13"
+	},
+	"scripts": {
+		"env:start": "wp-env start",
+		"env:stop": "wp-env stop",
+		"env:destroy": "wp-env destroy --force",
+		"env:tests:start": "wp-env start --config=.wp-env.tests.json",
+		"env:tests:stop": "wp-env stop --config=.wp-env.tests.json",
+		"env:tests:destroy": "wp-env destroy --force --config=.wp-env.tests.json",
+		"test:integration": "node tests/bin/integration.mjs",
+		"e2e": "node tests/bin/e2e.mjs",
+		"e2e:headed": "node tests/bin/e2e.mjs --headed",
+		"e2e:ui": "node tests/bin/e2e.mjs --ui",
+		"e2e:report": "playwright show-report"
+	},
+	"devDependencies": {
+		"@axe-core/playwright": "4.14.0",
+		"@playwright/test": "1.65.0",
+		"@wordpress/env": "12.1.0"
+	}
+}

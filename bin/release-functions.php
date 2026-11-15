@@ -68,7 +68,7 @@ function kkce_release_is_excluded( string $relative, array $patterns ): bool {
  * @return list<string> The offending paths.
  */
 function kkce_release_forbidden_files( array $files ): array {
-	$forbidden = '#^(?:\.[^/]+|AGENTS|DEV|bin|build|tests|vendor|node_modules)(?:/|$)|^(?:AGENTS\.md|CLAUDE\.md|composer\.(?:json|lock)|phpcs\.xml(?:\.dist)?|phpstan\.neon(?:\.dist)?|phpunit[^/]*\.xml(?:\.dist)?)$|(?:^|/)wp-tests-config[^/]*\.php$#';
+	$forbidden = '#^(?:\.[^/]+|AGENTS|DEV|bin|build|tests|vendor|node_modules)(?:/|$)|^(?:playwright-report|test-results)(?:/|$)|^(?:AGENTS\.md|CLAUDE\.md|composer\.(?:json|lock)|package(?:-lock)?\.json|playwright\.config\.[cm]?[jt]s|phpcs\.xml(?:\.dist)?|phpstan\.neon(?:\.dist)?|phpunit[^/]*\.xml(?:\.dist)?)$|(?:^|/)wp-tests-config[^/]*\.php$#';
 
 	return array_values( array_filter( $files, static fn( string $file ): bool => 1 === preg_match( $forbidden, $file ) ) );
 }

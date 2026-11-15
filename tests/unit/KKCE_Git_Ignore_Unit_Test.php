@@ -24,6 +24,12 @@ class KKCE_Git_Ignore_Unit_Test extends KKCE_Unit_Test_Case {
 		'AGENTS/ISSUES_TODO.md'                        => 'private backlog',
 		'AGENTS/ISSUES_RESOLVED.md'                    => 'private archive',
 		'AGENTS/CODE_REVIEW_PROGRESS.md'               => 'local review state',
+		'node_modules/'                                => 'npm dependencies of the test tools',
+		'/playwright-report/'                          => 'E2E report',
+		'/test-results/'                               => 'E2E traces and screenshots of failed tests',
+		'tests/e2e/.auth/'                             => 'session of the E2E administrator',
+		'.wp-env.override.json'                        => 'local overrides of the wp-env environments',
+		'.wp-env.tests.override.json'                  => 'local overrides of the wp-env test environment',
 	);
 
 	/**

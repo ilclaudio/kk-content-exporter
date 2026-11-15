@@ -178,6 +178,7 @@ Never state that something was verified when the check did not run. The canonica
 | Any PHP file | `composer run phpstan` | Level 8, no baseline, no `ignoreErrors` |
 | PHP, configuration or release files | `composer run test:unit` | Also run by the pre-commit hook |
 | WordPress behavior (hooks firing, post types, meta, capabilities, queries, REST, activation, translations) | `composer run test:integration` | Dedicated database `kkce_wordpress_test`; see `tests/integration/README.md` |
+| Admin screens and their JavaScript (mapping editor, feed editor, settings, list of the feeds) | `composer run e2e` | Playwright on the wp-env development environment (started by the command when needed); includes the axe-core check of the elements of the plugin; see `tests/e2e/README.md` |
 | New or changed strings | `composer run i18n` | Regenerates `.pot`, merges `.po`, compiles `.mo`; then translate the new `it_IT` entries |
 | Runtime behavior | Activate/use the plugin on http://kkce.local with `WP_DEBUG` | No notices, warnings or deprecations in `wp-content/debug.log` |
 | Before a release | Plugin Check, `composer audit` | See *WordPress.org Plugin Directory Rules* |

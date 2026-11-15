@@ -43,11 +43,19 @@ Automated tests are part of planning, changing and fixing code in this project.
 | Level | Command | Status |
 |---|---|---|
 | Unit (PHPUnit + Brain Monkey, no WordPress) | `composer run test:unit` | Available; also run by the `pre-commit` hook |
-| Integration (WordPress test suite, real database) | `composer run test:integration` | Available on the maintainer machine (needs `wordpress-develop` and the dedicated database `kkce_wordpress_test`, see `tests/integration/README.md`); not run by the `pre-commit` hook |
+| Integration (WordPress test suite, real database) | `composer run test:integration` | Available on the maintainer machine (needs `wordpress-develop` and the dedicated database `kkce_wordpress_test`, see `tests/integration/README.md`); also in Docker with `composer run test:integration:docker` (wp-env); not run by the `pre-commit` hook |
+| End-to-end (Playwright, Chromium, wp-env) | `composer run e2e` | Needs Docker Desktop, Node 24, `npm ci` and Chromium; the command starts its wp-env environment (see `tests/e2e/README.md`); not run by the `pre-commit` hook |
 
-The project uses only these two levels: no end-to-end or JavaScript tests. A level counts only when its
-suite can run in the current environment; when it cannot, say so: never write "verified" for a check
-that did not run.
+The project uses unit, integration and end-to-end test levels. End-to-end tests use Playwright on an
+isolated WordPress environment and cover browser behavior that cannot be adequately verified at a lower
+level. JavaScript behavior is covered by those browser tests when appropriate; a separate JavaScript
+unit-test framework is not required by default. Unit tests remain runnable locally and in the pre-commit
+hook. Integration and E2E environments use separate disposable databases. Run the relevant suites for
+each change and report any suite that could not run. E2E tests supplement, never replace, unit or
+integration tests for permissions, REST and export behavior.
+
+A level counts only when its suite can run in the current environment; when it cannot, say so: never
+write "verified" for a check that did not run.
 
 ### When to use which level
 - **Unit, pure logic (no mocks)**: mapping rules, value normalization (types, dates, missing values,
@@ -79,7 +87,9 @@ that did not run.
 5. **Failing test.** Stop. Show the failure (assertion, expected, actual) and propose three ways
    forward: fix the code, update the test, or drop the change. Let the operator decide. Never mark a
    test skipped or incomplete to make a suite pass without approval.
-6. **Resolved issues.** The entry in `AGENTS/ISSUES_RESOLVED.md` names the regression test that was
+6. **End-to-end tests.** Every Playwright test has a row in the *Test list* of `tests/e2e/README.md`
+   that says what it does; update it together with the test (see *Documentation*).
+7. **Resolved issues.** The entry in `AGENTS/ISSUES_RESOLVED.md` names the regression test that was
    added, or says why none could be added.
 
 How to run single tests and how to add new ones: `tests/README.md`.
@@ -273,6 +283,9 @@ First-party code that receives full attention: `kk-content-exporter.php`, `unins
   (*Unreleased* section), user guides, and the related issue status.
 - Bug fixed: `AGENTS/ISSUES_RESOLVED.md` (with the regression test) and `CHANGELOG.md`; `AGENTS/ARCHITECTURE.md`
   only if runtime behavior changed.
+- End-to-end test added, changed or removed: its row in the *Test list* of `tests/e2e/README.md` (file,
+  exact title, what the test does), in the same change; `KKCE_E2E_Catalog_Unit_Test` fails when a test is
+  missing from the list or a row matches no test.
 - Refactor without behavior change: documentation only if architecture or conventions changed.
 - Coding rule, tooling or process change: `AGENTS/CODING_STANDARDS.md`, `AGENTS/AI_BEHAVIOR.md`,
   `AGENTS/ARCHITECTURE.md` (*Quality checks*), `tests/README.md` as needed.

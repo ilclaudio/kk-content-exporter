@@ -125,9 +125,15 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 - Development tooling: the secret scan of the pre-commit hook recognizes more credential formats and is
   covered by a test.
 - Development tooling: the GitHub Actions of the CI are pinned to commit SHAs.
+- Development tooling: the integration tests also run in Docker (`composer run test:integration:docker`,
+  wp-env with WordPress 7.1.4 and PHP 8.3), and end-to-end tests of the admin screens run with Playwright and
+  an axe-core accessibility check (`composer run e2e`); both start their Docker environment when needed, and
+  Composer commands start, stop and delete the environments. None of these tools is shipped.
 
 ### Fixed
 
+- The accessible names of the buttons of the mapping editor ("Move up", "Move down", "Add fallback", "Remove
+  exception", "Insert field") start with their visible text, so voice control finds them (WCAG 2.5.3).
 - The texts of the mapping are limited in characters, as the editor counts them, so accented texts are no
   longer refused below the limit; every line of "is one of" is checked in the editor.
 - Malformed feed slugs are refused before text sanitization can silently rename them; the saved slug

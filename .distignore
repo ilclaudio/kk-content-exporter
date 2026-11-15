@@ -32,6 +32,15 @@ desktop.ini
 /tests
 /vendor
 /node_modules
+/package.json
+/package-lock.json
+/.wp-env.json
+/.wp-env.tests.json
+/.wp-env.override.json
+/.wp-env.tests.override.json
+/playwright.config.js
+/playwright-report
+/test-results
 /composer.json
 /composer.lock
 /phpcs.xml.dist

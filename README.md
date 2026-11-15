@@ -22,20 +22,27 @@ This file is for developers. The description for site administrators is in [`rea
 
 ## Development setup
 
+Tools needed on the development machine: PHP 8.3+ and Composer for the static checks and the unit
+tests; in addition, for the integration and end-to-end tests in Docker, Node 24 and Docker Desktop.
+
 ```sh
-composer install            # development tools (PHPCS, PHPStan, PHPUnit, Brain Monkey, WP-CLI i18n)
-composer run hooks:install  # Git hooks: secret scan, lint, PHPCS, PHPStan, unit tests
+composer install                 # PHP tools: PHPCS, PHPStan, PHPUnit, Brain Monkey, WP-CLI i18n
+composer run hooks:install       # Git hooks: secret scan, lint, PHPCS, PHPStan, unit tests
+npm ci                           # test tools: wp-env, Playwright, axe-core
+npx playwright install chromium  # browser of the end-to-end tests (once per machine)
 ```
+
+None of these tools is shipped: the plugin has no runtime dependencies.
 
 ## Checks and tests
 
 ```sh
-composer run check             # lint + PHPCS + PHPStan + unit tests (the fast local gate)
-composer run test:integration  # integration tests on the WordPress test suite
+composer run check                    # lint + PHPCS + PHPStan + unit tests: the fast gate before every commit
+composer run test:integration:docker  # integration tests in Docker
+composer run e2e                      # end-to-end tests in Chromium
 ```
 
-Test levels, commands, setup of the integration suite and how to add a test:
-[`tests/README.md`](tests/README.md).
+The three test levels, every command and when to run it: [`tests/README.md`](tests/README.md).
 
 ## Release
 

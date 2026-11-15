@@ -231,6 +231,9 @@ root. All scripts are non-interactive and can be reused by a future CI.
 | `composer run test:unit` | Unit suite (includes the contract tests on versions, PHPStan coverage and AGENTS documents) | Yes |
 | `composer run test:integration` | Integration suite on the WordPress test suite, database `kkce_wordpress_test` (see `tests/integration/README.md`) | No |
 | `composer run test:all` | Unit then integration suites | No |
+| `composer run test:integration:docker` (`npm run test:integration`) | Integration suite in the wp-env test environment (`.wp-env.tests.json`, port 8891, database `kkce_wordpress_test` created on start; `tests/bin/integration.mjs`) | No |
+| `composer run env:start` / `env:stop` / `env:destroy`, and `env:tests:start` / `env:tests:stop` / `env:tests:destroy` for the integration environment, `env:stop:all` / `env:destroy:all` for both (npm scripts of the same name; `destroy` deletes without confirmation) | wp-env development environment for the E2E suite (`.wp-env.json`, WordPress 7.1.4, PHP 8.3, http://localhost:8890) | No |
+| `composer run e2e` (`npm run e2e`) | Starts the wp-env development environment when needed, then the Playwright E2E suite (`tests/bin/e2e.mjs`; `tests/e2e/`, Chromium, one worker, axe-core on the elements of the plugin); `composer run e2e:headed`, `e2e:ui`, `e2e:report` for debugging | No |
 | `composer run check` | `lint`, `phpcs`, `phpstan`, `test:unit` | — |
 | `composer run make-pot` | Regenerates `languages/kk-content-exporter.pot` | No |
 | `composer run i18n` | `make-pot`, `update-po`, `make-mo` | No |

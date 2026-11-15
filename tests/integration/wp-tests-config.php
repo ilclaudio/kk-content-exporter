@@ -52,8 +52,10 @@ if ( false === $kkce_wp_tests_dir || '' === $kkce_wp_tests_dir ) {
 }
 $kkce_wp_tests_dir = rtrim( str_replace( '\\', '/', $kkce_wp_tests_dir ), '/' );
 
-// WordPress sources of the wordpress-develop checkout that provides the test framework.
-define( 'ABSPATH', dirname( $kkce_wp_tests_dir, 2 ) . '/src/' );
+// WordPress sources: KKCE_TEST_ABSPATH when set (the wp-env test container, where the framework comes
+// without the WordPress sources), otherwise the `src` folder of the wordpress-develop checkout.
+$kkce_abspath = getenv( 'KKCE_TEST_ABSPATH' );
+define( 'ABSPATH', false !== $kkce_abspath && '' !== $kkce_abspath ? rtrim( str_replace( '\\', '/', $kkce_abspath ), '/' ) . '/' : dirname( $kkce_wp_tests_dir, 2 ) . '/src/' );
 
 // The plugin is loaded from its own folder: its parent acts as the plugins directory, so that
 // plugin_basename() returns `kk-content-exporter/kk-content-exporter.php` as on a real site.

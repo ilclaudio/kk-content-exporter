@@ -1109,9 +1109,9 @@
 				if ( chain.length > 1 ) {
 					const actions = el( 'span', { className: 'kkce-mapping-chain-actions' } );
 					/* translators: 1: position of the field in its chain, 2: name of the chain, for example "For all post types". */
-					actions.appendChild( button( row, 'chain-up', LABEL_UP, { id: id + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move field %1$d up (%2$s)', 'kk-content-exporter' ), index + 1, label ), 'data-scope': scope, 'data-index': String( index ) } ) );
+					actions.appendChild( button( row, 'chain-up', LABEL_UP, { id: id + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move up: field %1$d (%2$s)', 'kk-content-exporter' ), index + 1, label ), 'data-scope': scope, 'data-index': String( index ) } ) );
 					/* translators: 1: position of the field in its chain, 2: name of the chain, for example "For all post types". */
-					actions.appendChild( button( row, 'chain-down', LABEL_DOWN, { id: id + '-down', disabled: index === chain.length - 1, ariaLabel: sprintf( __( 'Move field %1$d down (%2$s)', 'kk-content-exporter' ), index + 1, label ), 'data-scope': scope, 'data-index': String( index ) } ) );
+					actions.appendChild( button( row, 'chain-down', LABEL_DOWN, { id: id + '-down', disabled: index === chain.length - 1, ariaLabel: sprintf( __( 'Move down: field %1$d (%2$s)', 'kk-content-exporter' ), index + 1, label ), 'data-scope': scope, 'data-index': String( index ) } ) );
 					/* translators: 1: position of the field in its chain, 2: name of the chain, for example "For all post types". */
 					actions.appendChild( button( row, 'chain-remove', LABEL_REMOVE, { id: id + '-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove field %1$d (%2$s)', 'kk-content-exporter' ), index + 1, label ), 'data-scope': scope, 'data-index': String( index ) } ) );
 					item.appendChild( actions );
@@ -1123,10 +1123,10 @@
 			const tools = el( 'div', { className: 'kkce-mapping-scope-actions' } );
 			// A fallback can be added once the last field of the chain is chosen.
 			/* translators: %s: name of the chain, for example "For all post types". */
-			tools.appendChild( button( row, 'chain-add', LABEL_ADD_FALLBACK, { id: prefix + '-add', disabled: chain.length >= data.maxChain || ! chain.length || '' === chain[ chain.length - 1 ], ariaLabel: sprintf( __( 'Add a fallback field (%s)', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
+			tools.appendChild( button( row, 'chain-add', LABEL_ADD_FALLBACK, { id: prefix + '-add', disabled: chain.length >= data.maxChain || ! chain.length || '' === chain[ chain.length - 1 ], ariaLabel: sprintf( __( 'Add fallback (%s)', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
 			if ( '*' !== scope ) {
 				/* translators: %s: post types the exception applies to, for example "For Posts". */
-				tools.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove the exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
+				tools.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
 			}
 			group.appendChild( tools );
 
@@ -1158,7 +1158,7 @@
 			group.appendChild( labelled( sprintf( __( 'Value (%s)', 'kk-content-exporter' ), label ), input ) );
 			if ( '*' !== scope ) {
 				/* translators: %s: post types the exception applies to, for example "For Posts". */
-				group.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove the exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
+				group.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
 			}
 			return group;
 		}
@@ -1192,10 +1192,10 @@
 			// No data-uid: choosing the field to insert changes nothing until the button is pressed.
 			insert.appendChild( labelled( __( 'Field to insert', 'kk-content-exporter' ), sourceSelect( '', { id: prefix + '-insert', className: 'kkce-mapping-insert-source' } ) ) );
 			/* translators: %s: name of the scope, for example "For all post types". */
-			insert.appendChild( button( row, 'insert', LABEL_INSERT_FIELD, { id: prefix + '-insert-button', ariaLabel: sprintf( __( 'Insert the field in the template (%s)', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
+			insert.appendChild( button( row, 'insert', LABEL_INSERT_FIELD, { id: prefix + '-insert-button', ariaLabel: sprintf( __( 'Insert field in the template (%s)', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
 			if ( '*' !== scope ) {
 				/* translators: %s: post types the exception applies to, for example "For Posts". */
-				insert.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove the exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
+				insert.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
 			}
 			group.appendChild( insert );
 			return group;
@@ -1231,7 +1231,7 @@
 			group.appendChild( labelled( sprintf( __( 'Field to read (%s)', 'kk-content-exporter' ), label ), control ) );
 			if ( '*' !== scope ) {
 				/* translators: %s: post types the exception applies to, for example "For Posts". */
-				group.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove the exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
+				group.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
 			}
 			return group;
 		}
@@ -1300,9 +1300,9 @@
 
 				const actions = el( 'span', { className: 'kkce-mapping-chain-actions' } );
 				/* translators: %d: position of a line in the table of a lookup rule. */
-				actions.appendChild( button( row, 'case-up', LABEL_UP, { id: id + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move line %d up', 'kk-content-exporter' ), index + 1 ), 'data-index': position } ) );
+				actions.appendChild( button( row, 'case-up', LABEL_UP, { id: id + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move up: line %d', 'kk-content-exporter' ), index + 1 ), 'data-index': position } ) );
 				/* translators: %d: position of a line in the table of a lookup rule. */
-				actions.appendChild( button( row, 'case-down', LABEL_DOWN, { id: id + '-down', disabled: index === cases.length - 1, ariaLabel: sprintf( __( 'Move line %d down', 'kk-content-exporter' ), index + 1 ), 'data-index': position } ) );
+				actions.appendChild( button( row, 'case-down', LABEL_DOWN, { id: id + '-down', disabled: index === cases.length - 1, ariaLabel: sprintf( __( 'Move down: line %d', 'kk-content-exporter' ), index + 1 ), 'data-index': position } ) );
 				/* translators: %d: position of a line in the table of a lookup rule. */
 				actions.appendChild( button( row, 'case-remove', LABEL_REMOVE, { id: id + '-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove line %d', 'kk-content-exporter' ), index + 1 ), 'data-index': position } ) );
 				line.appendChild( actions );
@@ -1466,10 +1466,11 @@
 					return;
 				}
 				const warningId = prefix + '-confirm-' + index + '-help';
-				const text = 'core.author.url' === source.id
-					? __( 'The author archive URL usually contains the login name of the author: it is exported only if you confirm it here.', 'kk-content-exporter' )
+				let text = __( 'The author archive URL usually contains the login name of the author: it is exported only if you confirm it here.', 'kk-content-exporter' );
+				if ( 'core.author.url' !== source.id ) {
 					/* translators: %s: label of a field whose name looks sensitive or personal. */
-					: sprintf( __( '%s looks like sensitive or personal data: in a public feed anyone can read it. It is exported only if you confirm it here.', 'kk-content-exporter' ), source.label );
+					text = sprintf( __( '%s looks like sensitive or personal data: in a public feed anyone can read it. It is exported only if you confirm it here.', 'kk-content-exporter' ), source.label );
+				}
 				wrapper.appendChild( el( 'p', { id: warningId, className: 'kkce-mapping-warning' }, text ) );
 				const box = el( 'input', { type: 'checkbox', id: prefix + '-confirm-' + index, checked: -1 !== confirmed.indexOf( id ), 'data-uid': String( row.uid ), 'data-confirm': id, ariaDescribedby: warningId } );
 				const label = el( 'label', { htmlFor: box.id } );
@@ -1621,9 +1622,9 @@
 
 			const actions = el( 'div', { className: 'kkce-mapping-actions' } );
 			/* translators: %d: position of the row. */
-			actions.appendChild( button( row, 'up', LABEL_UP, { id: prefix + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move row %d up', 'kk-content-exporter' ), index + 1 ) } ) );
+			actions.appendChild( button( row, 'up', LABEL_UP, { id: prefix + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move up: row %d', 'kk-content-exporter' ), index + 1 ) } ) );
 			/* translators: %d: position of the row. */
-			actions.appendChild( button( row, 'down', LABEL_DOWN, { id: prefix + '-down', disabled: index === rows.length - 1, ariaLabel: sprintf( __( 'Move row %d down', 'kk-content-exporter' ), index + 1 ) } ) );
+			actions.appendChild( button( row, 'down', LABEL_DOWN, { id: prefix + '-down', disabled: index === rows.length - 1, ariaLabel: sprintf( __( 'Move down: row %d', 'kk-content-exporter' ), index + 1 ) } ) );
 			/* translators: %d: position of the row. */
 			actions.appendChild( button( row, 'remove', LABEL_REMOVE, { id: prefix + '-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove row %d', 'kk-content-exporter' ), index + 1 ) } ) );
 			fieldset.appendChild( actions );

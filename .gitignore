@@ -21,8 +21,13 @@ tests/integration/.cache/
 # Generated release folder, ZIP, SVN working copy and reports
 /build/
 
-# Node (no JavaScript build yet)
+# Node test tools (wp-env, Playwright): dependencies, reports, local overrides
 node_modules/
+/playwright-report/
+/test-results/
+tests/e2e/.auth/
+.wp-env.override.json
+.wp-env.tests.override.json
 
 # Logs
 *.log
