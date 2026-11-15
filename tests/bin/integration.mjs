@@ -6,9 +6,9 @@
  * configuration of tests/integration/wp-tests-config.php. Extra arguments go to PHPUnit, for example
  * `npm run test:integration -- --filter Feed_Editor`.
  *
- * The connection values are the public defaults of wp-env (user `root`, password `password`, host
- * `mysql`): the environment holds no real data. The guard of tests/bootstrap-integration.php still refuses
- * any database other than `kkce_wordpress_test`.
+ * The connection values and the WordPress folder are the defaults of tests/integration/wp-tests-config.php
+ * (the public defaults of wp-env: the environment holds no real data). The guard of
+ * tests/bootstrap-integration.php refuses any database other than `kkce_wordpress_test`.
  *
  * Arguments are passed as arrays, never through a shell, so the script behaves the same on Windows.
  *
@@ -59,10 +59,7 @@ wpEnvRun(
 		'--env-cwd=' + pluginDir,
 		'--',
 		'env',
-		'KKCE_TEST_DB_HOST=mysql',
-		'KKCE_TEST_DB_USER=root',
-		'KKCE_TEST_DB_PASSWORD=password',
-		'KKCE_TEST_ABSPATH=/var/www/html/',
+		// wp-env defines its own test configuration: the one of the plugin is used instead.
 		'WP_TESTS_CONFIG_FILE_PATH=/var/www/html/' + pluginDir + '/tests/integration/wp-tests-config.php',
 		'vendor/bin/phpunit',
 		'-c',

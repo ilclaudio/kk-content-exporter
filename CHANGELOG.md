@@ -125,8 +125,9 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 - Development tooling: the secret scan of the pre-commit hook recognizes more credential formats and is
   covered by a test.
 - Development tooling: the GitHub Actions of the CI are pinned to commit SHAs.
-- Development tooling: the integration tests also run in Docker (`composer run test:integration:docker`,
-  wp-env with WordPress 7.1.4 and PHP 8.3), and end-to-end tests of the admin screens run with Playwright and
+- Development tooling: the integration tests run in Docker (`composer run test:integration`, wp-env with
+  WordPress 7.1.4 and PHP 8.3) instead of a local `wordpress-develop` checkout and the database of a local
+  site, and end-to-end tests of the admin screens run with Playwright and
   an axe-core accessibility check (`composer run e2e`); both start their Docker environment when needed, and
   Composer commands start, stop and delete the environments. None of these tools is shipped.
 

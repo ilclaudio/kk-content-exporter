@@ -2,10 +2,11 @@
 /**
  * Configuration of the WordPress test framework for the integration suite.
  *
- * Read by wordpress-develop/tests/phpunit/includes/bootstrap.php. Connection values come, in
- * order of precedence, from the environment (KKCE_TEST_DB_HOST, KKCE_TEST_DB_USER,
- * KKCE_TEST_DB_PASSWORD), from the git-ignored file wp-tests-config.local.php next to this one
- * (copy wp-tests-config.local-sample.php), or from the defaults below. No credential is versioned.
+ * Read by the bootstrap of the WordPress test framework (`$WP_TESTS_DIR/includes/bootstrap.php`), inside
+ * the CLI container of the wp-env test environment (`.wp-env.tests.json`, see tests/integration/README.md).
+ * Every value has the default of that environment and can be changed with an environment variable:
+ * KKCE_TEST_DB_HOST, KKCE_TEST_DB_USER, KKCE_TEST_DB_PASSWORD (connection; the defaults are the public ones
+ * of wp-env, the environment holds no real data) and KKCE_TEST_ABSPATH (WordPress folder).
  *
  * SAFETY: the framework drops every table of the database it is given, so the database name is
  * fixed to `kkce_wordpress_test` and the suite refuses any other name. Never point it to the
@@ -15,47 +16,25 @@
  */
 
 /**
- * A connection setting: environment variable, then local file, then default.
+ * A setting: the environment variable when it is set, otherwise the default.
  *
- * This file can be included from inside a function (PHPUnit loads the bootstrap that way), so it
- * keeps no global state: the local file is read here.
+ * This file can be included from inside a function (PHPUnit loads the bootstrap that way) and on its own
+ * by the installer subprocess of the framework: it keeps no global state and depends on nothing else.
  *
- * @param string $env_name  Environment variable.
- * @param string $local_key Key in wp-tests-config.local.php.
- * @param string $default   Default value.
+ * @param string $env_name Environment variable.
+ * @param string $default  Default value.
  * @return string
  */
-function kkce_test_setting( $env_name, $local_key, $default ) {
-	static $local = null;
-
+function kkce_test_setting( $env_name, $default ) {
 	$value = getenv( $env_name );
-	if ( false !== $value && '' !== $value ) {
-		return $value;
-	}
 
-	if ( null === $local ) {
-		$file  = __DIR__ . '/wp-tests-config.local.php';
-		$local = is_readable( $file ) ? require $file : array();
-		$local = is_array( $local ) ? $local : array();
-	}
-
-	return isset( $local[ $local_key ] ) ? (string) $local[ $local_key ] : $default;
+	return false !== $value && '' !== $value ? $value : $default;
 }
 
 define( 'KKCE_TEST_DB_NAME', 'kkce_wordpress_test' );
 
-// This file is also loaded on its own by the installer subprocess of the framework
-// (wordpress-develop/tests/phpunit/includes/install.php): it must not depend on the bootstrap.
-$kkce_wp_tests_dir = getenv( 'WP_TESTS_DIR' );
-if ( false === $kkce_wp_tests_dir || '' === $kkce_wp_tests_dir ) {
-	$kkce_wp_tests_dir = 'C:/WordpressDEV/wordpress-develop/tests/phpunit';
-}
-$kkce_wp_tests_dir = rtrim( str_replace( '\\', '/', $kkce_wp_tests_dir ), '/' );
-
-// WordPress sources: KKCE_TEST_ABSPATH when set (the wp-env test container, where the framework comes
-// without the WordPress sources), otherwise the `src` folder of the wordpress-develop checkout.
-$kkce_abspath = getenv( 'KKCE_TEST_ABSPATH' );
-define( 'ABSPATH', false !== $kkce_abspath && '' !== $kkce_abspath ? rtrim( str_replace( '\\', '/', $kkce_abspath ), '/' ) . '/' : dirname( $kkce_wp_tests_dir, 2 ) . '/src/' );
+// WordPress of the container; the test framework comes with wp-env (WP_TESTS_DIR).
+define( 'ABSPATH', rtrim( str_replace( '\\', '/', kkce_test_setting( 'KKCE_TEST_ABSPATH', '/var/www/html/' ) ), '/' ) . '/' );
 
 // The plugin is loaded from its own folder: its parent acts as the plugins directory, so that
 // plugin_basename() returns `kk-content-exporter/kk-content-exporter.php` as on a real site.
@@ -65,9 +44,9 @@ define( 'WP_DEFAULT_THEME', 'default' );
 define( 'WP_DEBUG', true );
 
 define( 'DB_NAME', KKCE_TEST_DB_NAME );
-define( 'DB_USER', kkce_test_setting( 'KKCE_TEST_DB_USER', 'user', 'root' ) );
-define( 'DB_PASSWORD', kkce_test_setting( 'KKCE_TEST_DB_PASSWORD', 'password', '' ) );
-define( 'DB_HOST', kkce_test_setting( 'KKCE_TEST_DB_HOST', 'host', 'localhost' ) );
+define( 'DB_USER', kkce_test_setting( 'KKCE_TEST_DB_USER', 'root' ) );
+define( 'DB_PASSWORD', kkce_test_setting( 'KKCE_TEST_DB_PASSWORD', 'password' ) );
+define( 'DB_HOST', kkce_test_setting( 'KKCE_TEST_DB_HOST', 'mysql' ) );
 define( 'DB_CHARSET', 'utf8mb4' );
 define( 'DB_COLLATE', '' );
 

@@ -26,7 +26,7 @@ For a full review, begin with inventory and baseline before any code batch. Enum
 read, inspected, excluded or pending, with the reason for exclusions. Derive counts from actual files.
 
 Baseline: run `composer run lint`, `composer run phpcs`, `composer run phpstan`,
-`composer run test:unit`, `composer run test:integration` (when its setup is available) and
+`composer run test:unit`, `composer run test:integration` (when Docker is available) and
 `composer audit`. Record command, time, exit status, tool versions when relevant, and totals. If a
 check cannot run, record the reason; never infer a successful baseline. Distinguish pre-existing debt
 from regressions against the recorded baseline. Consolidate repetitive lint findings by root cause.

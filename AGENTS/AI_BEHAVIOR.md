@@ -43,7 +43,7 @@ Automated tests are part of planning, changing and fixing code in this project.
 | Level | Command | Status |
 |---|---|---|
 | Unit (PHPUnit + Brain Monkey, no WordPress) | `composer run test:unit` | Available; also run by the `pre-commit` hook |
-| Integration (WordPress test suite, real database) | `composer run test:integration` | Available on the maintainer machine (needs `wordpress-develop` and the dedicated database `kkce_wordpress_test`, see `tests/integration/README.md`); also in Docker with `composer run test:integration:docker` (wp-env); not run by the `pre-commit` hook |
+| Integration (WordPress test suite, real database) | `composer run test:integration` | Runs in Docker (wp-env test environment, dedicated database `kkce_wordpress_test`); needs Docker Desktop, Node 24 and `npm ci`, see `tests/integration/README.md`; not run by the `pre-commit` hook |
 | End-to-end (Playwright, Chromium, wp-env) | `composer run e2e` | Needs Docker Desktop, Node 24, `npm ci` and Chromium; the command starts its wp-env environment (see `tests/e2e/README.md`); not run by the `pre-commit` hook |
 
 The project uses unit, integration and end-to-end test levels. End-to-end tests use Playwright on an

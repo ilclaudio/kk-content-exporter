@@ -8,7 +8,7 @@ own isolated WordPress environment.
 | Level | Folder | Command | Needs | Details |
 |---|---|---|---|---|
 | Unit | `tests/unit/` | `composer run test:unit` | `composer install` only | [unit/README.md](unit/README.md) |
-| Integration | `tests/integration/` | `composer run test:integration:docker` (Docker) or `composer run test:integration` (local) | Docker: Docker Desktop and `npm ci`; local: a `wordpress-develop` checkout and a dedicated database | [integration/README.md](integration/README.md) |
+| Integration | `tests/integration/` | `composer run test:integration` | Docker Desktop and `npm ci` | [integration/README.md](integration/README.md) |
 | End-to-end | `tests/e2e/` | `composer run e2e` | Docker Desktop, `npm ci`, Chromium | [e2e/README.md](e2e/README.md) |
 
 Which level to use for what, and the test-first rule for bug fixes, are in `AGENTS/AI_BEHAVIOR.md`
@@ -25,9 +25,8 @@ composer run phpcs             # WordPress Coding Standards (0 errors, 0 warning
 composer run phpstan           # PHPStan level 8, no baseline
 composer run test:unit         # unit suite
 composer run check             # lint + phpcs + phpstan + unit (the fast local gate)
-composer run test:integration:docker  # integration suite in the wp-env test environment (Docker)
-composer run test:integration  # integration suite on a local wordpress-develop checkout
-composer run test:all          # unit, then the local integration suite
+composer run test:integration  # integration suite in the wp-env test environment (Docker)
+composer run test:all          # unit, then integration
 composer run e2e               # end-to-end suite (e2e:headed, e2e:ui, e2e:report for debugging)
 ```
 
@@ -52,7 +51,7 @@ Arguments after `--` reach the test runner (PHPUnit or Playwright):
 
 ```sh
 composer run test:unit -- --filter KKCE_Autoloader_Unit_Test   # PHPUnit: one class or test
-composer run test:integration:docker -- --filter KKCE_Feed_Editor  # PHPUnit in Docker
+composer run test:integration -- --filter KKCE_Feed_Editor  # PHPUnit in Docker
 composer run e2e -- tests/e2e/specs/lookup.spec.js                  # Playwright: one file
 composer run e2e -- -g "previewed"                                  # Playwright: tests whose title matches
 ```

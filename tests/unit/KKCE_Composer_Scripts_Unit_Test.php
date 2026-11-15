@@ -48,7 +48,7 @@ class KKCE_Composer_Scripts_Unit_Test extends KKCE_Unit_Test_Case {
 		$composer = json_decode( $this->read_plugin_file( 'composer.json' ), true );
 		$npm      = json_decode( $this->read_plugin_file( 'package.json' ), true )['scripts'];
 		$expected = array(
-			'test:integration:docker' => 'test:integration',
+			'test:integration'        => 'test:integration',
 			'e2e'                     => 'e2e',
 			'env:start'               => 'env:start',
 			'env:stop'                => 'env:stop',
@@ -78,5 +78,16 @@ class KKCE_Composer_Scripts_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( array( '@env:destroy', '@env:tests:destroy' ), $composer['scripts']['env:destroy:all'] );
 		$this->assertArrayHasKey( 'env:stop:all', $composer['scripts-descriptions'] );
 		$this->assertArrayHasKey( 'env:destroy:all', $composer['scripts-descriptions'] );
+	}
+
+	/**
+	 * The integration suite runs only in Docker (decision of 2026-11-15): `test:all` is unit then integration,
+	 * and the provisional name of the Docker script is gone.
+	 */
+	public function test_the_integration_suite_runs_in_docker() {
+		$scripts = json_decode( $this->read_plugin_file( 'composer.json' ), true )['scripts'];
+
+		$this->assertSame( array( '@test:unit', '@test:integration' ), $scripts['test:all'] );
+		$this->assertArrayNotHasKey( 'test:integration:docker', $scripts );
 	}
 }

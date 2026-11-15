@@ -33,14 +33,13 @@
     ],
     "phpstan": "phpstan analyse --no-progress --memory-limit=1G",
     "test:unit": "phpunit --testsuite unit",
-    "test:integration": "phpunit -c phpunit-integration.xml",
+    "test:integration": [
+      "Composer\\Config::disableProcessTimeout",
+      "npm run test:integration --"
+    ],
     "test:all": [
       "@test:unit",
       "@test:integration"
-    ],
-    "test:integration:docker": [
-      "Composer\\Config::disableProcessTimeout",
-      "npm run test:integration --"
     ],
     "e2e": [
       "Composer\\Config::disableProcessTimeout",
@@ -116,9 +115,8 @@
     "phpcbf": "Automatic fixes for PHPCS findings",
     "phpstan": "Static analysis at the level set in phpstan.neon.dist",
     "test:unit": "Unit tests (PHPUnit + Brain Monkey, no WordPress)",
-    "test:integration": "Integration tests (WordPress test suite, dedicated database; see tests/integration/README.md)",
-    "test:all": "Unit and integration tests in order",
-    "test:integration:docker": "Integration tests in the wp-env test environment (Docker; npm run test:integration)",
+    "test:integration": "Integration tests in the wp-env test environment (Docker; starts it when needed)",
+    "test:all": "Unit tests, then integration tests in Docker",
     "e2e": "End-to-end tests with Playwright; starts the wp-env development environment when needed",
     "env:start": "Start the wp-env development environment of the end-to-end tests (http://localhost:8890); composer run e2e starts it by itself",
     "env:stop": "Stop the wp-env development environment (data kept)",

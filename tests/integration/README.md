@@ -4,84 +4,49 @@ Tests that need a real WordPress: hooks firing, post types and meta, capabilitie
 routes, translations. They run on the WordPress PHPUnit test framework and on a **dedicated, empty
 database `kkce_wordpress_test`**, which the framework empties at every run.
 
-They can run in two ways; both use the same configuration (`wp-tests-config.php`) and the same guard.
-
-| | In Docker (recommended) | Local |
-|---|---|---|
-| Command | `composer run test:integration:docker` | `composer run test:integration` |
-| WordPress | 7.1.4 with PHP 8.3, in the wp-env test environment | the `src/` of a `wordpress-develop` checkout, with the PHP of the machine |
-| Database | `kkce_wordpress_test` in the MySQL server of the environment, created on start | `kkce_wordpress_test` on a MariaDB/MySQL server you prepare |
-| Needs | Docker Desktop, Node 24, `npm ci`, `composer install` | PHP 8.3+ with `mysqli`, `composer install`, `wordpress-develop`, the database |
+They run only in Docker, in the wp-env test environment: WordPress 7.1.4 with PHP 8.3, its own MySQL
+server and database. The tools to install are in the root [`README.md`](../../README.md) (*Development
+setup*).
 
 **Safety:** `tests/bootstrap-integration.php` loads the configuration first and refuses to run when
 `DB_NAME` is not `kkce_wordpress_test`, because the framework drops every table of the database it is
 given. Never point it to the database of a site.
 
-## In Docker
+## Running
 
 ```sh
-composer run test:integration:docker                               # whole suite
-composer run test:integration:docker -- --filter KKCE_Feed_Editor  # arguments after -- reach PHPUnit
-composer run env:tests:stop                                        # stop the environment when done (env:stop:all stops both)
+composer run test:integration                               # whole suite
+composer run test:integration -- --filter KKCE_Feed_Editor  # arguments after -- reach PHPUnit
+composer run test:all                                       # unit suite, then this one
+composer run env:tests:stop                                 # stop the environment when done (env:stop:all stops both)
 ```
 
 `tests/bin/integration.mjs` starts the environment of `.wp-env.tests.json` (http://localhost:8891; the
-first start downloads WordPress and the Docker images, then it takes about a minute), creates the
-database if it is missing and runs `vendor/bin/phpunit -c phpunit-integration.xml` inside the `cli`
-container, in the folder of the plugin. It passes the connection through environment variables (host
-`mysql`, user `root`, password `password`: the public defaults of wp-env, no real data) and points
-`ABSPATH` to the WordPress of the container. The WordPress test framework comes with wp-env (`WP_TESTS_DIR`).
+first start downloads WordPress and the Docker images, then it takes about a minute; nothing happens when
+it is already running), creates the database if it is missing and runs
+`vendor/bin/phpunit -c phpunit-integration.xml` inside the `cli` container, in the folder of the plugin,
+with the configuration of this folder. The WordPress test framework comes with wp-env (`WP_TESTS_DIR`).
+Without Docker Desktop running, the command stops with a message that says so.
 
 The environment is independent from the one of the end-to-end tests (`.wp-env.json`, port 8890): own
 containers, own database. Local changes to it go in `.wp-env.tests.override.json` (ignored by Git).
 
-## Local
-
-### One-time setup on Local (Windows)
-
-1. Start the Local site `kkce` (its MariaDB server must be running). In Local, *Database* tab of the
-   site: note the port (for example `10064`), user and password (Local default: `root` / `root`).
-2. Create the database, from *Open Adminer* in Local or with the MySQL client of Local's site shell
-   (*Open site shell*):
-
-   ```sql
-   CREATE DATABASE IF NOT EXISTS kkce_wordpress_test
-     CHARACTER SET utf8mb4
-     COLLATE utf8mb4_unicode_ci;
-   ```
-
-   If the user is not `root`: `GRANT ALL PRIVILEGES ON kkce_wordpress_test.* TO 'user'@'localhost';`.
-3. Copy `tests/integration/wp-tests-config.local-sample.php` to
-   `tests/integration/wp-tests-config.local.php` (ignored by Git) and set `host` (`127.0.0.1:<port>`),
-   `user` and `password`.
-4. Get `wordpress-develop` if it is not on the machine:
-   `git clone --depth=1 https://github.com/WordPress/wordpress-develop.git C:/WordpressDEV/wordpress-develop`
-   (any other folder works with `WP_TESTS_DIR`). No build step is needed; it is never modified.
-
-### Running
-
-```sh
-composer run test:integration
-composer run test:integration -- --filter test_bundled_italian_translation_is_loaded
-```
-
 ## Configuration and environment variables
+
+`wp-tests-config.php` (versioned, no credentials) has the defaults of the wp-env test environment; each
+value can be changed with an environment variable, for example to run the suite in another container:
 
 | Variable | Meaning | Default |
 |---|---|---|
-| `WP_TESTS_DIR` | Folder of the WordPress test framework (`tests/phpunit` of `wordpress-develop`; set by wp-env in Docker) | `C:/WordpressDEV/wordpress-develop/tests/phpunit` |
-| `WP_TESTS_CONFIG_FILE_PATH` | Alternative test configuration (must still use `kkce_wordpress_test`) | `tests/integration/wp-tests-config.php` |
-| `KKCE_TEST_ABSPATH` | WordPress folder, when it is not the `src/` next to the framework (Docker: `/var/www/html/`) | `src/` of `wordpress-develop` |
-| `KKCE_TEST_DB_HOST` | Database host and port | value of `wp-tests-config.local.php`, else `localhost` |
-| `KKCE_TEST_DB_USER` | Database user | value of `wp-tests-config.local.php`, else `root` |
-| `KKCE_TEST_DB_PASSWORD` | Database password | value of `wp-tests-config.local.php`, else empty |
+| `KKCE_TEST_DB_HOST` | Database host and port | `mysql` |
+| `KKCE_TEST_DB_USER` | Database user | `root` |
+| `KKCE_TEST_DB_PASSWORD` | Database password | `password` (public default of wp-env, no real data) |
+| `KKCE_TEST_ABSPATH` | WordPress folder | `/var/www/html/` |
+| `WP_TESTS_DIR` | Folder of the WordPress test framework | set by wp-env |
+| `WP_TESTS_CONFIG_FILE_PATH` | Test configuration (must use `kkce_wordpress_test`) | this folder's `wp-tests-config.php`, passed by the script |
 
-Environment variables take precedence over the local file. Example of a local run with variables
-(PowerShell, current session only): `$env:KKCE_TEST_DB_HOST = '127.0.0.1:10064'`; Git Bash:
-`KKCE_TEST_DB_HOST=127.0.0.1:10064 composer run test:integration`.
-
-`wp-tests-config.php` (versioned, no credentials) points `WP_PLUGIN_DIR` to the parent folder of this
-plugin, so that `plugin_basename()` returns `kk-content-exporter/kk-content-exporter.php` as on a real site.
+The configuration also points `WP_PLUGIN_DIR` to the parent folder of this plugin, so that
+`plugin_basename()` returns `kk-content-exporter/kk-content-exporter.php` as on a real site.
 
 ## How a run behaves
 
@@ -90,8 +55,8 @@ with a message saying what is missing. Each test runs in a transaction that is r
 test does not depend on the others and leaves no data behind. Test uploads go to
 `.phpunit.cache/integration-uploads/` inside this repository.
 
-The number of assertions can differ by a few between the two ways: some tests make one assertion per
-item that WordPress provides (for example one per REST route), and the two WordPress versions differ.
+Some tests make one assertion per item that WordPress provides (for example one per REST route): the
+number of assertions changes with the version of WordPress.
 
 ## What it covers
 
@@ -119,4 +84,4 @@ item that WordPress provides (for example one per REST route), and the two WordP
    `WP_UnitTestCase`; use `self::factory()` to create posts, users and terms.
 2. Optional plugins (ACF, CMB2, Polylang) are not loaded yet: when the plan needs them, add them to the
    wp-env configuration and document it here.
-3. Update the table above, and run the suite in Docker before proposing the change.
+3. Update the table above, and run the suite before proposing the change.

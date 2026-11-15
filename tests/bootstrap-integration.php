@@ -2,30 +2,26 @@
 /**
  * Bootstrap of the integration test suite.
  *
- * Loads the WordPress test framework of a `wordpress-develop` checkout, with the configuration
- * in tests/integration/wp-tests-config.php (dedicated database `kkce_wordpress_test`), and loads
- * the plugin on `muplugins_loaded`, before WordPress finishes booting.
+ * Runs inside the CLI container of the wp-env test environment (`composer run test:integration`, see
+ * tests/integration/README.md). Loads the WordPress test framework that wp-env provides (`WP_TESTS_DIR`),
+ * with the configuration in tests/integration/wp-tests-config.php (dedicated database
+ * `kkce_wordpress_test`), and loads the plugin on `muplugins_loaded`, before WordPress finishes booting.
  *
- * Environment variables (all optional on the maintainer machine):
- * - WP_TESTS_DIR: `tests/phpunit` folder of wordpress-develop
- *   (default `C:/WordpressDEV/wordpress-develop/tests/phpunit`).
+ * Environment variables:
+ * - WP_TESTS_DIR: folder of the WordPress test framework (set by wp-env).
  * - WP_TESTS_CONFIG_FILE_PATH: alternative `wp-tests-config.php`.
- * - KKCE_TEST_DB_HOST, KKCE_TEST_DB_USER, KKCE_TEST_DB_PASSWORD: database connection
- *   (see tests/integration/README.md).
+ * - KKCE_TEST_DB_HOST, KKCE_TEST_DB_USER, KKCE_TEST_DB_PASSWORD, KKCE_TEST_ABSPATH: see
+ *   tests/integration/wp-tests-config.php.
  *
  * @package KKCE
  */
 
 define( 'KKCE_TEST_PLUGIN_DIR', str_replace( '\\', '/', dirname( __DIR__ ) ) );
 
-$kkce_tests_dir = getenv( 'WP_TESTS_DIR' );
-if ( false === $kkce_tests_dir || '' === $kkce_tests_dir ) {
-	$kkce_tests_dir = 'C:/WordpressDEV/wordpress-develop/tests/phpunit';
-}
-$kkce_tests_dir = rtrim( str_replace( '\\', '/', $kkce_tests_dir ), '/' );
+$kkce_tests_dir = rtrim( str_replace( '\\', '/', (string) getenv( 'WP_TESTS_DIR' ) ), '/' );
 
-if ( ! file_exists( $kkce_tests_dir . '/includes/functions.php' ) ) {
-	fwrite( STDERR, "WordPress test framework not found in $kkce_tests_dir (set WP_TESTS_DIR).\n" );
+if ( '' === $kkce_tests_dir || ! file_exists( $kkce_tests_dir . '/includes/functions.php' ) ) {
+	fwrite( STDERR, "WordPress test framework not found: run the suite with `composer run test:integration` (it runs in the wp-env test environment, see tests/integration/README.md).\n" );
 	exit( 1 );
 }
 
@@ -65,7 +61,7 @@ function kkce_tests_load_plugin() {
 tests_add_filter( 'muplugins_loaded', 'kkce_tests_load_plugin' );
 
 /**
- * Keeps all test uploads inside the repository, without writing to wordpress-develop.
+ * Keeps all test uploads inside the repository, without writing to the WordPress of the container.
  *
  * @param array<string, mixed> $uploads Upload directory configuration.
  * @return array<string, mixed>

@@ -108,8 +108,8 @@ When the specification and the code disagree, stop and ask the operator which on
 ## Development site
 
 The maintainer runs a Local (by Flywheel) site `kkce` at http://kkce.local with `WP_DEBUG` enabled;
-the plugin folder is its working copy. Integration tests never use the site database (see
-`tests/integration/README.md`).
+the plugin folder is its working copy, for manual checks. The automated tests never use the site: the
+integration and end-to-end suites run in their own Docker environments (wp-env; see `tests/README.md`).
 
 
 ## License
