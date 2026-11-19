@@ -6,7 +6,7 @@ Tags: export, json, rest-api, feed, content
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.3
-Stable tag: 0.0.3
+Stable tag: 0.0.4
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -57,6 +57,9 @@ By default nothing is deleted: the feeds and their settings stay in the database
 It protects your site: a feed cannot serve more items in a page than the maximum you set (100 by default). There is no upper limit for the maximum itself; very high values make each response heavy and are your responsibility.
 
 == Changelog ==
+
+= 0.0.4 =
+* In development.
 
 = 0.0.3 =
 * Post meta fields in the mapping: the keys in use, hidden keys listed apart, and any key typed by hand.

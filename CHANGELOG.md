@@ -9,6 +9,9 @@ follows [Semantic Versioning](https://semver.org/). The version of the first ent
 Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 
+## [0.0.4] - Unreleased
+No changes yet.
+
 ## [0.0.3] - 2026-11-19
 ### Added
 - Post meta fields in the mapping: the keys in use, hidden keys listed apart, and any key typed by hand.
