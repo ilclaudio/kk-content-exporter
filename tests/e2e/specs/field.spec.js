@@ -7,7 +7,7 @@
 
 const { test, expect } = require( '@playwright/test' );
 const { createFixtures, cleanupFixtures } = require( '../support/wp' );
-const { openFeed, addRow, preview, saveFeed } = require( '../support/editor' );
+const { openFeed, preview, saveFeed } = require( '../support/editor' );
 
 test.afterEach( () => {
 	cleanupFixtures();
@@ -21,8 +21,12 @@ test( 'a chain falls back to the next field and a post type can read other field
 	} );
 	const box = await openFeed( page, data.feed );
 
-	const row = await addRow( box, 'Field', 'summary' );
+	await box.getByRole( 'button', { name: 'Add row' } ).click();
+	const row = box.getByRole( 'group', { name: /^Row \d+/ } ).last();
 	const general = row.getByRole( 'group', { name: 'For all post types' } );
+	await general.getByLabel( 'Field', { exact: true } ).selectOption( 'core.title' );
+	await expect( row.getByLabel( 'JSON key' ) ).toHaveValue( 'title' );
+	await row.getByLabel( 'JSON key' ).fill( 'summary' );
 	await general.getByLabel( 'Field', { exact: true } ).selectOption( 'core.excerpt' );
 	await general.getByRole( 'button', { name: /^Add fallback/ } ).click();
 	await general.getByLabel( 'Otherwise, field 2' ).selectOption( 'core.title' );

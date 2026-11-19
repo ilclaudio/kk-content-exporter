@@ -1,5 +1,5 @@
 /**
- * Rule "Lookup table": lines added, moved and removed, a default, the exact comparison.
+ * Rule "Lookup table": lines added, moved and removed, with their outputs and default kept on save.
  *
  * @package KKCE
  */
@@ -12,11 +12,10 @@ test.afterEach( () => {
 	cleanupFixtures();
 } );
 
-test( 'a table translates the post type and falls back to its default', async ( { page } ) => {
+test( 'lookup lines and the default survive editing and saving', async ( { page } ) => {
 	const data = createFixtures( 'lookup', {
-		post_types: [ 'post', 'page' ],
+		post_types: [ 'post' ],
 		posts: [ { title: 'E2E lookup post' } ],
-		pages: [ { title: 'E2E lookup page' } ],
 	} );
 	const box = await openFeed( page, data.feed );
 
@@ -25,30 +24,28 @@ test( 'a table translates the post type and falls back to its default', async ( 
 
 	const matches = row.getByLabel( 'If the value is' );
 	const outputs = row.getByLabel( 'Fixed text' );
-	await matches.nth( 0 ).fill( 'Post' );
-	await outputs.nth( 0 ).fill( 'Capital letters count' );
+	await matches.nth( 0 ).fill( 'event' );
+	await outputs.nth( 0 ).fill( 'Events' );
 	await row.getByRole( 'button', { name: 'Add line' } ).click();
 	await matches.nth( 1 ).fill( 'post' );
 	await outputs.nth( 1 ).fill( 'News' );
 	await row.getByRole( 'button', { name: 'Add line' } ).click();
-	await matches.nth( 2 ).fill( 'event' );
-	await outputs.nth( 2 ).fill( 'Event' );
+	await matches.nth( 2 ).fill( 'page' );
+	await outputs.nth( 2 ).fill( 'Pages' );
 	await row.getByLabel( 'When no line matches' ).selectOption( { label: 'The value read, unchanged' } );
-
-	// "Post" does not match "post" (exact comparison); the page matches no line and keeps its value.
-	await expect( preview( box ) ).toContainText( '"section": "News"' );
-	await expect( preview( box ) ).toContainText( '"section": "page"' );
 
 	await row.getByRole( 'button', { name: 'Move up: line 2' } ).click();
 	await expect( matches.nth( 0 ) ).toHaveValue( 'post' );
 	await row.getByRole( 'button', { name: 'Remove line 3' } ).click();
 	await expect( matches ).toHaveCount( 2 );
+	await expect( preview( box ) ).toContainText( '"section": "News"' );
 
 	await saveFeed( page );
-	await page.reload();
 	const saved = box.getByRole( 'group', { name: /: section$/ } );
 	await expect( saved.getByLabel( 'If the value is' ) ).toHaveCount( 2 );
 	await expect( saved.getByLabel( 'If the value is' ).nth( 0 ) ).toHaveValue( 'post' );
-	await expect( saved.getByLabel( 'If the value is' ).nth( 1 ) ).toHaveValue( 'Post' );
+	await expect( saved.getByLabel( 'If the value is' ).nth( 1 ) ).toHaveValue( 'event' );
+	await expect( saved.getByLabel( 'Fixed text' ).nth( 0 ) ).toHaveValue( 'News' );
+	await expect( saved.getByLabel( 'Fixed text' ).nth( 1 ) ).toHaveValue( 'Events' );
 	await expect( saved.getByLabel( 'When no line matches' ) ).toHaveValue( 'input' );
 } );

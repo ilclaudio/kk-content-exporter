@@ -6,19 +6,18 @@
  */
 
 const { test, expect } = require( '@playwright/test' );
-const { wp, createFixtures, cleanupFixtures } = require( '../support/wp' );
+const { createFixtures, cleanupFixtures } = require( '../support/wp' );
 
-test.beforeEach( () => {
-	wp( [ 'user', 'meta', 'update', 'admin', 'locale', 'it_IT' ] );
-} );
+let previousLocale = null;
 
 test.afterEach( () => {
-	wp( [ 'user', 'meta', 'delete', 'admin', 'locale' ] );
-	cleanupFixtures();
+	cleanupFixtures( { locale: previousLocale } );
+	previousLocale = null;
 } );
 
 test( 'the Mapping box speaks Italian when the administrator does', async ( { page } ) => {
-	const data = createFixtures( 'italian', { post_types: [ 'post' ], posts: [ { title: 'E2E italiano' } ] } );
+	const data = createFixtures( 'italian', { post_types: [ 'post' ], posts: [ { title: 'E2E italiano' } ], locale: 'it_IT' } );
+	previousLocale = data.previous_locale;
 
 	await page.goto( '/wp-admin/post.php?post=' + data.feed + '&action=edit' );
 	const box = page.locator( '#kkce_feed_mapping' );

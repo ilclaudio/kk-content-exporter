@@ -44,32 +44,29 @@ function lastJson( output ) {
  * Creates the data of a test: a feed and published items, all with the `kkce-e2e-` prefix.
  *
  * @param {string} name    Short name of the test (letters, digits, dashes).
- * @param {Object} options `post_types` of the feed, `posts` and `pages` (title, excerpt, content).
- * @return {{feed: number, slug: string, posts: number[], pages: number[]}} IDs.
+ * @param {Object} options Feed and items, optional `draft` (mapping text and errors) and administrator `locale`.
+ * @return {{feed: number, slug: string, posts: number[], pages: number[], previous_locale?: string|null}} IDs and, when changed, the previous locale.
  */
 function createFixtures( name, options = {} ) {
-	return lastJson( wp( [ 'eval-file', FIXTURES, 'create', name, JSON.stringify( options ) ] ) );
+	const args = [ 'eval-file', FIXTURES, 'create', name, JSON.stringify( options ) ];
+	if ( options.draft || Object.prototype.hasOwnProperty.call( options, 'locale' ) ) {
+		args.unshift( '--user=admin' );
+	}
+	return lastJson( wp( args ) );
 }
 
 /**
  * Deletes every object of the suite (slugs that start with `kkce-e2e-`).
  *
+ * @param {Object} options Optional administrator `locale` to restore; null removes the user override.
  * @return {number} Objects deleted.
  */
-function cleanupFixtures() {
-	return lastJson( wp( [ 'eval-file', FIXTURES, 'cleanup' ] ) ).deleted;
+function cleanupFixtures( options = {} ) {
+	const args = [ 'eval-file', FIXTURES, 'cleanup', JSON.stringify( options ) ];
+	if ( Object.prototype.hasOwnProperty.call( options, 'locale' ) ) {
+		args.unshift( '--user=admin' );
+	}
+	return lastJson( wp( args ) ).deleted;
 }
 
-/**
- * Keeps a refused mapping for the administrator, as a refused save of the feed editor does: the next
- * opening of the editor shows it with its errors.
- *
- * @param {number}   feed    ID of the feed.
- * @param {string}   mapping JSON text of the refused mapping, as it was sent.
- * @param {Object[]} errors  Errors (`row`, `field`, `code`).
- */
-function setRefusedDraft( feed, mapping, errors ) {
-	wp( [ '--user=admin', 'eval-file', FIXTURES, 'draft', String( feed ), mapping, JSON.stringify( errors ) ] );
-}
-
-module.exports = { wp, createFixtures, cleanupFixtures, setRefusedDraft };
+module.exports = { wp, createFixtures, cleanupFixtures };

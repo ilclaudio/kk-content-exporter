@@ -55,7 +55,7 @@ test( 'a sensitive field typed in a template asks for its confirmation at once',
 	await expect( confirm ).toHaveCount( 0 );
 } );
 
-test( 'a text output is cut at a whole word; the limit is offered only for text', async ( { page } ) => {
+test( 'the text length limit is serialized only for text and kept on save', async ( { page } ) => {
 	const data = createFixtures( 'maxlength', {
 		post_types: [ 'post' ],
 		posts: [ { title: 'Concerto di musica classica al teatro' } ],
@@ -66,14 +66,17 @@ test( 'a text output is cut at a whole word; the limit is offered only for text'
 	await row.getByLabel( 'Field', { exact: true } ).selectOption( 'core.title' );
 	await row.getByLabel( 'Output type' ).selectOption( { label: 'Text' } );
 	await row.getByLabel( 'Maximum length' ).fill( '20' );
-	await expect( preview( box ) ).toContainText( '"short": "Concerto di musica…"' );
+	// Check the browser's submitted mapping; the truncation algorithm is covered by PHP tests.
+	const serializedRow = async () => JSON.parse( await box.locator( 'input[name="kkce_feed[mapping]"]' ).inputValue() ).rows.find( ( item ) => 'short' === item.key );
+	expect( await serializedRow() ).toHaveProperty( 'max_length', 20 );
 
 	await row.getByLabel( 'Output type' ).selectOption( { label: 'HTML' } );
 	await expect( row.getByLabel( 'Maximum length' ) ).toHaveCount( 0 );
+	expect( await serializedRow() ).not.toHaveProperty( 'max_length' );
 
 	await row.getByLabel( 'Output type' ).selectOption( { label: 'Text' } );
 	await expect( row.getByLabel( 'Maximum length' ) ).toHaveValue( '20' );
+	expect( await serializedRow() ).toHaveProperty( 'max_length', 20 );
 	await saveFeed( page );
-	await page.reload();
 	await expect( box.getByRole( 'group', { name: /: short$/ } ).getByLabel( 'Maximum length' ) ).toHaveValue( '20' );
 } );

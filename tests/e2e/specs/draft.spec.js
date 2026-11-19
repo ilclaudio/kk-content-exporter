@@ -6,18 +6,13 @@
  */
 
 const { test, expect } = require( '@playwright/test' );
-const { createFixtures, cleanupFixtures, setRefusedDraft } = require( '../support/wp' );
+const { createFixtures, cleanupFixtures } = require( '../support/wp' );
 
 test.afterEach( () => {
 	cleanupFixtures();
 } );
 
 test( 'a refused draft keeps incomplete rows editable and survives rows of an unexpected shape', async ( { page } ) => {
-	const data = createFixtures( 'draft', {
-		post_types: [ 'post' ],
-		posts: [ { title: 'E2E draft' } ],
-		rows: [ { key: 'saved', kind: 'fixed', type: 'string', values: { '*': 'x' } } ],
-	} );
 	// As the editor sends them: an empty map for an unfinished Fixed value and Template.
 	const refused = {
 		version: 1,
@@ -27,7 +22,12 @@ test( 'a refused draft keeps incomplete rows editable and survives rows of an un
 			{ key: 'odd', kind: 'lookup', type: 'string', inputs: null, cases: 'x' },
 		],
 	};
-	setRefusedDraft( data.feed, JSON.stringify( refused ), [ { row: 0, field: 'values', code: 'empty' } ] );
+	const data = createFixtures( 'draft', {
+		post_types: [ 'post' ],
+		posts: [ { title: 'E2E draft' } ],
+		rows: [ { key: 'saved', kind: 'fixed', type: 'string', values: { '*': 'x' } } ],
+		draft: { mapping: JSON.stringify( refused ), errors: [ { row: 0, field: 'values', code: 'empty' } ] },
+	} );
 
 	await page.goto( '/wp-admin/post.php?post=' + data.feed + '&action=edit' );
 	const box = page.locator( '#kkce_feed_mapping' );

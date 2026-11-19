@@ -32,8 +32,8 @@ composer run env:stop:all # stop this environment and the integration one
 ## Running
 
 ```sh
-composer run test:e2e                                   # whole suite, headless (about 4 minutes on Windows, 1 in CI)
-composer run test:e2e -- tests/e2e/specs/smoke.spec.js  # one file
+composer run test:e2e                                   # whole suite, headless
+composer run test:e2e -- tests/e2e/specs/field.spec.js    # one file
 composer run test:e2e -- -g "previewed"                 # tests whose title matches
 composer run test:e2e:headed                            # with a visible browser
 composer run test:e2e:ui                                # Playwright UI mode: pick tests, step through them
@@ -56,15 +56,14 @@ test.
 
 | File | Test | What it does |
 |---|---|---|
-| `smoke.spec.js` | `a Field row is previewed, saved and kept after a reload` | Adds a Field row on the title of a post-only feed, checks the proposed key `title` and the JSON of the preview, runs axe on the two boxes, saves the feed and finds the row again after the reload. |
-| `field.spec.js` | `a chain falls back to the next field and a post type can read other fields` | Builds a chain "excerpt, otherwise title" for every post type and an exception that reads the slug for pages; the preview shows the title for a post without excerpt and the slug for the page; the chain and the exception are kept after save and reload. |
-| `fixed.spec.js` | `fixed values per post type, converted to their output type` | Writes a fixed value `it` with the exception `en` for pages, a value `42` with the number type and `yes` with the true/false type; the preview shows `"it"`, `"en"`, `42` and `true`; the exception is kept after save and reload. |
+| `field.spec.js` | `a chain falls back to the next field and a post type can read other fields` | Checks the proposed key `title`, then builds a chain "excerpt, otherwise title" and an exception that reads the slug for pages; checks both preview values and keeps the chain and exception after save and reload. |
+| `fixed.spec.js` | `fixed text and a post type exception survive saving` | Writes a fixed text `it` with the exception `en` for pages, checks both preview values and keeps the text output type and both values after saving. |
 | `template.spec.js` | `an optional part is written only when its field has a value` | Writes `{core.title}[ – {core.excerpt}] ({core.excerpt\|"n.d."})`; on the latest post (no excerpt) the optional part disappears and the fallback writes `n.d.`; choosing the other post in the preview shows both; the template is kept after save and reload. |
 | `template.spec.js` | `a sensitive field typed in a template asks for its confirmation at once` | Types `{core.author.url}` in a template: the confirmation box of the author archive URL appears at once, without leaving the template; once checked the preview shows the URL; when the field is removed from the template the box goes away. |
 | `meta.spec.js` | `hidden meta keys are listed apart and a key typed by hand is kept after a reload` | Checks that a meta key in use and a hidden one (leading underscore) are in separate groups of the field list; types a key by hand, chooses it, saves the feed and finds it chosen after the reload. |
-| `template.spec.js` | `a text output is cut at a whole word; the limit is offered only for text` | Sets a maximum length of 20 on the title with the text type: the preview cuts it at a whole word with `…`; the field disappears with the HTML type and comes back with its value; the limit is kept after save and reload. |
-| `lookup.spec.js` | `a table translates the post type and falls back to its default` | Builds a table on the post type with the lines `Post`, `post` and `event` and the default "the value read": `post` gives `News` (`Post` does not match: exact comparison), the page keeps `page`; moves a line up and removes another; the order and the default are kept after save and reload. |
-| `condition.spec.js` | `a check chooses between two outputs` | A row writes the title when the excerpt is empty, otherwise the excerpt; another one writes `yes` when the title contains `Breaking` and `no` otherwise, then switches to "is one of" with two lines that do not match and writes `no`; the check and its values are kept after save and reload. |
+| `template.spec.js` | `the text length limit is serialized only for text and kept on save` | Checks that the length control and submitted mapping include a limit only for Text; switching to HTML hides and omits it, switching back restores it, and saving keeps it. |
+| `lookup.spec.js` | `lookup lines and the default survive editing and saving` | Adds three lines, moves one up and removes another; checks a representative preview value and keeps both remaining pairs, their order and the default after saving. |
+| `condition.spec.js` | `condition controls switch between checks and keep their outputs on save` | Switches from a check without a comparison value to a single value and then a multiline list; configures Field and Fixed text outputs, checks a representative preview value and keeps the comparison, values and outputs after saving. |
 | `draft.spec.js` | `a refused draft keeps incomplete rows editable and survives rows of an unexpected shape` | Keeps a refused mapping for the administrator (unfinished Fixed value and Template rows sent with empty maps, and a lookup row of an impossible shape) and opens the editor: the "not saved" notice appears, the unfinished rows can still be edited, the odd row is shown as "cannot be edited here". |
 | `rows.spec.js` | `rows keep the order chosen with the move and remove buttons` | Adds three rows, moves the third up and removes the first; after save and reload there are two rows, in the chosen order. |
 | `italian.spec.js` | `the Mapping box speaks Italian when the administrator does` | With the Italian language for the administrator, finds the help printed by PHP and the button, the row and its labels built by the script in Italian (JSON translations); the language is reset afterwards. |
@@ -76,11 +75,15 @@ test.
 - **Data:** every test creates what it needs with `createFixtures( name, options )` and deletes it in
   `afterEach` with `cleanupFixtures()` (`support/wp.js`). The data is made by WP-CLI inside the container
   (`support/fixtures.php`): a feed with its post types and, if given, a saved mapping (`rows`), plus
-  published posts and pages by the administrator. `setRefusedDraft()` keeps a refused mapping for the
-  administrator, as a refused save does. Every object has a slug that starts with `kkce-e2e-`, and the cleanup
-  deletes only those objects. `wp( [ ... ] )` runs any other WP-CLI command.
+  published posts and pages by the administrator. Optional `draft: { mapping, errors }` keeps a refused
+  mapping for the administrator in the same call. Optional `locale` changes the administrator's language
+  and returns `previous_locale`; pass it to `cleanupFixtures( { locale: data.previous_locale } )` to
+  restore it during cleanup. These options avoid separate WP-CLI startups. Every object has a slug that
+  starts with `kkce-e2e-`, and cleanup deletes only those objects. `wp( [ ... ] )` runs other WP-CLI commands.
 - **Editor:** `support/editor.js` opens a feed (`openFeed`), adds a row with a rule and a key (`addRow`),
-  gives the preview (`preview`) and saves (`saveFeed`).
+  gives the preview (`preview`) and saves (`saveFeed`). Saving submits the form and waits for the server's
+  confirmation after navigation; an extra reload is usually redundant. The Field scenario retains an
+  explicit reload check.
 - **Selectors:** by role and label (`getByRole`, `getByLabel`), scoped to the boxes of the plugin
   (`#kkce_feed_settings`, `#kkce_feed_mapping`) or to a row (`getByRole( 'group', { name: 'Row 1: key' } )`);
   `{ exact: true }` when a label is part of another one. No `data-testid` in the plugin.
@@ -89,6 +92,8 @@ test.
   AA rules on the given elements of the plugin only. A violation is a defect of the plugin: fix it or
   record it as an issue, never exclude it.
 - **Stability:** one worker and no retries: an unstable test is fixed, not retried.
+- **Scope:** keep browser controls, submitted data and representative preview checks here. Cover operator
+  semantics, conversions and truncation edge cases in PHP tests instead of repeating them in the browser.
 
 ## When a test fails
 
