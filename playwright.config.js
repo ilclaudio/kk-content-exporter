@@ -1,6 +1,6 @@
 /**
  * Playwright configuration of the E2E suite (tests/e2e). Runs against the wp-env development environment
- * (`.wp-env.json`, http://localhost:8890), started with `npm run env:start`.
+ * (`.wp-env.e2etest.json`, http://localhost:8890), started with `npm run env:start`.
  *
  * One worker and no retries: tests are independent but share one WordPress, and a failure must be seen,
  * not hidden by a retry. Traces and screenshots are kept for failed tests only.

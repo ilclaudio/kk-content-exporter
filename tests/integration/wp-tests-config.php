@@ -3,7 +3,7 @@
  * Configuration of the WordPress test framework for the integration suite.
  *
  * Read by the bootstrap of the WordPress test framework (`$WP_TESTS_DIR/includes/bootstrap.php`), inside
- * the CLI container of the wp-env test environment (`.wp-env.tests.json`, see tests/integration/README.md).
+ * the CLI container of the wp-env test environment (`.wp-env.inttest.json`, see tests/integration/README.md).
  * Every value has the default of that environment and can be changed with an environment variable:
  * KKCE_TEST_DB_HOST, KKCE_TEST_DB_USER, KKCE_TEST_DB_PASSWORD (connection; the defaults are the public ones
  * of wp-env, the environment holds no real data) and KKCE_TEST_ABSPATH (WordPress folder).

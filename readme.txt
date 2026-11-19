@@ -59,7 +59,7 @@ It protects your site: a feed cannot serve more items in a page than the maximum
 == Changelog ==
 
 = 0.0.3 =
-* In development.
+* Post meta fields in the mapping: the keys in use, hidden keys listed apart, and any key typed by hand.
 
 = 0.0.2 =
 * Fixes in the mapping editor: refused drafts stay editable, sensitive fields typed in a template ask for confirmation at once.
