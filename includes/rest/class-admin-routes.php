@@ -13,6 +13,7 @@ use KKCE\Output\Catalog_Validator;
 use KKCE\Output\Item_Exporter;
 use KKCE\Output\Mapping;
 use KKCE\Sources\Catalog_Factory;
+use KKCE\Sources\Meta_Keys;
 use KKCE\Sources\Source;
 use WP_Error;
 use WP_Post;
@@ -54,6 +55,11 @@ final class Admin_Routes {
 	private const MAX_POST_TYPES = 100;
 
 	/**
+	 * Most post meta keys accepted in one request of the catalog.
+	 */
+	private const MAX_META_KEYS = 100;
+
+	/**
 	 * Items listed by `GET /items` for a post type.
 	 */
 	public const RECENT_ITEMS = 20;
@@ -74,6 +80,15 @@ final class Admin_Routes {
 				'show_in_index'       => false,
 				'args'                => array(
 					'post_types' => self::post_types_arg(),
+					'meta_keys'  => array(
+						'description' => __( 'Post meta keys to list as well, for example keys that the administrator typed.', 'kk-content-exporter' ),
+						'type'        => 'array',
+						'maxItems'    => self::MAX_META_KEYS,
+						'items'       => array(
+							'type'      => 'string',
+							'maxLength' => Meta_Keys::MAX_LENGTH,
+						),
+					),
 				),
 			)
 		);
@@ -171,7 +186,7 @@ final class Admin_Routes {
 	 * @return WP_REST_Response
 	 */
 	public static function catalog( WP_REST_Request $request ): WP_REST_Response {
-		return new WP_REST_Response( self::describe_catalog( $request->get_param( 'post_types' ) ) );
+		return new WP_REST_Response( self::describe_catalog( $request->get_param( 'post_types' ), (array) $request->get_param( 'meta_keys' ) ) );
 	}
 
 	/**
@@ -179,12 +194,25 @@ final class Admin_Routes {
 	 * prints it as the initial data, so the editor reads one form only.
 	 *
 	 * @param mixed $requested Requested post types (a list of keys).
-	 * @return array{post_types: list<string>, unavailable: list<string>, labels: array<string, string>, sources: list<array<string, mixed>>, suggested_rows: list<array<string, mixed>>}
+	 * @param mixed $meta_keys Post meta keys to list as well (typed by the administrator); the ones that cannot be
+	 *                         a source (internal, malformed) are not listed and are given back in `refused_meta_keys`.
+	 * @return array{post_types: list<string>, unavailable: list<string>, labels: array<string, string>, sources: list<array<string, mixed>>, suggested_rows: list<array<string, mixed>>, refused_meta_keys: list<string>}
 	 */
-	public static function describe_catalog( $requested ): array {
+	public static function describe_catalog( $requested, $meta_keys = array() ): array {
 		list( $post_types, $unavailable ) = self::split_post_types( $requested );
-		$catalog                          = Catalog_Factory::for_post_types( $post_types );
-		$selectable                       = Feed_Editor::selectable_post_types();
+
+		$keys    = array();
+		$refused = array();
+		foreach ( array_unique( array_map( 'strval', (array) $meta_keys ) ) as $key ) {
+			if ( Meta_Keys::is_selectable( $key ) ) {
+				$keys[] = $key;
+			} else {
+				$refused[] = $key;
+			}
+		}
+
+		$catalog    = Catalog_Factory::for_post_types( $post_types, true, $keys );
+		$selectable = Feed_Editor::selectable_post_types();
 
 		$labels = array();
 		foreach ( $post_types as $post_type ) {
@@ -192,11 +220,12 @@ final class Admin_Routes {
 		}
 
 		return array(
-			'post_types'     => $post_types,
-			'unavailable'    => $unavailable,
-			'labels'         => $labels,
-			'sources'        => array_map( array( self::class, 'describe_source' ), $catalog->sources() ),
-			'suggested_rows' => $catalog->suggested_rows(),
+			'post_types'        => $post_types,
+			'unavailable'       => $unavailable,
+			'labels'            => $labels,
+			'sources'           => array_map( array( self::class, 'describe_source' ), $catalog->sources() ),
+			'suggested_rows'    => $catalog->suggested_rows(),
+			'refused_meta_keys' => $refused,
 		);
 	}
 
@@ -336,6 +365,7 @@ final class Admin_Routes {
 			'post_type'          => $source->post_type,
 			'type'               => $source->type,
 			'options'            => $source->options,
+			'hidden'             => $source->is_hidden(),
 			'needs_confirmation' => $source->needs_confirmation(),
 			'suggested_key'      => Mapping::suggest_key( $source->id ),
 		);

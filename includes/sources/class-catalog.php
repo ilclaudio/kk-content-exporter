@@ -103,6 +103,58 @@ final class Catalog {
 	}
 
 	/**
+	 * Declared types of a source for a scope: the one place that answers whether a mapping can use a source.
+	 *
+	 * A source of the catalog counts for the post types it belongs to (a common one for all). A post meta key
+	 * that is selectable (`Meta_Keys`) also counts for every post type of the feed that does not list it, as
+	 * text: the list of the catalog is only a sample of the keys in use, so a key typed by hand is valid.
+	 *
+	 * @param string $id    Source identifier.
+	 * @param string $scope A post type of the feed, or `*` for every post type of the feed.
+	 * @return list<string>|null The types, without repetitions (empty: the source does not exist for the
+	 *                           scope), or null when the post type is not read by the feed.
+	 */
+	public function types_for( string $id, string $scope ): ?array {
+		if ( '*' !== $scope && ! in_array( $scope, $this->post_types, true ) ) {
+			return null;
+		}
+
+		$types = array();
+		foreach ( $this->sources as $source ) {
+			if ( $source->id === $id && ( '*' === $scope || $source->is_common() || $source->post_type === $scope ) ) {
+				$types[] = $source->type;
+			}
+		}
+
+		if ( null !== Meta_Keys::key_from_source( $id ) ) {
+			foreach ( '*' === $scope ? $this->post_types : array( $scope ) as $post_type ) {
+				if ( null === $this->find( $id, $post_type ) ) {
+					$types[] = Meta_Keys::UNREGISTERED_TYPE;
+				}
+			}
+		}
+
+		return array_values( array_unique( $types ) );
+	}
+
+	/**
+	 * Options a source accepts, in any post type of the feed.
+	 *
+	 * @param string $id Source identifier.
+	 * @return list<string> Option names, without repetitions; empty when the source has none or does not exist.
+	 */
+	public function options_for( string $id ): array {
+		$options = array();
+		foreach ( $this->sources as $source ) {
+			if ( $source->id === $id ) {
+				$options = array_merge( $options, $source->options );
+			}
+		}
+
+		return array_values( array_unique( $options ) );
+	}
+
+	/**
 	 * Rows that the mapping editor proposes for a new mapping.
 	 *
 	 * In a feed with two or more post types, the row `type` (slug of the post type of every item) tells

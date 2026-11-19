@@ -135,6 +135,73 @@ class KKCE_Catalog_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
+	 * The declared types of a source for a scope: the sources of the catalog that match, none when the
+	 * source does not exist, and null when the post type is not read by the feed.
+	 */
+	public function test_types_for() {
+		$catalog = new Catalog(
+			array(
+				$this->common( 'core.title' ),
+				$this->common( 'core.id', 'number' ),
+				new Source( 'taxonomy.place', 'Place', 'event', 'list' ),
+				new Source( 'taxonomy.place', 'Place', 'post', 'string' ),
+			),
+			array( 'event', 'post' )
+		);
+
+		$this->assertSame( array( 'string' ), $catalog->types_for( 'core.title', '*' ) );
+		$this->assertSame( array( 'number' ), $catalog->types_for( 'core.id', 'event' ) );
+		$this->assertSame( array( 'list' ), $catalog->types_for( 'taxonomy.place', 'event' ) );
+		$this->assertSame( array( 'string' ), $catalog->types_for( 'taxonomy.place', 'post' ) );
+		$this->assertSame( array( 'list', 'string' ), $catalog->types_for( 'taxonomy.place', '*' ), 'The general scope reads every post type of the feed.' );
+		$this->assertSame( array(), $catalog->types_for( 'core.nothing', 'event' ) );
+		$this->assertNull( $catalog->types_for( 'core.title', 'page' ), 'A post type the feed does not read.' );
+		$this->assertNull( $catalog->types_for( 'core.nothing', 'page' ) );
+	}
+
+	/**
+	 * A post meta key that is well formed and not internal is a source of every post type of the feed, even
+	 * when it is not in the list the catalog shows (a key typed by hand): its type is text, unless the catalog
+	 * knows it.
+	 */
+	public function test_a_meta_key_not_listed_is_accepted() {
+		$catalog = new Catalog(
+			array(
+				new Source( 'meta.price', 'price', 'event', 'number' ),
+			),
+			array( 'event', 'post' )
+		);
+
+		$this->assertSame( array( 'number' ), $catalog->types_for( 'meta.price', 'event' ), 'Known: its own type.' );
+		$this->assertSame( array( 'string' ), $catalog->types_for( 'meta.price', 'post' ), 'Not listed for this post type: text.' );
+		$this->assertSame( array( 'number', 'string' ), $catalog->types_for( 'meta.price', '*' ) );
+		$this->assertSame( array( 'string' ), $catalog->types_for( 'meta._place', 'event' ), 'A hidden key is accepted too.' );
+		$this->assertSame( array( 'string' ), $catalog->types_for( 'meta.venue', '*' ) );
+		$this->assertSame( array(), $catalog->types_for( 'meta._edit_lock', 'event' ), 'An internal key is refused.' );
+		$this->assertSame( array(), $catalog->types_for( 'meta._kkce_mapping', '*' ) );
+		$this->assertSame( array(), $catalog->types_for( 'meta.', 'event' ) );
+		$this->assertNull( $catalog->types_for( 'meta.venue', 'page' ), 'A post type the feed does not read.' );
+	}
+
+	/**
+	 * The options a source accepts, in every post type of the feed.
+	 */
+	public function test_options_for() {
+		$catalog = new Catalog(
+			array(
+				new Source( 'core.content', 'Content', '', 'html', array( 'shortcodes', 'raw' ) ),
+				new Source( 'meta.day', 'day', 'event', 'datetime', array( 'date_format' ) ),
+				new Source( 'meta.day', 'day', 'post', 'datetime', array( 'timezone' ) ),
+			),
+			array( 'event', 'post' )
+		);
+
+		$this->assertSame( array( 'shortcodes', 'raw' ), $catalog->options_for( 'core.content' ) );
+		$this->assertSame( array( 'date_format', 'timezone' ), $catalog->options_for( 'meta.day' ) );
+		$this->assertSame( array(), $catalog->options_for( 'core.nothing' ) );
+	}
+
+	/**
 	 * With two or more post types the catalog proposes the `type` row (slug of the post type); with
 	 * one it proposes nothing, although the source exists.
 	 */

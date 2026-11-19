@@ -14,10 +14,10 @@
 		"env:tests:stop": "wp-env stop --config=.wp-env.tests.json",
 		"env:tests:destroy": "wp-env destroy --force --config=.wp-env.tests.json",
 		"test:integration": "node tests/bin/integration.mjs",
-		"e2e": "node tests/bin/e2e.mjs",
-		"e2e:headed": "node tests/bin/e2e.mjs --headed",
-		"e2e:ui": "node tests/bin/e2e.mjs --ui",
-		"e2e:report": "playwright show-report"
+		"test:e2e": "node tests/bin/e2e.mjs",
+		"test:e2e:headed": "node tests/bin/e2e.mjs --headed",
+		"test:e2e:ui": "node tests/bin/e2e.mjs --ui",
+		"test:e2e:report": "playwright show-report"
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "4.14.0",

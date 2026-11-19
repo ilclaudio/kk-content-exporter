@@ -1,7 +1,7 @@
 /**
  * Runs the end-to-end suite: starts the wp-env development environment (`.wp-env.json`, port 8890; nothing
  * happens when it is already running), then runs Playwright. Extra arguments go to Playwright, for example
- * `composer run e2e -- -g "previewed"`; `--headed` and `--ui` are passed by the `e2e:headed` and `e2e:ui`
+ * `composer run test:e2e -- -g "previewed"`; `--headed` and `--ui` are passed by the `test:e2e:headed` and `test:e2e:ui`
  * scripts.
  *
  * Arguments are passed as arrays, never through a shell, so the script behaves the same on Windows.

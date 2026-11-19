@@ -41,9 +41,9 @@
       "@test:unit",
       "@test:integration"
     ],
-    "e2e": [
+    "test:e2e": [
       "Composer\\Config::disableProcessTimeout",
-      "npm run e2e --"
+      "npm run test:e2e --"
     ],
     "env:start": [
       "Composer\\Config::disableProcessTimeout",
@@ -88,17 +88,17 @@
       "Composer\\Config::disableProcessTimeout",
       "npm run env:tests:destroy --"
     ],
-    "e2e:headed": [
+    "test:e2e:headed": [
       "Composer\\Config::disableProcessTimeout",
-      "npm run e2e:headed --"
+      "npm run test:e2e:headed --"
     ],
-    "e2e:ui": [
+    "test:e2e:ui": [
       "Composer\\Config::disableProcessTimeout",
-      "npm run e2e:ui --"
+      "npm run test:e2e:ui --"
     ],
-    "e2e:report": [
+    "test:e2e:report": [
       "Composer\\Config::disableProcessTimeout",
-      "npm run e2e:report --"
+      "npm run test:e2e:report --"
     ],
     "env:stop:all": [
       "@env:stop",
@@ -117,8 +117,8 @@
     "test:unit": "Unit tests (PHPUnit + Brain Monkey, no WordPress)",
     "test:integration": "Integration tests in the wp-env test environment (Docker; starts it when needed)",
     "test:all": "Unit tests, then integration tests in Docker",
-    "e2e": "End-to-end tests with Playwright; starts the wp-env development environment when needed",
-    "env:start": "Start the wp-env development environment of the end-to-end tests (http://localhost:8890); composer run e2e starts it by itself",
+    "test:e2e": "End-to-end tests with Playwright; starts the wp-env development environment when needed",
+    "env:start": "Start the wp-env development environment of the end-to-end tests (http://localhost:8890); composer run test:e2e starts it by itself",
     "env:stop": "Stop the wp-env development environment (data kept)",
     "make-pot": "Regenerate languages/kk-content-exporter.pot",
     "update-po": "Merge the .pot into every languages/*.po",
@@ -133,9 +133,9 @@
     "env:tests:start": "Start the wp-env test environment of the integration suite (http://localhost:8891)",
     "env:tests:stop": "Stop the wp-env test environment",
     "env:tests:destroy": "Delete the integration environment: containers, database and volumes (no confirmation)",
-    "e2e:headed": "End-to-end tests with a visible browser",
-    "e2e:ui": "End-to-end tests in the Playwright UI mode",
-    "e2e:report": "Open the HTML report of the last end-to-end run",
+    "test:e2e:headed": "End-to-end tests with a visible browser",
+    "test:e2e:ui": "End-to-end tests in the Playwright UI mode",
+    "test:e2e:report": "Open the HTML report of the last end-to-end run",
     "env:stop:all": "Stop both Docker environments (end-to-end and integration), data kept",
     "env:destroy:all": "Delete both Docker environments: containers, databases and volumes (no confirmation)"
   },

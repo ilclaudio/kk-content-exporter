@@ -8,6 +8,7 @@
 namespace KKCE\Output;
 
 use KKCE\Sources\Core_Provider;
+use KKCE\Sources\Meta_Provider;
 use WP_Post;
 
 defined( 'ABSPATH' ) || exit;
@@ -51,7 +52,7 @@ final class Item_Exporter {
 			$GLOBALS['post'] = $post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Block context and template tags require the target post; restored in finally.
 			setup_postdata( $post );
 
-			return Rule_Evaluator::evaluate_mapping( $mapping, $post->post_type, $read, self::declared_types(), self::origin() );
+			return Rule_Evaluator::evaluate_mapping( $mapping, $post->post_type, $read, self::declared_types( $post->post_type ), self::origin() );
 		} finally {
 			// Restore the exact previous loop state, including unset globals and explicit nulls.
 			foreach ( $context_names as $kkce_context_name ) {
@@ -67,17 +68,19 @@ final class Item_Exporter {
 	}
 
 	/**
-	 * Declared type of the known sources, for the rows with the type `auto`.
+	 * Declared type of the known sources of a post type, for the rows with the type `auto`: the core ones,
+	 * and the post meta (registered type, text for the others).
 	 *
+	 * @param string $post_type Post type of the item.
 	 * @return callable(string): ?string Gives null for a source of unknown type (it counts as text).
 	 */
-	private static function declared_types(): callable {
+	private static function declared_types( string $post_type ): callable {
 		$types = array();
 		foreach ( Core_Provider::sources() as $source ) {
 			$types[ $source->id ] = $source->type;
 		}
 
-		return static fn( string $source ): ?string => $types[ $source ] ?? null;
+		return static fn( string $source ): ?string => $types[ $source ] ?? Meta_Provider::declared_type( $post_type, $source );
 	}
 
 	/**
@@ -106,6 +109,7 @@ final class Item_Exporter {
 	private static function read( WP_Post $post, string $source, array $options ) {
 		return match ( explode( '.', $source, 2 )[0] ) {
 			'core'  => Core_Provider::value( $post, $source, $options ),
+			'meta'  => Meta_Provider::value( $post, $source ),
 			default => null,
 		};
 	}

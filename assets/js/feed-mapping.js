@@ -401,6 +401,9 @@
 		const keyPattern = new RegExp( data.keyPattern );
 		let nextId = 1;
 		let catalog = data.catalog;
+		// Post meta keys typed by the administrator or used by the saved mapping, listed with the others (the server judges them).
+		let metaKeys = [];
+		let pendingMetaKey = '';
 		let request = 0;
 		let timer = null;
 		// A saved mapping is never replaced by the proposed rows; an empty one is, until it is touched.
@@ -413,6 +416,10 @@
 		const empty = el( 'p', { className: 'kkce-mapping-empty' }, __( 'No rows yet. Add a row to choose what the feed exports.', 'kk-content-exporter' ) );
 		const addButton = el( 'button', { type: 'button', className: 'button' }, __( 'Add row', 'kk-content-exporter' ) );
 		const limit = el( 'p', { className: 'description', hidden: true } );
+		const metaInput = el( 'input', { type: 'text', id: 'kkce-meta-key', className: 'regular-text', autocomplete: 'off', spellcheck: false, maxLength: data.metaKeyMaxLength || 191 } );
+		const metaButton = el( 'button', { type: 'button', className: 'button' }, __( 'Add field', 'kk-content-exporter' ) );
+		const metaMessage = el( 'p', { className: 'description kkce-mapping-meta-message', id: 'kkce-meta-message', role: 'status' } );
+		const metaForm = el( 'div', { className: 'kkce-mapping-meta' } );
 		const status = el( 'p', { className: 'screen-reader-text', ariaLive: 'polite' } );
 		const field = el( 'input', { type: 'hidden', name: data.field } );
 
@@ -426,7 +433,12 @@
 		if ( refused ) {
 			editor.appendChild( refused );
 		}
-		[ empty, list, addButton, limit ].forEach( function ( node ) {
+		metaForm.appendChild( el( 'label', { htmlFor: 'kkce-meta-key' }, __( 'Use another post meta key', 'kk-content-exporter' ) ) );
+		metaForm.appendChild( metaInput );
+		metaForm.appendChild( metaButton );
+		metaForm.appendChild( el( 'p', { className: 'description', id: 'kkce-meta-key-help' }, __( 'For a custom field that is not in the lists. After adding it, choose it in the list of fields of a row. If the item has no such field, the value is null.', 'kk-content-exporter' ) ) );
+		metaInput.setAttribute( 'aria-describedby', 'kkce-meta-key-help kkce-meta-message' );
+		[ empty, list, addButton, limit, metaForm, metaMessage ].forEach( function ( node ) {
 			editor.appendChild( node );
 		} );
 		layout.appendChild( editor );
@@ -1036,15 +1048,18 @@
 				node.appendChild( el( 'option', { value: current, selected: true }, sprintf( __( '%s (cannot be used here)', 'kk-content-exporter' ), findSource( current ).label ) ) );
 			}
 
-			const groups = [ [ '', __( 'Common fields', 'kk-content-exporter' ) ] ];
+			const groups = [ [ '', __( 'Common fields', 'kk-content-exporter' ), false ] ];
 			catalog.post_types.forEach( function ( postType ) {
+				const label = ( catalog.labels || {} )[ postType ] || postType;
 				/* translators: %s: label of a post type. */
-				groups.push( [ postType, sprintf( __( 'Fields of %s', 'kk-content-exporter' ), ( catalog.labels || {} )[ postType ] || postType ) ] );
+				groups.push( [ postType, sprintf( __( 'Fields of %s', 'kk-content-exporter' ), label ), false ] );
+				/* translators: %s: label of a post type. */
+				groups.push( [ postType, sprintf( __( 'Hidden fields of %s (meant for the plugin or theme that stores them)', 'kk-content-exporter' ), label ), true ] );
 			} );
 
 			groups.forEach( function ( group ) {
 				const sources = catalog.sources.filter( function ( source ) {
-					return source.post_type === group[ 0 ] && ( ! accept || accept( source ) );
+					return source.post_type === group[ 0 ] && !! source.hidden === group[ 2 ] && ( ! accept || accept( source ) );
 				} );
 				if ( ! sources.length ) {
 					return;
@@ -2166,6 +2181,85 @@
 		} );
 
 		/**
+		 * Shows a message about the typed meta keys. The element has `role="status"`, so screen readers announce
+		 * it by themselves (a second announcement through `announce()` would be read twice).
+		 *
+		 * @param {string} message Message.
+		 */
+		function showMetaMessage( message ) {
+			metaMessage.textContent = message;
+		}
+
+		/**
+		 * Reports the result of a typed meta key once the catalog has answered: the server refuses the keys that
+		 * cannot be a source (internal keys, keys with spaces or other special characters).
+		 *
+		 * @param {string[]} refused Keys the server did not list.
+		 */
+		function reportMetaKeys( refused ) {
+			metaKeys = metaKeys.filter( function ( key ) {
+				return -1 === refused.indexOf( key );
+			} );
+			if ( refused.length ) {
+				/* translators: %s: meta keys that cannot be used, separated by commas. */
+				showMetaMessage( sprintf( __( 'This key cannot be used: %s. Keys of WordPress and of this plugin, and keys with spaces or special characters, are not allowed.', 'kk-content-exporter' ), refused.join( ', ' ) ) );
+				pendingMetaKey = '';
+			} else if ( '' !== pendingMetaKey ) {
+				/* translators: %s: meta key. */
+				showMetaMessage( sprintf( __( 'Field added: %s. Choose it in the list of fields of a row.', 'kk-content-exporter' ), pendingMetaKey ) );
+				metaInput.value = '';
+				pendingMetaKey = '';
+			}
+		}
+
+		/**
+		 * Adds the key typed by the administrator to the lists of fields.
+		 */
+		function addMetaKey() {
+			const key = metaInput.value.trim();
+			if ( '' === key ) {
+				showMetaMessage( __( 'Type the post meta key first.', 'kk-content-exporter' ) );
+				return;
+			}
+			if ( ! catalog.post_types.length ) {
+				showMetaMessage( __( 'Check at least one post type of the feed first.', 'kk-content-exporter' ) );
+				return;
+			}
+			if ( -1 === metaKeys.indexOf( key ) ) {
+				metaKeys.push( key );
+			}
+			pendingMetaKey = key;
+			loadCatalog( catalog.post_types );
+		}
+
+		/**
+		 * Meta keys that the mapping uses and the catalog does not list: the keys of a saved mapping that are not
+		 * among the keys in use, so the lists of fields still show them.
+		 *
+		 * @return {string[]} Keys.
+		 */
+		function unlistedMetaKeys() {
+			const found = [];
+			rows.forEach( function ( row ) {
+				rowSources( row.data ).forEach( function ( id ) {
+					if ( 0 === id.indexOf( 'meta.' ) && null === findSource( id ) && -1 === found.indexOf( id.slice( 5 ) ) ) {
+						found.push( id.slice( 5 ) );
+					}
+				} );
+			} );
+			return found;
+		}
+
+		metaButton.addEventListener( 'click', addMetaKey );
+		metaInput.addEventListener( 'keydown', function ( event ) {
+			if ( 'Enter' === event.key ) {
+				// Enter must not save the feed.
+				event.preventDefault();
+				addMetaKey();
+			}
+		} );
+
+		/**
 		 * Asks the catalog of the checked post types.
 		 *
 		 * @param {string[]} postTypes Checked post types.
@@ -2191,13 +2285,16 @@
 
 			const query = postTypes.map( function ( postType ) {
 				return 'post_types[]=' + encodeURIComponent( postType );
-			} ).join( '&' );
+			} ).concat( metaKeys.map( function ( key ) {
+				return 'meta_keys[]=' + encodeURIComponent( key );
+			} ) ).join( '&' );
 
 			wp.apiFetch( { path: data.catalogPath + '?' + query } ).then( function ( response ) {
 				if ( current !== request ) {
 					return;
 				}
 				catalog = response;
+				reportMetaKeys( response.refused_meta_keys || [] );
 				proposeRows();
 				commit( false );
 				render( document.activeElement && container.contains( document.activeElement ) ? document.activeElement.id : '' );
@@ -2230,6 +2327,11 @@
 		commit( false );
 		render( '' );
 		preview.typesChanged();
+		metaKeys = unlistedMetaKeys();
+		if ( metaKeys.length && catalog.post_types.length ) {
+			// Keys of the saved mapping that are not among the keys in use: ask for a catalog that lists them.
+			loadCatalog( catalog.post_types );
+		}
 		if ( data.draft && data.draft.readable ) {
 			// A refused mapping shown again is not saved: leaving the page asks for confirmation. Sent after the
 			// other scripts of the page have bound their listeners.

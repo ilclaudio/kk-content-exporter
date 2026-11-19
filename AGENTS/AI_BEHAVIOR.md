@@ -44,7 +44,7 @@ Automated tests are part of planning, changing and fixing code in this project.
 |---|---|---|
 | Unit (PHPUnit + Brain Monkey, no WordPress) | `composer run test:unit` | Available; also run by the `pre-commit` hook |
 | Integration (WordPress test suite, real database) | `composer run test:integration` | Runs in Docker (wp-env test environment, dedicated database `kkce_wordpress_test`); needs Docker Desktop, Node 24 and `npm ci`, see `tests/integration/README.md`; not run by the `pre-commit` hook |
-| End-to-end (Playwright, Chromium, wp-env) | `composer run e2e` | Needs Docker Desktop, Node 24, `npm ci` and Chromium; the command starts its wp-env environment (see `tests/e2e/README.md`); not run by the `pre-commit` hook |
+| End-to-end (Playwright, Chromium, wp-env) | `composer run test:e2e` | Needs Docker Desktop, Node 24, `npm ci` and Chromium; the command starts its wp-env environment (see `tests/e2e/README.md`); not run by the `pre-commit` hook |
 
 The project uses unit, integration and end-to-end test levels. End-to-end tests use Playwright on an
 isolated WordPress environment and cover browser behavior that cannot be adequately verified at a lower
@@ -56,6 +56,21 @@ integration tests for permissions, REST and export behavior.
 
 A level counts only when its suite can run in the current environment; when it cannot, say so: never
 write "verified" for a check that did not run.
+
+### Order of the test levels (operator decision, 2026-11-19)
+Whenever tests are created, in new features, changes to existing features and bug fixes alike, consider
+the levels **in this order**: 1. unit, 2. integration, 3. end-to-end (when available).
+
+- Start from unit. Move to the next level only for what the lighter one cannot check, and say in the plan
+  or in the work summary why it could not.
+- **End-to-end tests are the most expensive** (slow, need Docker and a browser, costly to keep up to date)
+  **and are written only when strictly necessary**: when the behavior exists only in the browser (the
+  JavaScript of the admin screens, what the user sees, keyboard use, the accessibility check). Never add
+  one to cover logic, permissions, REST or exported data, and never to repeat what a unit or an integration
+  test already proves. Prefer extending an existing end-to-end test over adding a new one.
+- Before writing an end-to-end test, state which lighter test was considered and why it is not enough.
+- When logic can move out of the browser or out of WordPress (a rule decided by the server, a pure
+  function), move it there and test it at the lighter level.
 
 ### When to use which level
 - **Unit, pure logic (no mocks)**: mapping rules, value normalization (types, dates, missing values,
@@ -72,9 +87,10 @@ write "verified" for a check that did not run.
   REST routes (status codes 200/400/401/403/404, schema, `permission_callback`), Application
   Password authentication, activation/uninstall, translations loading, optional integrations with the
   real ACF/CMB2/Polylang plugins.
-- **End-to-end**: what only a browser shows: the admin screens and their JavaScript (the mapping editor,
-  its preview, the save of a feed), the translations of the scripts, keyboard use and the accessibility
-  check of the elements of the plugin. Never the only test of permissions, REST or exported data.
+- **End-to-end** (last resort, see *Order of the test levels*): what only a browser shows: the admin
+  screens and their JavaScript (the mapping editor, its preview, the save of a feed), the translations of
+  the scripts, keyboard use and the accessibility check of the elements of the plugin. Never the only test
+  of permissions, REST or exported data.
 
 ### Test rules
 1. **Planning.** A plan for a feature, change or fix states which tests will be written or run and at
@@ -83,9 +99,11 @@ write "verified" for a check that did not run.
    and run them again afterwards.
 3. **Bug fixes** (issue categories `Bug` and `Security`). Before fixing, write (or point to) a test
    that reproduces the defect and **fails**; show the failure; fix the code; check that the test passes;
-   keep it as a regression test. Write it at the lightest level that reproduces the defect (rule 4).
-4. **New features and changes.** Prefer the lightest test that can check the behavior, in this order:
-   unit, then integration, then end-to-end. Use a heavier level only for what the lighter one cannot see
+   keep it as a regression test. Write it at the lightest level that reproduces the defect (rule 4 and
+   *Order of the test levels*: unit, then integration, then end-to-end only if strictly necessary).
+4. **New features and changes.** Follow *Order of the test levels*: prefer the lightest test that can check
+   the behavior, in this order: unit, then integration, then end-to-end (only if strictly necessary). Use a
+   heavier level only for what the lighter one cannot see
    (a real WordPress for integration; a browser, the JavaScript of the admin screens, for end-to-end), and
    when a change spans levels, test each part at its own level (for example the PHP side of a fix with an
    integration test, its JavaScript side with an end-to-end test). Changes to permissions, REST routes,

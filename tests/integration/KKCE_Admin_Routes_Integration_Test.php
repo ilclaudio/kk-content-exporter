@@ -204,6 +204,7 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 				'post_type'          => '',
 				'type'               => 'html',
 				'options'            => array( 'shortcodes', 'raw' ),
+				'hidden'             => false,
 				'needs_confirmation' => false,
 				'suggested_key'      => 'content',
 			),
@@ -530,8 +531,8 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 	public function test_preview_checks_the_catalog() {
 		wp_set_current_user( self::$admin );
 		$rows = array(
-			array( 'key' => 'a', 'kind' => 'field', 'sources' => array( '*' => array( 'meta.nothing' ) ) ),
-			array( 'key' => 'b', 'kind' => 'template', 'templates' => array( '*' => '{core.title} {meta.nothing}' ) ),
+			array( 'key' => 'a', 'kind' => 'field', 'sources' => array( '*' => array( 'core.nothing' ) ) ),
+			array( 'key' => 'b', 'kind' => 'template', 'templates' => array( '*' => '{core.title} {core.nothing}' ) ),
 		);
 
 		$response = $this->preview( array( 'mapping' => $this->mapping( $rows ), 'post_types' => array( 'post' ) ) );

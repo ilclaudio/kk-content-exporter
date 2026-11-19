@@ -26,8 +26,8 @@ class KKCE_Catalog_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 				new Source( 'core.title', 'Title', '', 'string' ),
 				new Source( 'core.id', 'ID', '', 'number' ),
 				new Source( 'core.content', 'Content', '', 'html', array( 'raw', 'shortcodes' ) ),
-				new Source( 'meta.tags', 'Tags', 'post', 'list' ),
-				new Source( 'meta.place', 'Place', 'event', 'string' ),
+				new Source( 'taxonomy.tags', 'Tags', 'post', 'list' ),
+				new Source( 'taxonomy.place', 'Place', 'event', 'string' ),
 			),
 			array( 'post', 'event' )
 		);
@@ -66,12 +66,12 @@ class KKCE_Catalog_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	 */
 	public function test_known_sources_are_accepted() {
 		$rows = array(
-			$this->row( 'field', array( 'sources' => array( '*' => array( 'meta.place', 'core.title' ), 'post' => array( 'meta.tags' ) ) ) ),
+			$this->row( 'field', array( 'sources' => array( '*' => array( 'taxonomy.place', 'core.title' ), 'post' => array( 'taxonomy.tags' ) ) ) ),
 			$this->row( 'field', array( 'sources' => array( '*' => array( 'core.content' ) ), 'options' => array( 'raw' => true ) ) ),
 			$this->row( 'fixed', array( 'values' => array( '*' => 'it' ) ) ),
-			$this->row( 'template', array( 'templates' => array( '*' => '{core.title}[ – {meta.place}] {meta.tags}' ) ) ),
-			$this->row( 'lookup', array( 'inputs' => array( '*' => 'core.title', 'event' => 'meta.place' ), 'cases' => array( array( 'match' => 'a', 'output' => array( 'source' => 'meta.tags' ) ) ), 'default' => array( 'source' => 'core.id' ) ) ),
-			$this->row( 'condition', array( 'inputs' => array( '*' => 'meta.tags' ), 'operator' => 'contains', 'matches' => array( 'x' ), 'then' => array( 'source' => 'meta.place' ), 'else' => array( 'input' => true ) ) ),
+			$this->row( 'template', array( 'templates' => array( '*' => '{core.title}[ – {taxonomy.place}] {taxonomy.tags}' ) ) ),
+			$this->row( 'lookup', array( 'inputs' => array( '*' => 'core.title', 'event' => 'taxonomy.place' ), 'cases' => array( array( 'match' => 'a', 'output' => array( 'source' => 'taxonomy.tags' ) ) ), 'default' => array( 'source' => 'core.id' ) ) ),
+			$this->row( 'condition', array( 'inputs' => array( '*' => 'taxonomy.tags' ), 'operator' => 'contains', 'matches' => array( 'x' ), 'then' => array( 'source' => 'taxonomy.place' ), 'else' => array( 'input' => true ) ) ),
 		);
 
 		$this->assertSame( array(), $this->errors( $rows ) );
@@ -82,10 +82,10 @@ class KKCE_Catalog_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	 */
 	public function test_unknown_sources_are_refused() {
 		$rows = array(
-			$this->row( 'field', array( 'sources' => array( '*' => array( 'core.title', 'meta.nothing', 'meta.other' ) ) ) ),
-			$this->row( 'template', array( 'templates' => array( '*' => '{core.title|meta.nothing}' ) ) ),
-			$this->row( 'lookup', array( 'inputs' => array( '*' => 'meta.nothing' ), 'cases' => array( array( 'match' => 'a', 'output' => array( 'source' => 'meta.nothing' ) ) ), 'default' => array( 'source' => 'meta.nothing' ) ) ),
-			$this->row( 'condition', array( 'inputs' => array( '*' => 'core.title' ), 'operator' => 'not_empty', 'then' => array( 'source' => 'meta.nothing' ), 'else' => array( 'source' => 'meta.nothing' ) ) ),
+			$this->row( 'field', array( 'sources' => array( '*' => array( 'core.title', 'core.nothing', 'core.other' ) ) ) ),
+			$this->row( 'template', array( 'templates' => array( '*' => '{core.title|core.nothing}' ) ) ),
+			$this->row( 'lookup', array( 'inputs' => array( '*' => 'core.nothing' ), 'cases' => array( array( 'match' => 'a', 'output' => array( 'source' => 'core.nothing' ) ) ), 'default' => array( 'source' => 'core.nothing' ) ) ),
+			$this->row( 'condition', array( 'inputs' => array( '*' => 'core.title' ), 'operator' => 'not_empty', 'then' => array( 'source' => 'core.nothing' ), 'else' => array( 'source' => 'core.nothing' ) ) ),
 		);
 
 		$this->assertSame(
@@ -99,23 +99,52 @@ class KKCE_Catalog_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	 * a post type that the feed no longer reads is kept and not checked.
 	 */
 	public function test_exceptions_use_the_sources_of_their_post_type() {
-		$this->assertSame( array( '0:sources:unknown' ), $this->errors( array( $this->row( 'field', array( 'sources' => array( '*' => array( 'core.title' ), 'post' => array( 'meta.place' ) ) ) ) ) ) );
-		$this->assertSame( array( '0:inputs:unknown' ), $this->errors( array( $this->row( 'lookup', array( 'inputs' => array( '*' => 'core.title', 'post' => 'meta.place' ), 'cases' => array( array( 'match' => 'a', 'output' => array( 'fixed' => 'b' ) ) ) ) ) ) ) );
-		$this->assertSame( array( '0:templates:unknown' ), $this->errors( array( $this->row( 'template', array( 'templates' => array( '*' => 'x', 'event' => '{meta.tags}' ) ) ) ) ) );
+		$this->assertSame( array( '0:sources:unknown' ), $this->errors( array( $this->row( 'field', array( 'sources' => array( '*' => array( 'core.title' ), 'post' => array( 'taxonomy.place' ) ) ) ) ) ) );
+		$this->assertSame( array( '0:inputs:unknown' ), $this->errors( array( $this->row( 'lookup', array( 'inputs' => array( '*' => 'core.title', 'post' => 'taxonomy.place' ), 'cases' => array( array( 'match' => 'a', 'output' => array( 'fixed' => 'b' ) ) ) ) ) ) ) );
+		$this->assertSame( array( '0:templates:unknown' ), $this->errors( array( $this->row( 'template', array( 'templates' => array( '*' => 'x', 'event' => '{taxonomy.tags}' ) ) ) ) ) );
 		$this->assertSame( array(), $this->errors( array( $this->row( 'field', array( 'sources' => array( '*' => array( 'core.title' ), 'page' => array( 'meta.gone' ) ) ) ) ) ), 'Post type not in the feed.' );
+	}
+
+	/**
+	 * A post meta key that is not in the catalog is valid when it is well formed and not internal: the list is
+	 * only a sample of the keys in use. It is text, so a lookup table or a comparison can read it.
+	 */
+	public function test_a_meta_key_typed_by_hand_is_valid() {
+		$this->assertSame( array(), $this->errors( array( $this->row( 'field', array( 'sources' => array( '*' => array( 'meta.venue', 'meta._hidden_note' ), 'event' => array( 'meta.stage' ) ) ) ) ) ) );
+		$this->assertSame( array(), $this->errors( array( $this->row( 'lookup', array( 'inputs' => array( '*' => 'meta.venue' ), 'cases' => array( array( 'match' => 'a', 'output' => array( 'source' => 'meta.stage' ) ) ) ) ) ) ) );
+		$this->assertSame( array(), $this->errors( array( $this->row( 'template', array( 'templates' => array( '*' => '{core.title} – {meta.venue}' ) ) ) ) ) );
+	}
+
+	/**
+	 * Internal keys of WordPress, of ACF and of this plugin are never valid, nor are keys with an invalid form.
+	 */
+	public function test_internal_meta_keys_are_unknown() {
+		foreach ( array( 'meta._edit_lock', 'meta._wp_page_template', 'meta._oembed_abc', 'meta._thumbnail_id', 'meta._kkce_mapping' ) as $source ) {
+			$this->assertSame( array( '0:sources:unknown' ), $this->errors( array( $this->row( 'field', array( 'sources' => array( '*' => array( $source ) ) ) ) ) ), $source );
+		}
+
+		$this->assertSame( array( '0:sources:format' ), $this->errors( array( $this->row( 'field', array( 'sources' => array( '*' => array( 'meta.two words' ) ) ) ) ) ) );
+	}
+
+	/**
+	 * A key typed by hand with a sensitive name needs the confirmation, like a listed one.
+	 */
+	public function test_a_sensitive_meta_key_typed_by_hand_needs_the_confirmation() {
+		$this->assertNotSame( array(), $this->errors( array( $this->row( 'field', array( 'sources' => array( '*' => array( 'meta.api_key' ) ) ) ) ) ) );
+		$this->assertSame( array(), $this->errors( array( $this->row( 'field', array( 'sources' => array( '*' => array( 'meta.api_key' ) ), 'confirmed' => array( 'meta.api_key' ) ) ) ) ) );
 	}
 
 	/**
 	 * A list cannot be the input of a lookup table, nor of a condition that compares texts.
 	 */
 	public function test_lists_where_a_text_is_compared_are_refused() {
-		$this->assertSame( array( '0:inputs:list' ), $this->errors( array( $this->row( 'lookup', array( 'inputs' => array( '*' => 'core.title', 'post' => 'meta.tags' ), 'cases' => array( array( 'match' => 'a', 'output' => array( 'fixed' => 'b' ) ) ) ) ) ) ) );
+		$this->assertSame( array( '0:inputs:list' ), $this->errors( array( $this->row( 'lookup', array( 'inputs' => array( '*' => 'core.title', 'post' => 'taxonomy.tags' ), 'cases' => array( array( 'match' => 'a', 'output' => array( 'fixed' => 'b' ) ) ) ) ) ) ) );
 
 		foreach ( array( 'equals', 'not_equals', 'one_of' ) as $operator ) {
-			$this->assertSame( array( '0:inputs:list' ), $this->errors( array( $this->row( 'condition', array( 'inputs' => array( '*' => 'meta.tags' ), 'operator' => $operator, 'matches' => array( 'x' ) ) ) ) ), $operator );
+			$this->assertSame( array( '0:inputs:list' ), $this->errors( array( $this->row( 'condition', array( 'inputs' => array( '*' => 'taxonomy.tags' ), 'operator' => $operator, 'matches' => array( 'x' ) ) ) ) ), $operator );
 		}
 		foreach ( array( 'empty', 'not_empty' ) as $operator ) {
-			$this->assertSame( array(), $this->errors( array( $this->row( 'condition', array( 'inputs' => array( '*' => 'meta.tags' ), 'operator' => $operator ) ) ) ), $operator );
+			$this->assertSame( array(), $this->errors( array( $this->row( 'condition', array( 'inputs' => array( '*' => 'taxonomy.tags' ), 'operator' => $operator ) ) ) ), $operator );
 		}
 	}
 
@@ -132,7 +161,7 @@ class KKCE_Catalog_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	 * The format is checked first: a mapping with format errors gets only those, the catalog is not used.
 	 */
 	public function test_format_errors_come_first() {
-		$this->assertSame( array( '0:kind:unknown' ), $this->errors( array( array( 'key' => 'a', 'kind' => 'other', 'sources' => array( '*' => array( 'meta.nothing' ) ) ) ) ) );
+		$this->assertSame( array( '0:kind:unknown' ), $this->errors( array( array( 'key' => 'a', 'kind' => 'other', 'sources' => array( '*' => array( 'core.nothing' ) ) ) ) ) );
 		$this->assertSame( array( '-1::not_object' ), array_map( static fn( array $error ): string => $error['row'] . ':' . $error['field'] . ':' . $error['code'], Catalog_Validator::validate( 'x', $this->catalog() ) ) );
 	}
 
@@ -149,7 +178,7 @@ class KKCE_Catalog_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( array(), $result['errors'] );
 		$this->assertSame( 'auto', $result['mapping']['rows'][0]['type'], 'Canonical form.' );
 
-		$this->assertSame( array( array( 'row' => 0, 'field' => 'sources', 'code' => 'unknown' ) ), Catalog_Validator::validate_text( '{"version":1,"rows":[{"key":"t","kind":"field","sources":{"*":["meta.nothing"]}}]}', $this->catalog(), 'json_encode' )['errors'] );
+		$this->assertSame( array( array( 'row' => 0, 'field' => 'sources', 'code' => 'unknown' ) ), Catalog_Validator::validate_text( '{"version":1,"rows":[{"key":"t","kind":"field","sources":{"*":["core.nothing"]}}]}', $this->catalog(), 'json_encode' )['errors'] );
 	}
 
 	/**

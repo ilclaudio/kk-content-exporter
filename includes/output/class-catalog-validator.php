@@ -145,7 +145,7 @@ final class Catalog_Validator {
 		$errors = array();
 
 		foreach ( self::scoped_sources( $row ) as list( $field, $scope, $source ) ) {
-			$types = self::declared_types( $source, $scope, $catalog );
+			$types = $catalog->types_for( $source, $scope );
 			if ( null === $types ) {
 				continue;
 			}
@@ -212,30 +212,6 @@ final class Catalog_Validator {
 	}
 
 	/**
-	 * Declared types of a source for a post type of the feed, or for any of them with `*`.
-	 *
-	 * @param string  $source  Source identifier.
-	 * @param string  $scope   Post type, or `*`.
-	 * @param Catalog $catalog Catalog of the feed.
-	 * @return list<string>|null The types (empty: the source does not exist), or null when the post type is
-	 *                           not read by the feed and the source is not checked.
-	 */
-	private static function declared_types( string $source, string $scope, Catalog $catalog ): ?array {
-		if ( '*' !== $scope && ! in_array( $scope, $catalog->post_types(), true ) ) {
-			return null;
-		}
-
-		$types = array();
-		foreach ( $catalog->sources() as $candidate ) {
-			if ( $candidate->id === $source && ( '*' === $scope || $candidate->is_common() || $candidate->post_type === $scope ) ) {
-				$types[] = $candidate->type;
-			}
-		}
-
-		return $types;
-	}
-
-	/**
 	 * Whether the inputs of a row are compared with texts: a lookup table, or a condition with a text check.
 	 *
 	 * @param array<string, mixed> $row Row in canonical form.
@@ -255,15 +231,11 @@ final class Catalog_Validator {
 	private static function options_accepted( array $row, Catalog $catalog ): bool {
 		$accepted = array();
 		foreach ( self::scoped_sources( $row ) as list( , $scope, $source ) ) {
-			if ( null === self::declared_types( $source, $scope, $catalog ) ) {
+			if ( null === $catalog->types_for( $source, $scope ) ) {
 				// An entry for a post type the feed no longer reads is not checked: its options are not either.
 				return true;
 			}
-			foreach ( $catalog->sources() as $candidate ) {
-				if ( $candidate->id === $source ) {
-					$accepted = array_merge( $accepted, $candidate->options );
-				}
-			}
+			$accepted = array_merge( $accepted, $catalog->options_for( $source ) );
 		}
 
 		foreach ( (array) ( $row['options'] ?? array() ) as $name => $value ) {

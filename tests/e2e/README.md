@@ -5,6 +5,9 @@ with [`@wordpress/env`](https://www.npmjs.com/package/@wordpress/env) (wp-env). 
 and integration suites cannot see: the mapping editor in the browser, its preview, the save of a feed,
 the translations of the script, the accessibility of the screens.
 
+End-to-end tests are the most expensive level of the project: write one only when strictly necessary, after
+considering a unit and an integration test (*Order of the test levels* in `AGENTS/AI_BEHAVIOR.md`).
+
 Before the first run: the tools of the root [`README.md`](../../README.md) (*Development setup*: `npm ci`
 and `npx playwright install chromium`) and Docker Desktop running.
 
@@ -16,7 +19,7 @@ container. It answers at **http://localhost:8890**, user `admin`, password `pass
 wp-env, no real data). Local changes go in `.wp-env.override.json` (ignored by Git). The integration
 suite uses a separate environment ([`../integration/README.md`](../integration/README.md)).
 
-`composer run e2e` starts it when it is off (the first start downloads WordPress and the Docker images)
+`composer run test:e2e` starts it when it is off (the first start downloads WordPress and the Docker images)
 and leaves it on afterwards. To manage it by hand:
 
 ```sh
@@ -29,12 +32,12 @@ composer run env:stop:all # stop this environment and the integration one
 ## Running
 
 ```sh
-composer run e2e                                   # whole suite, headless (about 4 minutes on Windows, 1 in CI)
-composer run e2e -- tests/e2e/specs/smoke.spec.js  # one file
-composer run e2e -- -g "previewed"                 # tests whose title matches
-composer run e2e:headed                            # with a visible browser
-composer run e2e:ui                                # Playwright UI mode: pick tests, step through them
-composer run e2e:report                            # open the HTML report of the last run
+composer run test:e2e                                   # whole suite, headless (about 4 minutes on Windows, 1 in CI)
+composer run test:e2e -- tests/e2e/specs/smoke.spec.js  # one file
+composer run test:e2e -- -g "previewed"                 # tests whose title matches
+composer run test:e2e:headed                            # with a visible browser
+composer run test:e2e:ui                                # Playwright UI mode: pick tests, step through them
+composer run test:e2e:report                            # open the HTML report of the last run
 ```
 
 Configuration: `playwright.config.js` (Chromium, one worker, no retries, 60 s per test). The commands go
@@ -58,6 +61,7 @@ test.
 | `fixed.spec.js` | `fixed values per post type, converted to their output type` | Writes a fixed value `it` with the exception `en` for pages, a value `42` with the number type and `yes` with the true/false type; the preview shows `"it"`, `"en"`, `42` and `true`; the exception is kept after save and reload. |
 | `template.spec.js` | `an optional part is written only when its field has a value` | Writes `{core.title}[ – {core.excerpt}] ({core.excerpt\|"n.d."})`; on the latest post (no excerpt) the optional part disappears and the fallback writes `n.d.`; choosing the other post in the preview shows both; the template is kept after save and reload. |
 | `template.spec.js` | `a sensitive field typed in a template asks for its confirmation at once` | Types `{core.author.url}` in a template: the confirmation box of the author archive URL appears at once, without leaving the template; once checked the preview shows the URL; when the field is removed from the template the box goes away. |
+| `meta.spec.js` | `hidden meta keys are listed apart and a key typed by hand is kept after a reload` | Checks that a meta key in use and a hidden one (leading underscore) are in separate groups of the field list; types a key by hand, chooses it, saves the feed and finds it chosen after the reload. |
 | `template.spec.js` | `a text output is cut at a whole word; the limit is offered only for text` | Sets a maximum length of 20 on the title with the text type: the preview cuts it at a whole word with `…`; the field disappears with the HTML type and comes back with its value; the limit is kept after save and reload. |
 | `lookup.spec.js` | `a table translates the post type and falls back to its default` | Builds a table on the post type with the lines `Post`, `post` and `event` and the default "the value read": `post` gives `News` (`Post` does not match: exact comparison), the page keeps `page`; moves a line up and removes another; the order and the default are kept after save and reload. |
 | `condition.spec.js` | `a check chooses between two outputs` | A row writes the title when the excerpt is empty, otherwise the excerpt; another one writes `yes` when the title contains `Breaking` and `no` otherwise, then switches to "is one of" with two lines that do not match and writes `no`; the check and its values are kept after save and reload. |
@@ -91,5 +95,5 @@ test.
 The HTML report (`playwright-report/`) and, for the failed tests only, a trace and a screenshot
 (`test-results/<test>/`) are kept; both folders are ignored by Git and left out of the ZIP. Open a trace
 with `npx playwright show-trace test-results/<test>/trace.zip`, or run the test again with
-`composer run e2e:headed` or `composer run e2e:ui`. The PHP log of WordPress is in the container:
+`composer run test:e2e:headed` or `composer run test:e2e:ui`. The PHP log of WordPress is in the container:
 `npx wp-env run cli -- tail wp-content/debug.log`.

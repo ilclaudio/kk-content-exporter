@@ -39,7 +39,7 @@ None of these tools is shipped: the plugin has no runtime dependencies.
 ```sh
 composer run check             # lint + PHPCS + PHPStan + unit tests: the fast gate before every commit
 composer run test:integration  # integration tests in Docker
-composer run e2e               # end-to-end tests in Chromium
+composer run test:e2e               # end-to-end tests in Chromium
 ```
 
 The three test levels, every command and when to run it: [`tests/README.md`](tests/README.md).

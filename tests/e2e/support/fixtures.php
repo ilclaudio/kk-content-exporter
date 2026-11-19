@@ -23,7 +23,7 @@ const KKCE_E2E_PREFIX = 'kkce-e2e-';
  *
  * @param string $post_type Post type.
  * @param string $slug      Slug, with the prefix.
- * @param array  $item      Title, excerpt and content.
+ * @param array  $item      Title, excerpt, content and `meta` (post meta, key to value).
  * @return int
  */
 function kkce_e2e_item( $post_type, $slug, array $item ) {
@@ -36,6 +36,7 @@ function kkce_e2e_item( $post_type, $slug, array $item ) {
 			'post_title'   => isset( $item['title'] ) ? $item['title'] : $slug,
 			'post_excerpt' => isset( $item['excerpt'] ) ? $item['excerpt'] : '',
 			'post_content' => isset( $item['content'] ) ? $item['content'] : '<p>Content of ' . $slug . '.</p>',
+			'meta_input'   => isset( $item['meta'] ) && is_array( $item['meta'] ) ? $item['meta'] : array(),
 		),
 		true
 	);
@@ -45,7 +46,7 @@ function kkce_e2e_item( $post_type, $slug, array $item ) {
  * Creates the data of a test.
  *
  * @param string $name    Short name of the test (letters, digits, dashes).
- * @param array  $options `post_types` of the feed, `posts` and `pages` (lists of title, excerpt, content),
+ * @param array  $options `post_types` of the feed, `posts` and `pages` (lists of title, excerpt, content, meta),
  *                        `rows` of a mapping to save (canonical rows).
  * @return array<string, mixed> IDs of the feed and of the items.
  */

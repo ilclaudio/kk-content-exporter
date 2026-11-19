@@ -53,7 +53,7 @@ Examples: `Feature: Add the kkce_feed post type and its meta`,
   characters). PHPUnit, PHPStan and PHPCS must be installed
   (`composer install`).
 - Before proposing a commit, also run `composer run phpcs` (warnings included: the target is zero),
-  `composer run test:integration` when the change touches WordPress behavior, and `composer run e2e`
+  `composer run test:integration` when the change touches WordPress behavior, and `composer run test:e2e`
   when it touches the admin screens or their JavaScript.
 - Do not commit secrets, credentials, `.env` files or `tests/integration/wp-tests-config.local.php`.
   If staged files contain potential sensitive data, stop, report only its type and path (never its

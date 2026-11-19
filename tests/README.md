@@ -9,7 +9,7 @@ own isolated WordPress environment.
 |---|---|---|---|---|
 | Unit | `tests/unit/` | `composer run test:unit` | `composer install` only | [unit/README.md](unit/README.md) |
 | Integration | `tests/integration/` | `composer run test:integration` | Docker Desktop and `npm ci` | [integration/README.md](integration/README.md) |
-| End-to-end | `tests/e2e/` | `composer run e2e` | Docker Desktop, `npm ci`, Chromium | [e2e/README.md](e2e/README.md) |
+| End-to-end | `tests/e2e/` | `composer run test:e2e` | Docker Desktop, `npm ci`, Chromium | [e2e/README.md](e2e/README.md) |
 
 Which level to use for what, and the test-first rule for bug fixes, are in `AGENTS/AI_BEHAVIOR.md`
 (*Test-driven workflow*). How to prepare the machine (Composer, Node, Docker, Chromium): root
@@ -27,7 +27,7 @@ composer run test:unit         # unit suite
 composer run check             # lint + phpcs + phpstan + unit (the fast local gate)
 composer run test:integration  # integration suite in the wp-env test environment (Docker)
 composer run test:all          # unit, then integration
-composer run e2e               # end-to-end suite (e2e:headed, e2e:ui, e2e:report for debugging)
+composer run test:e2e               # end-to-end suite (test:e2e:headed, test:e2e:ui, test:e2e:report for debugging)
 ```
 
 Docker environments (each test command starts its own when needed; they stay on afterwards):
@@ -52,8 +52,8 @@ Arguments after `--` reach the test runner (PHPUnit or Playwright):
 ```sh
 composer run test:unit -- --filter KKCE_Autoloader_Unit_Test     # PHPUnit: one class or test
 composer run test:integration -- --filter KKCE_Feed_Editor       # PHPUnit in Docker
-composer run e2e -- tests/e2e/specs/lookup.spec.js               # Playwright: one file
-composer run e2e -- -g "previewed"                               # Playwright: tests whose title matches
+composer run test:e2e -- tests/e2e/specs/lookup.spec.js               # Playwright: one file
+composer run test:e2e -- -g "previewed"                               # Playwright: tests whose title matches
 ```
 
 If a PHPUnit filter matches nothing, PHPUnit prints `No tests executed!` and exits with `0`: always check

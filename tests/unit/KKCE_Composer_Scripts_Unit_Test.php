@@ -49,16 +49,16 @@ class KKCE_Composer_Scripts_Unit_Test extends KKCE_Unit_Test_Case {
 		$npm      = json_decode( $this->read_plugin_file( 'package.json' ), true )['scripts'];
 		$expected = array(
 			'test:integration'        => 'test:integration',
-			'e2e'                     => 'e2e',
+			'test:e2e'                => 'test:e2e',
 			'env:start'               => 'env:start',
 			'env:stop'                => 'env:stop',
 			'env:destroy'             => 'env:destroy',
 			'env:tests:start'         => 'env:tests:start',
 			'env:tests:stop'          => 'env:tests:stop',
 			'env:tests:destroy'       => 'env:tests:destroy',
-			'e2e:headed'              => 'e2e:headed',
-			'e2e:ui'                  => 'e2e:ui',
-			'e2e:report'              => 'e2e:report',
+			'test:e2e:headed'         => 'test:e2e:headed',
+			'test:e2e:ui'             => 'test:e2e:ui',
+			'test:e2e:report'         => 'test:e2e:report',
 		);
 
 		foreach ( $expected as $name => $target ) {

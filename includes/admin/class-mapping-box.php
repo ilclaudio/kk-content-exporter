@@ -13,6 +13,7 @@ use KKCE\Output\Mapping;
 use KKCE\Output\Mapping_Validator;
 use KKCE\Output\Template;
 use KKCE\Rest\Admin_Routes;
+use KKCE\Sources\Meta_Keys;
 use WP_Post;
 
 defined( 'ABSPATH' ) || exit;
@@ -86,6 +87,7 @@ final class Mapping_Box {
 			'templateMaxLength' => Template::MAX_LENGTH,
 			'maxCases'          => Mapping_Validator::MAX_CASES,
 			'maxLengthLimit'    => Mapping_Validator::MAX_LENGTH_LIMIT,
+			'metaKeyMaxLength'  => Meta_Keys::MAX_LENGTH,
 		);
 
 		$draft = self::refused_mapping( $post->ID );

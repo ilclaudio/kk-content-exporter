@@ -223,3 +223,20 @@
 	align-items: flex-end;
 	margin-top: 0.5em;
 }
+
+.kkce-mapping-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5em;
+	align-items: center;
+	margin-top: 1em;
+}
+
+.kkce-mapping-meta .description {
+	flex-basis: 100%;
+	margin: 0;
+}
+
+.kkce-mapping-meta-message {
+	margin-top: 0.5em;
+}

@@ -72,6 +72,18 @@ final class Source {
 	}
 
 	/**
+	 * Whether the source is a post meta whose key starts with an underscore (WordPress hides it from the
+	 * Custom Fields box), so the editor lists it apart, with a warning.
+	 *
+	 * @return bool
+	 */
+	public function is_hidden(): bool {
+		$key = Meta_Keys::key_from_source( $this->id );
+
+		return null !== $key && Meta_Keys::is_hidden( $key );
+	}
+
+	/**
 	 * Whether the mapping must confirm the source before it is exported (sensitive name, author archive URL).
 	 *
 	 * @return bool

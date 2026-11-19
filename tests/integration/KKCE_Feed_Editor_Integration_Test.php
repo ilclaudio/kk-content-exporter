@@ -993,7 +993,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 			'unreadable'       => array( '{"version": 1, "rows": [', '', 'json' ),
 			'too large'        => array( str_repeat( 'è', 131073 ), '', 'too_large' ),
 			'format'           => array( $row( array( 'kind' => 'other' ) ), 'kind', 'unknown' ),
-			'unknown source'   => array( $row( array( 'sources' => array( '*' => array( 'meta.nothing' ) ) ) ), 'sources', 'unknown' ),
+			'unknown source'   => array( $row( array( 'sources' => array( '*' => array( 'core.nothing' ) ) ) ), 'sources', 'unknown' ),
 			'sensitive source' => array( $row( array( 'sources' => array( '*' => array( 'core.author.url' ) ) ) ), 'sources', 'sensitive' ),
 		);
 	}
