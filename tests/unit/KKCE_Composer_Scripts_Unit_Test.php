@@ -90,4 +90,31 @@ class KKCE_Composer_Scripts_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( array( '@test:unit', '@test:integration' ), $scripts['test:all'] );
 		$this->assertArrayNotHasKey( 'test:integration:docker', $scripts );
 	}
+
+	/**
+	 * Lifecycle commands, runners, fixtures and CI must target the same isolated environment for each suite.
+	 */
+	public function test_named_environments_are_used_consistently() {
+		$scripts = json_decode( $this->read_plugin_file( 'package.json' ), true )['scripts'];
+		$environments = array(
+			'e2etest' => array( 'prefix' => 'env', 'port' => 8890, 'runner' => 'tests/bin/e2e.mjs', 'workflow' => '.github/workflows/functional.yml' ),
+			'inttest' => array( 'prefix' => 'env:tests', 'port' => 8891, 'runner' => 'tests/bin/integration.mjs', 'workflow' => '.github/workflows/ci.yml' ),
+		);
+
+		foreach ( $environments as $variant => $environment ) {
+			$config_file = '.wp-env.' . $variant . '.json';
+			$config = json_decode( $this->read_plugin_file( $config_file ), true );
+			$this->assertSame( $environment['port'], $config['port'], $variant );
+			$this->assertFalse( $config['testsEnvironment'], $variant );
+			$this->assertContains( '.', $config['plugins'], $variant );
+
+			foreach ( array( 'start', 'stop', 'destroy' ) as $action ) {
+				$this->assertStringContainsString( '--config=' . $config_file, $scripts[ $environment['prefix'] . ':' . $action ] );
+			}
+			$this->assertStringContainsString( '--config=' . $config_file, $this->read_plugin_file( $environment['runner'] ) );
+			$this->assertStringContainsString( 'run: npm run ' . $environment['prefix'] . ':stop', $this->read_plugin_file( $environment['workflow'] ) );
+		}
+
+		$this->assertStringContainsString( '--config=.wp-env.e2etest.json', $this->read_plugin_file( 'tests/e2e/support/wp.js' ) );
+	}
 }

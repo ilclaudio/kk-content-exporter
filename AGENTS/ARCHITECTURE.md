@@ -63,7 +63,7 @@ mapping editor and the mapping editor with its save: the post meta sources: the 
 | `tests/e2e/`, `playwright.config.js` | End-to-end tests (Playwright, Chromium, axe-core): `specs/`, `support/`, README with the list of the tests |
 | `tests/bin/` | Node scripts behind the Composer test commands: `integration.mjs`, `e2e.mjs`, `docker.mjs` (Docker check) |
 | `package.json`, `package-lock.json` | npm test tools only (`@wordpress/env`, `@playwright/test`, `@axe-core/playwright`, exact versions); never shipped |
-| `.wp-env.json`, `.wp-env.tests.json` | wp-env environments: development (E2E, port 8890) and tests (integration, port 8891), WordPress 7.1.4, PHP 8.3 |
+| `.wp-env.e2etest.json`, `.wp-env.inttest.json` | wp-env environments: development (E2E, port 8890) and tests (integration, port 8891), WordPress 7.1.4, PHP 8.3 |
 | `.github/workflows/` | `ci.yml` (automatic checks and integration suite), `functional.yml` (*End-to-end tests*, started by hand) |
 | `tests/phpstan/` | PHPStan bootstrap (runtime constants) |
 | `.githooks/` | Git hooks (pre-commit, commit-msg) |
@@ -239,8 +239,8 @@ root. All scripts are non-interactive and can be reused by a future CI.
 | `composer run phpstan` | PHPStan on the whole plugin at the level of `phpstan.neon.dist` (8), no baseline | Yes |
 | `composer run test:unit` | Unit suite (includes the contract tests listed in `tests/README.md`) | Yes |
 | `composer run test:all` | Unit suite, then the integration suite in Docker | No |
-| `composer run test:integration` (`npm run test:integration`) | Integration suite in the wp-env test environment (`.wp-env.tests.json`, port 8891, database `kkce_wordpress_test` created on start; `tests/bin/integration.mjs`, which first checks that Docker answers) | No |
-| `composer run env:start` / `env:stop` / `env:destroy`, and `env:tests:start` / `env:tests:stop` / `env:tests:destroy` for the integration environment, `env:stop:all` / `env:destroy:all` for both (npm scripts of the same name; `destroy` deletes without confirmation) | wp-env development environment for the E2E suite (`.wp-env.json`, WordPress 7.1.4, PHP 8.3, http://localhost:8890) | No |
+| `composer run test:integration` (`npm run test:integration`) | Integration suite in the wp-env test environment (`.wp-env.inttest.json`, port 8891, database `kkce_wordpress_test` created on start; `tests/bin/integration.mjs`, which first checks that Docker answers) | No |
+| `composer run env:start` / `env:stop` / `env:destroy`, and `env:tests:start` / `env:tests:stop` / `env:tests:destroy` for the integration environment, `env:stop:all` / `env:destroy:all` for both (npm scripts of the same name; `destroy` deletes without confirmation) | wp-env development environment for the E2E suite (`.wp-env.e2etest.json`, WordPress 7.1.4, PHP 8.3, http://localhost:8890) | No |
 | `composer run test:e2e` (`npm run test:e2e`) | Starts the wp-env development environment when needed, then the Playwright E2E suite (`tests/bin/e2e.mjs`; `tests/e2e/`, Chromium, one worker, axe-core on the elements of the plugin); `composer run test:e2e:headed`, `test:e2e:ui`, `test:e2e:report` for debugging | No |
 | `composer run check` | `lint`, `phpcs`, `phpstan`, `test:unit` | — |
 | `composer run make-pot` | Regenerates `languages/kk-content-exporter.pot` | No |

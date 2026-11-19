@@ -7,12 +7,12 @@
 		"node": ">=22.13"
 	},
 	"scripts": {
-		"env:start": "wp-env start",
-		"env:stop": "wp-env stop",
-		"env:destroy": "wp-env destroy --force",
-		"env:tests:start": "wp-env start --config=.wp-env.tests.json",
-		"env:tests:stop": "wp-env stop --config=.wp-env.tests.json",
-		"env:tests:destroy": "wp-env destroy --force --config=.wp-env.tests.json",
+		"env:start": "wp-env start --config=.wp-env.e2etest.json",
+		"env:stop": "wp-env stop --config=.wp-env.e2etest.json",
+		"env:destroy": "wp-env destroy --force --config=.wp-env.e2etest.json",
+		"env:tests:start": "wp-env start --config=.wp-env.inttest.json",
+		"env:tests:stop": "wp-env stop --config=.wp-env.inttest.json",
+		"env:tests:destroy": "wp-env destroy --force --config=.wp-env.inttest.json",
 		"test:integration": "node tests/bin/integration.mjs",
 		"test:e2e": "node tests/bin/e2e.mjs",
 		"test:e2e:headed": "node tests/bin/e2e.mjs --headed",

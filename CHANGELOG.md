@@ -14,6 +14,7 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 - Post meta fields in the mapping: the keys in use, hidden keys listed apart, and any key typed by hand.
 ### Changed
 - Development tooling: the end-to-end tests run with `composer run test:e2e`, like the other test levels.
+- Development tooling: Docker test environments are named explicitly for integration (`inttest`) and end-to-end (`e2etest`) tests.
 
 
 

@@ -21,7 +21,7 @@ composer run test:all                                       # unit suite, then t
 composer run env:tests:stop                                 # stop the environment when done (env:stop:all stops both)
 ```
 
-`tests/bin/integration.mjs` starts the environment of `.wp-env.tests.json` (http://localhost:8891; the
+`tests/bin/integration.mjs` starts the environment of `.wp-env.inttest.json` (http://localhost:8891; the
 first start downloads WordPress and the Docker images, then it takes about a minute; nothing happens when
 it is already running), creates the database if it is missing and runs
 `vendor/bin/phpunit -c phpunit-integration.xml` inside the `cli` container, in the folder of the plugin,
@@ -29,8 +29,8 @@ with the configuration of this folder. The WordPress test framework comes with w
 The script first checks that Docker answers: without Docker Desktop running it stops at once and says
 so (the end-to-end command does the same).
 
-The environment is independent from the one of the end-to-end tests (`.wp-env.json`, port 8890): own
-containers, own database. Local changes to it go in `.wp-env.tests.override.json` (ignored by Git).
+The environment is independent from the one of the end-to-end tests (`.wp-env.e2etest.json`, port 8890): own
+containers, own database. Local changes to it go in `.wp-env.inttest.override.json` (ignored by Git).
 
 ## Configuration and environment variables
 

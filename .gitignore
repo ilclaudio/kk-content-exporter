@@ -28,6 +28,8 @@ node_modules/
 tests/e2e/.auth/
 .wp-env.override.json
 .wp-env.tests.override.json
+.wp-env.e2etest.override.json
+.wp-env.inttest.override.json
 
 # Logs
 *.log

@@ -47,6 +47,22 @@ Delete or stop the environments only with these commands, not from Docker Deskto
 their state. They hold test data only; the next start recreates what is missing. The Docker and
 end-to-end scripts of Composer call the npm scripts of `package.json` of the same name.
 
+The explicit configurations also identify the Docker Compose projects:
+
+| Suite | Configuration | Project name | HTTP port |
+|---|---|---|---|
+| Integration | `.wp-env.inttest.json` | `wp-env-kk-content-exporter-inttest-<hash>` | 8891 |
+| End-to-end | `.wp-env.e2etest.json` | `wp-env-kk-content-exporter-e2etest-<hash>` | 8890 |
+
+Always pass the matching `--config` when calling wp-env directly. Renaming a configuration changes its
+hash and creates a fresh environment; it does not rename or migrate the old containers and data. Older
+environments must be stopped before starting the new ones on the same ports. The lifecycle commands
+above manage only the named environments. For a legacy environment, temporarily restore its old
+configuration at its original path and use wp-env with that configuration to stop or remove it; remove
+it only after deciding that its test data is no longer needed. Local overrides use
+`.wp-env.inttest.override.json` and `.wp-env.e2etest.override.json` (ignored by Git); any overrides from
+the old configuration names must be moved manually.
+
 Arguments after `--` reach the test runner (PHPUnit or Playwright):
 
 ```sh
@@ -85,7 +101,7 @@ Some unit tests check the consistency of files rather than code: `KKCE_Release_V
 and PHPStan), `KKCE_PHPStan_Config_Unit_Test` (every PHP file analyzed, level ≥ 8, no baseline) and
 `KKCE_Agents_Docs_Unit_Test` (AI context documents and their references), `KKCE_Release_Build_Unit_Test`
 (`.distignore` and package verification), `KKCE_Composer_Scripts_Unit_Test` (scripts work on a fresh
-clone), `KKCE_Git_Ignore_Unit_Test` (credentials, build output and private files ignored by Git),
+clone and all entry points select the matching named test environment), `KKCE_Git_Ignore_Unit_Test` (credentials, build output and private files ignored by Git),
 `KKCE_CI_Workflow_Unit_Test` (GitHub Actions pinned to a commit SHA, with the tag in a comment),
 `KKCE_E2E_Catalog_Unit_Test` (every end-to-end test listed in the *Test list* of `e2e/README.md`),
 `KKCE_Integration_Config_Unit_Test` (the integration suite has only the Docker path, with the defaults of

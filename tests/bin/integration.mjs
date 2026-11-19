@@ -1,5 +1,5 @@
 /**
- * Runs the integration suite in the wp-env test environment (`.wp-env.tests.json`, port 8891).
+ * Runs the integration suite in the wp-env test environment (`.wp-env.inttest.json`, port 8891).
  *
  * Steps: start the environment (nothing happens when it is already running), create the dedicated
  * database `kkce_wordpress_test` in its MySQL server, then run PHPUnit inside the CLI container with the
@@ -25,7 +25,7 @@ const root = path.resolve( import.meta.dirname, '..', '..' );
 // The executable is declared in the `bin` field of the package, which does not export it as a module.
 const wpEnvPackage = require.resolve( '@wordpress/env/package.json' );
 const wpEnv = path.join( path.dirname( wpEnvPackage ), require( wpEnvPackage ).bin[ 'wp-env' ] );
-const config = '--config=.wp-env.tests.json';
+const config = '--config=.wp-env.inttest.json';
 const pluginDir = 'wp-content/plugins/' + path.basename( root );
 
 /**

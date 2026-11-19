@@ -30,6 +30,8 @@ class KKCE_Git_Ignore_Unit_Test extends KKCE_Unit_Test_Case {
 		'tests/e2e/.auth/'                             => 'session of the E2E administrator',
 		'.wp-env.override.json'                        => 'local overrides of the wp-env environments',
 		'.wp-env.tests.override.json'                  => 'local overrides of the wp-env test environment',
+		'.wp-env.e2etest.override.json'                => 'local overrides of the named E2E environment',
+		'.wp-env.inttest.override.json'                => 'local overrides of the named integration environment',
 	);
 
 	/**

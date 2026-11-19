@@ -113,7 +113,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # The version of .wp-env.tests.json.
+          # The version of .wp-env.inttest.json.
           - wordpress: '7.1.4'
             core: ''
           # The minimum version declared by the plugin.
@@ -148,4 +148,4 @@ jobs:
 
       - name: Stop the environment
         if: always()
-        run: npx wp-env stop --config=.wp-env.tests.json
+        run: npm run env:tests:stop

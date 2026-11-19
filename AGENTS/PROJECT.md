@@ -74,12 +74,14 @@ downloads, timeouts, import logs and scheduling.
 - Admin interface: native WordPress markup and vanilla JavaScript, no build step.
 - Multisite: network activation is not supported in V1 (single-site operation).
 
-Out of V1 (Phase 6 of the plan): taxonomy/meta filters, cache with ETag/Last-Modified, WPML, an
+Out of V1 (after the 1.0.0 release): taxonomy/meta filters, cache with ETag/Last-Modified, WPML, an
 endpoint outside `/wp-json/`, cursors, network activation, and an Expression rule kind (a real expression
 language), which is added only for a concrete case that the other rule kinds cannot solve.
 
-Plan phases: 1 foundations (done), 2 multiple post types and the base of the rule mapping, 3 endpoints,
-4 additional rule kinds, 5 release 1.0.0, 6 later evolutions.
+Done: foundations, the rule mapping with its editor and preview, core and post meta sources. Next, in this
+order: feed endpoints, a test with the real importer, the restructured mapping editor, the remaining sources
+(meta dates, taxonomies, image, language, ACF, CMB2), configuration export/import, the complete endpoints,
+documentation, release 1.0.0.
 
 
 ## Optional integrations (read-only)
@@ -97,7 +99,8 @@ Available only on the maintainer machine through the `DEV/` symlink (ignored by 
 into public documentation):
 
 - `DEV/TODO/Plugin_WordPress_Export.md`: functional specification (what the plugin does).
-- `DEV/TODO/TODO_KK_Content_Exporter_Plan.md`: development plan in phases (how and when).
+- `DEV/TODO/TODO_KKCE_Roadmap_1.0.md`: the only plan in progress, the ordered work up to the 1.0.0 release
+  (features, refactoring, interface, documentation); the earlier plans are in `DEV/TODO/Archived/`.
 - `DEV/TODO/README.md`: index of the operational plans (read at bootstrap); each plan is a
   `DEV/TODO/TODO_<Name>.md` file (rules: *Operational plans* in `AGENTS/AI_BEHAVIOR.md`).
 - `DEV/PROCEDURES/README.md`: index of the release and publication procedures (`PROC_<Name>.md`).

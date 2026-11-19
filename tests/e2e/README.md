@@ -13,10 +13,10 @@ and `npx playwright install chromium`) and Docker Desktop running.
 
 ## Environment
 
-`.wp-env.json` describes the development environment used by this suite: WordPress 7.1.4 and PHP 8.3
+`.wp-env.e2etest.json` describes the development environment used by this suite: WordPress 7.1.4 and PHP 8.3
 (fixed: change them on purpose), this folder mounted as the plugin, `WP_DEBUG` on with the log in the
 container. It answers at **http://localhost:8890**, user `admin`, password `password` (public defaults of
-wp-env, no real data). Local changes go in `.wp-env.override.json` (ignored by Git). The integration
+wp-env, no real data). Local changes go in `.wp-env.e2etest.override.json` (ignored by Git). The integration
 suite uses a separate environment ([`../integration/README.md`](../integration/README.md)).
 
 `composer run test:e2e` starts it when it is off (the first start downloads WordPress and the Docker images)
@@ -96,4 +96,4 @@ The HTML report (`playwright-report/`) and, for the failed tests only, a trace a
 (`test-results/<test>/`) are kept; both folders are ignored by Git and left out of the ZIP. Open a trace
 with `npx playwright show-trace test-results/<test>/trace.zip`, or run the test again with
 `composer run test:e2e:headed` or `composer run test:e2e:ui`. The PHP log of WordPress is in the container:
-`npx wp-env run cli -- tail wp-content/debug.log`.
+`npx wp-env run --config=.wp-env.e2etest.json cli -- tail wp-content/debug.log`.

@@ -47,4 +47,4 @@ jobs:
 
       - name: Stop the environment
         if: always()
-        run: npx wp-env stop
+        run: npm run env:stop

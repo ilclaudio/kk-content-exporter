@@ -22,7 +22,7 @@ const FIXTURES = PLUGIN_DIR + '/tests/e2e/support/fixtures.php';
  * @return {string} Standard output, trimmed.
  */
 function wp( args ) {
-	const result = spawnSync( process.execPath, [ WP_ENV, 'run', 'cli', '--', 'wp', ...args ], { cwd: ROOT, encoding: 'utf8' } );
+	const result = spawnSync( process.execPath, [ WP_ENV, 'run', '--config=.wp-env.e2etest.json', 'cli', '--', 'wp', ...args ], { cwd: ROOT, encoding: 'utf8' } );
 	if ( 0 !== result.status ) {
 		throw new Error( 'WP-CLI failed: wp ' + args.join( ' ' ) + '\n' + result.stderr );
 	}

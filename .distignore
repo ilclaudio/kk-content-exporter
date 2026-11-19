@@ -38,6 +38,10 @@ desktop.ini
 /.wp-env.tests.json
 /.wp-env.override.json
 /.wp-env.tests.override.json
+/.wp-env.e2etest.json
+/.wp-env.inttest.json
+/.wp-env.e2etest.override.json
+/.wp-env.inttest.override.json
 /playwright.config.js
 /playwright-report
 /test-results

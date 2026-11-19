@@ -44,6 +44,11 @@ composer run test:e2e               # end-to-end tests in Chromium
 
 The three test levels, every command and when to run it: [`tests/README.md`](tests/README.md).
 
+Docker environments use separate configurations: `.wp-env.inttest.json` creates
+`wp-env-kk-content-exporter-inttest-<hash>` for integration tests (port 8891), and
+`.wp-env.e2etest.json` creates `wp-env-kk-content-exporter-e2etest-<hash>` for end-to-end tests (port 8890).
+Use the Composer commands to select the right environment; direct wp-env commands require `--config`.
+
 ## Release
 
 `composer run build:zip` builds `build/kk-content-exporter-<version>.zip` from a clean working tree;
