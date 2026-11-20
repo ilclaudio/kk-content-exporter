@@ -70,6 +70,7 @@ number of assertions changes with the version of WordPress.
 | `KKCE_Environment_Integration_Test.php` | The plugin is loaded, wired and translatable (bundled `it_IT` translation) |
 | `KKCE_Exportable_Post_Types_Integration_Test.php` | The post types a feed can export: public ones only, `attachment` excluded, sorted by label |
 | `KKCE_Feed_Editor_Integration_Test.php` | Saving a feed and its mapping: nonce, capability, validation, refused mapping kept as a draft, activation rules |
+| `KKCE_Feed_Routes_Integration_Test.php` | The endpoint of a feed: switch of the settings, 404 for feeds that cannot be served, 401 for feeds that need authentication, published public data only, computed as a visitor, first page, isolation between feeds |
 | `KKCE_Feed_List_Integration_Test.php` | Columns of the list of the feeds, escaped, with the mark of the feeds that export sensitive fields |
 | `KKCE_Feed_Meta_Integration_Test.php` | Configuration meta: registered, hidden from REST, sanitized, editable by administrators only |
 | `KKCE_Feed_Post_Type_Integration_Test.php` | The post type `kkce_feed`: private, without REST routes, title only, administrators only |

@@ -10,7 +10,8 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 
 ## [0.0.4] - Unreleased
-No changes yet.
+### Added
+- Feed endpoint `GET /wp-json/kkce/v1/<slug>`: first page of a published, enabled, public feed.
 
 ## [0.0.3] - 2026-11-19
 ### Added

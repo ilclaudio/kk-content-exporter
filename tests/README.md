@@ -54,6 +54,9 @@ The explicit configurations also identify the Docker Compose projects:
 | Integration | `.wp-env.inttest.json` | `wp-env-kk-content-exporter-inttest-<hash>` | 8891 |
 | End-to-end | `.wp-env.e2etest.json` | `wp-env-kk-content-exporter-e2etest-<hash>` | 8890 |
 
+Each project has its own containers and builds its own images; only the database image is shared. Seeing
+both sets in Docker Desktop is expected.
+
 Always pass the matching `--config` when calling wp-env directly. Renaming a configuration changes its
 hash and creates a fresh environment; it does not rename or migrate the old containers and data. Older
 environments must be stopped before starting the new ones on the same ports. The lifecycle commands

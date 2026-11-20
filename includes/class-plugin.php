@@ -86,6 +86,7 @@ final class Plugin {
 		add_action( 'admin_enqueue_scripts', array( Admin\Feed_Editor::class, 'enqueue_assets' ) );
 		add_action( 'admin_enqueue_scripts', array( Admin\Mapping_Box::class, 'enqueue_assets' ) );
 		add_action( 'rest_api_init', array( Rest\Admin_Routes::class, 'register' ) );
+		add_action( 'rest_api_init', array( Rest\Feed_Routes::class, 'register' ) );
 		add_filter( 'plugin_row_meta', array( self::class, 'filter_plugin_row_meta' ), 10, 2 );
 	}
 

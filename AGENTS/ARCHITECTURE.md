@@ -8,7 +8,7 @@ the `KKCE` namespace under `includes/` and are loaded by the plugin's own autolo
 development tool only and is never shipped. The code contains the bootstrap, the private feed post type with its configuration meta, the
 feed list, the feed editor, the settings page, the uninstall cleanup, the mapping engine (format, validation,
 core sources, evaluation, normalization, rendering, check against the catalog), the admin REST routes of the
-mapping editor and the mapping editor with its save: the post meta sources: the other features of the plan (taxonomies, image, language, ACF and CMB2, feed endpoints, log) are not implemented yet. Update this file in the same change that adds them.
+mapping editor and the mapping editor with its save, the post meta sources and the first page of the feed endpoint: the other features of the plan (pagination parameters, authentication and date filters of the endpoint, taxonomies, image, language, ACF and CMB2, log) are not implemented yet. Update this file in the same change that adds them.
 
 
 ## Key Directories and Files
@@ -36,6 +36,8 @@ mapping editor and the mapping editor with its save: the post meta sources: the 
 | `includes/sources/class-catalog.php` | `KKCE\Sources\Catalog`: pure. Sources of a feed for its post types (common ones once, then those of each post type), `post_types()`, `find()` of a source for a post type or `*`, `types_for()` (declared types of a source for a scope: the one place that says whether a mapping can use it; a selectable post meta key not in the list counts for every post type of the feed, as text, because the list is only a sample), `options_for()`, `suggested_rows()` (the `type` row in feeds with two or more post types) |
 | `includes/sources/class-catalog-factory.php` | `KKCE\Sources\Catalog_Factory`: `for_post_types()` builds the `Catalog` of a feed from the providers (core and post meta now); `discover` (only the admin catalog, never the check of a mapping) also reads the keys in use, and `meta_keys` lists keys typed by the administrator; the only place that knows which providers exist |
 | `includes/sources/class-exportable-post-types.php` | `KKCE\Sources\Exportable_Post_Types`: the one rule on the post types a feed can read. `selectable()` (public post types, `attachment` excluded, key => label sorted by label; the only call to `get_post_types()`) and `split()` (pure: requested post types against a list already read, into the exportable ones and the others, without duplicates, in the order of the request). Used by the feed editor and the admin routes |
+| `includes/output/class-feed-response.php` | `KKCE\Output\Feed_Response`: pure. `build()` gives the fixed container of a feed response (`items` as JSON objects, `pagination` with `page`, `per_page`, `total`, `total_pages` (0 without items), `meta` with the slug of the feed and `generated_at` in UTC ISO 8601); `per_page()` limits the items per page of a feed to the global maximum |
+| `includes/rest/class-feed-routes.php` | `KKCE\Rest\Feed_Routes`: the public endpoint of the feeds, described in *Public Endpoints and Hooks* |
 | `includes/rest/class-admin-routes.php` | `KKCE\Rest\Admin_Routes`: admin-only REST routes of the mapping editor in the namespace `kkce-admin/v1` (`GET /catalog`, `POST /preview`), described in *Public Endpoints and Hooks* |
 | `includes/sources/class-core-provider.php` | `KKCE\Sources\Core_Provider`: the core sources common to every post type and their values (stored title, content and excerpt through `Content_Renderer` with the options of the row, GMT dates, author ID, display name and archive URL only; never e-mail or login) |
 | `includes/sources/class-meta-keys.php` | `KKCE\Sources\Meta_Keys`: pure. Which post meta keys can be a source: `is_valid()` (1 to 191 characters among letters, digits and `_ . : -`), `is_internal()` (`_edit_*`, `_wp_*`, `_oembed_*`, `_kkce_*` and `_thumbnail_id`), `is_hidden()` (leading underscore), `is_selectable()`, `key_from_source()`, and `declared_type()` (registered type to declared type; `array` and `object` are not exported) |
@@ -76,7 +78,7 @@ mapping editor and the mapping editor with its save: the post meta sources: the 
 `includes/output/` holds the logic of the output: the mapping format and its validation, the sensitive names, the
 rule evaluator (pure) and the export of an item (the link with WordPress); the normalizer and the serialization later. `includes/sources/` holds the sources a mapping can read: the catalog and the providers (core now; meta,
 taxonomies, image, language, ACF and CMB2 later). `includes/rest/` holds the REST routes: the admin routes of
-the mapping editor now, the feed endpoints in Phase 3.
+the mapping editor and the endpoint of the feeds.
 
 
 ## Plugin Lifecycle
@@ -134,8 +136,8 @@ Add new hooks in `Plugin::boot()` (or in a class it wires), never as side effect
 
 ## Public Endpoints and Hooks
 
-No public endpoint, shortcode, cron job or WP-CLI command yet, and the plugin offers no hook of its own.
-Admin hooks used (all in `Plugin::boot()`): `rest_api_init` (`Rest\Admin_Routes::register()`), `manage_kkce_feed_posts_columns`, `manage_kkce_feed_posts_custom_column`,
+One public REST endpoint (below); no shortcode, cron job or WP-CLI command, and the plugin offers no hook of its own.
+Hooks used (all in `Plugin::boot()`): `rest_api_init` (`Rest\Admin_Routes::register()` and `Rest\Feed_Routes::register()`), `manage_kkce_feed_posts_columns`, `manage_kkce_feed_posts_custom_column`,
 `post_row_actions` (removes Quick Edit from the feeds, because it could change a slug without validation),
 `add_meta_boxes_kkce_feed` (`Feed_Editor` and `Mapping_Box`), `wp_insert_post_data`, `save_post_kkce_feed`, `admin_notices`, `untrashed_post`,
 `admin_enqueue_scripts` (`Feed_Editor::enqueue_assets()` and `Mapping_Box::enqueue_assets()`), `admin_menu` and `admin_init` (the settings page)
@@ -188,9 +190,22 @@ unknown) are left out.
   `modified` (GMT, ISO 8601). A post type that is missing, malformed or not selectable gives 400 (`kkce_no_post_types`
   when not selectable). The preview uses the same query for its latest item.
 
-Planned: REST `GET kkce/v1/<feed-slug>` (read-only, public or authenticated) registered on
-`rest_api_init`; capability `kkce_read_export`; private post type `kkce_feed`. No shortcodes, cron jobs or
-WP-CLI commands are planned for V1.
+Feed endpoint (`Rest\Feed_Routes`, namespace `kkce/v1`), registered on `rest_api_init` only while the endpoints
+are switched on in the settings (otherwise WordPress answers 404 `rest_no_route`):
+- `GET /kkce/v1/<slug>` (the slug in `Feed_Validator::SLUG_PATTERN`; the route matches without regard to case, so the
+  slug is checked again with `Feed_Validator::validate_slug()` and must equal the `post_name` exactly). A feed is served
+  when it is published (`post_status` `publish`), enabled (`_kkce_active`) and has mapping rows; a missing, unpublished,
+  disabled feed, or one whose stored mapping is empty or damaged, gives the same 404 `kkce_feed_not_found`. The
+  `permission_callback` (`can_read()`) gives that 404, then 401 `rest_forbidden` when the feed needs an authentication (its
+  access, or the setting that requires it for every feed): the authentication of the feeds is not available yet, so
+  for now such a feed answers 401 to everybody. Items: published, without a password, of the post types of the feed
+  that can still be exported (`Exportable_Post_Types`), first page only, `per_page` of the feed within the global
+  maximum, ordered by modified date and ID, computed by `Item_Exporter` as an anonymous visitor. Response:
+  `Output\Feed_Response`.
+
+Planned: the parameters `page` and `per_page`, the order by `post_modified_gmt`, the authentication with Application
+Passwords and the capability `kkce_read_export`, the date filters. No shortcodes, cron jobs or WP-CLI commands are
+planned for V1.
 
 
 ### Export rendering scope
