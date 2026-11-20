@@ -53,16 +53,18 @@ final class Feed_Response {
 	}
 
 	/**
-	 * Items per page of a feed: its own value, never above the global maximum.
+	 * Items per page of a response: the requested value, otherwise the one of the feed within the global maximum.
 	 *
-	 * A feed saved with more items than a maximum lowered later is limited, not refused.
+	 * A feed saved with more items than a maximum lowered later is limited, not refused. A requested value
+	 * above the maximum never reaches this point: the route refuses it.
 	 *
-	 * @param int $feed_per_page Items per page of the feed.
-	 * @param int $max_per_page  Global maximum of the settings.
+	 * @param int      $feed_per_page Items per page of the feed.
+	 * @param int      $max_per_page  Global maximum of the settings.
+	 * @param int|null $requested     Items per page asked by the request, or null.
 	 * @return int
 	 */
-	public static function per_page( int $feed_per_page, int $max_per_page ): int {
-		return max( 1, min( $feed_per_page, $max_per_page ) );
+	public static function per_page( int $feed_per_page, int $max_per_page, ?int $requested = null ): int {
+		return max( 1, $requested ?? min( $feed_per_page, $max_per_page ) );
 	}
 
 	/**

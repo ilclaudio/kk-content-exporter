@@ -1,0 +1,516 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-11-20T16:00:00.000Z",
+  "__export_source": "kk-content-exporter:tests/routes",
+  "resources": [
+    {
+      "_id": "wrk_kkce_feed_endpoint",
+      "_type": "workspace",
+      "parentId": null,
+      "name": "KK Content Exporter - Feed endpoint",
+      "description": "Manual checks of the public endpoint of a feed: GET /wp-json/kkce/v1/<slug>. Set the base environment first: base_url, feed_slug (a published, enabled, public feed with at least three items) and max_per_page (the maximum of the settings). The authenticated requests need authenticated_feed_slug, wp_user and wp_app_password (an Application Password); never commit their values.",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_kkce_feed_endpoint_base",
+      "_type": "environment",
+      "parentId": "wrk_kkce_feed_endpoint",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://kkce.local",
+        "feed_slug": "news",
+        "missing_feed_slug": "kkce-no-such-feed",
+        "max_per_page": 100,
+        "authenticated_feed_slug": "",
+        "wp_user": "",
+        "wp_app_password": "",
+        "wp_user_without_capability": "",
+        "wp_app_password_without_capability": ""
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url",
+          "feed_slug",
+          "missing_feed_slug",
+          "max_per_page",
+          "authenticated_feed_slug",
+          "wp_user",
+          "wp_app_password",
+          "wp_user_without_capability",
+          "wp_app_password_without_capability"
+        ]
+      },
+      "color": null,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_kkce_pages",
+      "_type": "request_group",
+      "parentId": "wrk_kkce_feed_endpoint",
+      "name": "1. Pages",
+      "description": "Pages of a feed (steps 1.2 and 1.3). Expected: 200 with items, pagination and meta.",
+      "environment": {},
+      "metaSortKey": -100
+    },
+    {
+      "_id": "req_kkce_first_page",
+      "_type": "request",
+      "parentId": "fld_kkce_pages",
+      "name": "First page (items per page of the feed)",
+      "description": "Expected: 200; pagination.page 1, pagination.per_page as set in the feed (within the maximum).",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -110
+    },
+    {
+      "_id": "req_kkce_page_one_of_two",
+      "_type": "request",
+      "parentId": "fld_kkce_pages",
+      "name": "Page 1 with per_page=2",
+      "description": "Expected: 200; at most two items; total_pages = total / 2 rounded up.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "page",
+          "value": "1",
+          "disabled": false
+        },
+        {
+          "name": "per_page",
+          "value": "2",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -120
+    },
+    {
+      "_id": "req_kkce_page_two",
+      "_type": "request",
+      "parentId": "fld_kkce_pages",
+      "name": "Page 2 with per_page=2",
+      "description": "Expected: 200; the next items, none repeated from page 1; same total.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "page",
+          "value": "2",
+          "disabled": false
+        },
+        {
+          "name": "per_page",
+          "value": "2",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -130
+    },
+    {
+      "_id": "req_kkce_page_after_last",
+      "_type": "request",
+      "parentId": "fld_kkce_pages",
+      "name": "Page after the last one",
+      "description": "Expected: 200 with \"items\": [] and the real total and total_pages.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "page",
+          "value": "9999",
+          "disabled": false
+        },
+        {
+          "name": "per_page",
+          "value": "2",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -140
+    },
+    {
+      "_id": "req_kkce_per_page_max",
+      "_type": "request",
+      "parentId": "fld_kkce_pages",
+      "name": "per_page equal to the maximum",
+      "description": "Expected: 200; pagination.per_page equal to max_per_page.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "per_page",
+          "value": "{{ _.max_per_page }}",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -150
+    },
+    {
+      "_id": "req_kkce_plain_permalinks",
+      "_type": "request",
+      "parentId": "fld_kkce_pages",
+      "name": "Page 2 with plain permalinks (?rest_route=)",
+      "description": "The same page through rest_route, for sites with plain permalinks. Expected: the same response as \"Page 2 with per_page=2\".",
+      "method": "GET",
+      "url": "{{ _.base_url }}/",
+      "body": {},
+      "parameters": [
+        {
+          "name": "rest_route",
+          "value": "/kkce/v1/{{ _.feed_slug }}",
+          "disabled": false
+        },
+        {
+          "name": "page",
+          "value": "2",
+          "disabled": false
+        },
+        {
+          "name": "per_page",
+          "value": "2",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -160
+    },
+    {
+      "_id": "fld_kkce_errors",
+      "_type": "request_group",
+      "parentId": "wrk_kkce_feed_endpoint",
+      "name": "2. Errors",
+      "description": "Requests that must be refused.",
+      "environment": {},
+      "metaSortKey": -200
+    },
+    {
+      "_id": "req_kkce_per_page_above_max",
+      "_type": "request",
+      "parentId": "fld_kkce_errors",
+      "name": "per_page above the maximum (400)",
+      "description": "Expected: 400 rest_invalid_param, \"per_page must be at most <max_per_page>\". Set the value to max_per_page + 1.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "per_page",
+          "value": "101",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -210
+    },
+    {
+      "_id": "req_kkce_page_zero",
+      "_type": "request",
+      "parentId": "fld_kkce_errors",
+      "name": "page=0 (400)",
+      "description": "Expected: 400 rest_invalid_param on page.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "page",
+          "value": "0",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -220
+    },
+    {
+      "_id": "req_kkce_page_decimal",
+      "_type": "request",
+      "parentId": "fld_kkce_errors",
+      "name": "page=1.5 (400)",
+      "description": "Expected: 400 rest_invalid_param, page is not of type integer.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "page",
+          "value": "1.5",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -230
+    },
+    {
+      "_id": "req_kkce_per_page_text",
+      "_type": "request",
+      "parentId": "fld_kkce_errors",
+      "name": "per_page=all (400)",
+      "description": "Expected: 400 rest_invalid_param: there is no mode without pages.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "per_page",
+          "value": "all",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -240
+    },
+    {
+      "_id": "req_kkce_missing_feed",
+      "_type": "request",
+      "parentId": "fld_kkce_errors",
+      "name": "Missing feed (404)",
+      "description": "Expected: 404 kkce_feed_not_found. A disabled or unpublished feed gives the same answer.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.missing_feed_slug }}",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -250
+    },
+    {
+      "_id": "req_kkce_slug_capitals",
+      "_type": "request",
+      "parentId": "fld_kkce_errors",
+      "name": "Slug in capitals (404)",
+      "description": "Expected: 404 kkce_feed_not_found: the slug must match exactly.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug | upper }}",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -260
+    },
+    {
+      "_id": "req_kkce_post_method",
+      "_type": "request",
+      "parentId": "fld_kkce_errors",
+      "name": "POST (404, no route)",
+      "description": "Expected: 404 rest_no_route: the endpoint answers GET only.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -270
+    },
+    {
+      "_id": "fld_kkce_route",
+      "_type": "request_group",
+      "parentId": "wrk_kkce_feed_endpoint",
+      "name": "3. Route and methods",
+      "description": "What WordPress says about the route.",
+      "environment": {},
+      "metaSortKey": -300
+    },
+    {
+      "_id": "req_kkce_namespace_index",
+      "_type": "request",
+      "parentId": "fld_kkce_route",
+      "name": "Index of the namespace kkce/v1",
+      "description": "Expected: 200 with the route /kkce/v1/(?P<slug>...), method GET, arguments slug, page, per_page. Missing when the endpoints are switched off in the settings.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -310
+    },
+    {
+      "_id": "req_kkce_options",
+      "_type": "request",
+      "parentId": "fld_kkce_route",
+      "name": "OPTIONS of a feed",
+      "description": "Expected: 200 with the description of the route (methods and arguments); no feed is read.",
+      "method": "OPTIONS",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -320
+    },
+    {
+      "_id": "req_kkce_post_as_get",
+      "_type": "request",
+      "parentId": "fld_kkce_route",
+      "name": "POST with _method=GET",
+      "description": "Expected: the same 200 as a GET: WordPress serves a POST with _method=GET (or the header X-HTTP-Method-Override: GET) as a GET. Parameters stay in the query string.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "_method",
+          "value": "GET",
+          "disabled": false
+        },
+        {
+          "name": "per_page",
+          "value": "2",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -330
+    },
+    {
+      "_id": "fld_kkce_access",
+      "_type": "request_group",
+      "parentId": "wrk_kkce_feed_endpoint",
+      "name": "4. Access",
+      "description": "Feeds that need authentication (access \"authenticated\", or the setting \"Require authentication for every feed\"). Only an Application Password is accepted: a browser session is not enough, also for an administrator.\n\nWhat you need:\n1. A feed with the access \"Authenticated\" (its slug in authenticated_feed_slug).\n2. An Application Password: Users > Profile > Application Passwords, a name (for example \"Importer\"), Add; copy the password at once (WordPress shows it only once; spaces can stay).\n3. A user with the capability kkce_read_export (administrators receive it when the plugin is activated) in wp_user and wp_app_password; for the 403, a user without it (for example a Subscriber with its own Application Password) in wp_user_without_capability and wp_app_password_without_capability.\n4. Select the sub-environment \"Local credentials (private, fill in here)\" and fill it in: it is private, so Insomnia does not export it. Never write credentials in the base environment of the file in the repository.\n\nEach request uses Basic authentication (Auth tab): the user login and the Application Password. WordPress accepts Application Passwords on HTTPS only, or in an environment of type local (like kkce.local). Revoke the test passwords from the profile when done.",
+      "environment": {},
+      "metaSortKey": -400
+    },
+    {
+      "_id": "req_kkce_authenticated_anonymous",
+      "_type": "request",
+      "parentId": "fld_kkce_access",
+      "name": "Authenticated feed, anonymous (401)",
+      "description": "Expected: 401 kkce_authentication_required. Needs authenticated_feed_slug.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.authenticated_feed_slug }}",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -410
+    },
+    {
+      "_id": "req_kkce_authenticated_basic",
+      "_type": "request",
+      "parentId": "fld_kkce_access",
+      "name": "Authenticated feed, Application Password (200 or 403)",
+      "description": "Expected: 200 for a user with the capability kkce_read_export (administrators receive it when the plugin is activated), 403 rest_forbidden for a user without it, 401 incorrect_password from WordPress for a wrong password. The data are the same as a public feed. WordPress accepts Application Passwords on HTTPS only, or in an environment of type local. Needs authenticated_feed_slug, wp_user and wp_app_password.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.authenticated_feed_slug }}",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "basic",
+        "useISO88591": false,
+        "disabled": false,
+        "username": "{{ _.wp_user }}",
+        "password": "{{ _.wp_app_password }}"
+      },
+      "metaSortKey": -420
+    },
+    {
+      "_id": "req_kkce_authenticated_wrong_password",
+      "_type": "request",
+      "parentId": "fld_kkce_access",
+      "name": "Authenticated feed, wrong password (401)",
+      "description": "Expected: 401 from WordPress (incorrect_password) before the route of the plugin.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.authenticated_feed_slug }}",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "basic",
+        "useISO88591": false,
+        "disabled": false,
+        "username": "{{ _.wp_user }}",
+        "password": "wrong"
+      },
+      "metaSortKey": -430
+    },
+    {
+      "_id": "env_kkce_feed_endpoint_credentials",
+      "_type": "environment",
+      "parentId": "env_kkce_feed_endpoint_base",
+      "name": "Local credentials (private, fill in here)",
+      "data": {
+        "authenticated_feed_slug": "",
+        "wp_user": "",
+        "wp_app_password": "",
+        "wp_user_without_capability": "",
+        "wp_app_password_without_capability": ""
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "authenticated_feed_slug",
+          "wp_user",
+          "wp_app_password",
+          "wp_user_without_capability",
+          "wp_app_password_without_capability"
+        ]
+      },
+      "color": "#d9534f",
+      "isPrivate": true
+    },
+    {
+      "_id": "req_kkce_authenticated_without_capability",
+      "_type": "request",
+      "parentId": "fld_kkce_access",
+      "name": "Authenticated feed, user without the capability (403)",
+      "description": "Expected: 403 rest_forbidden: the Application Password is valid, but its user does not have kkce_read_export.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.authenticated_feed_slug }}",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "basic",
+        "useISO88591": false,
+        "disabled": false,
+        "username": "{{ _.wp_user_without_capability }}",
+        "password": "{{ _.wp_app_password_without_capability }}"
+      },
+      "metaSortKey": -425
+    },
+    {
+      "_id": "req_kkce_public_with_password",
+      "_type": "request",
+      "parentId": "fld_kkce_access",
+      "name": "Public feed with an Application Password (200, same data)",
+      "description": "Expected: 200 with the same items as the anonymous request \"First page\": authentication decides who reads, never what is exported.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "basic",
+        "useISO88591": false,
+        "disabled": false,
+        "username": "{{ _.wp_user }}",
+        "password": "{{ _.wp_app_password }}"
+      },
+      "metaSortKey": -440
+    }
+  ]
+}

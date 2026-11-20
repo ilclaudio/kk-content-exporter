@@ -127,5 +127,5 @@ for a custom installation (PowerShell: `$env:KKCE_TEST_BASH = 'D:/Tools/Git/bin/
 | `integration/` | Integration tests and the test-framework configuration |
 | `e2e/` | End-to-end tests: `specs/` (Playwright tests), `support/` (global setup and login, test data with WP-CLI, helpers of the feed editor, accessibility check) |
 | `bin/` | Node scripts behind the Composer commands: `integration.mjs` (starts the wp-env test environment, runs the integration suite in it) and `e2e.mjs` (starts the development environment, runs Playwright); both first check that Docker answers (`docker.mjs`) |
-| `routes/` | Request collections for manual checks of the admin REST routes |
+| `routes/` | Request collections for manual checks of the REST routes, to import in Insomnia: `Insomnia_Feed_Endpoint.json` for the endpoint of the feeds (set its base environment; credentials stay empty in the repository) |
 | `phpstan/` | PHPStan bootstrap with the runtime constants |

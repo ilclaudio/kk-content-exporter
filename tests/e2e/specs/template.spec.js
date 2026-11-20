@@ -35,6 +35,22 @@ test( 'an optional part is written only when its field has a value', async ( { p
 	await saveFeed( page );
 	await page.reload();
 	await expect( box.getByRole( 'group', { name: /: label$/ } ).getByLabel( 'Template (For all post types)', { exact: true } ) ).toHaveValue( '{core.title}[ – {core.excerpt}] ({core.excerpt|"n.d."})' );
+
+	// A preview-only selection must not warn on leaving; editing the mapping still must.
+	const dialogs = [];
+	page.on( 'dialog', async ( dialog ) => {
+		dialogs.push( dialog.type() );
+		await dialog.accept();
+	} );
+	await preview( box ).getByLabel( 'Item of Posts' ).selectOption( String( data.posts[ 0 ] ) );
+	await expect( preview( box ) ).toContainText( '"label": "E2E with excerpt – Short excerpt (Short excerpt)"' );
+	await page.goto( '/wp-admin/edit.php?post_type=kkce_feed' );
+	expect( dialogs ).toEqual( [] );
+
+	const reopened = await openFeed( page, data.feed );
+	await reopened.getByLabel( 'Template (For all post types)', { exact: true } ).fill( '{core.title} changed' );
+	await page.goto( '/wp-admin/edit.php?post_type=kkce_feed' );
+	expect( dialogs ).toEqual( [ 'beforeunload' ] );
 } );
 
 test( 'a sensitive field typed in a template asks for its confirmation at once', async ( { page } ) => {

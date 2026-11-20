@@ -56,6 +56,11 @@ if [ -z "$added_lines" ]; then
 	exit 0
 fi
 
+# A quoted value that is only a template variable (`"{{ _.wp_app_password }}"`, the request collections of
+# tests/routes/) names a value kept elsewhere and is never a secret: it is emptied before the scan. A value
+# with any other text around the variable is still scanned.
+added_lines="$(printf '%s\n' "$added_lines" | sed -E "s/\"\\{\\{[^{}\"]*\\}\\}\"/\"\"/g; s/'\\{\\{[^{}']*\\}\\}'/''/g")"
+
 # High-signal patterns only, to keep false positives low. Every quote class holds both quotes: `q`
 # is a single quote, because `grep -E` has no `\x27` escape.
 q="'"

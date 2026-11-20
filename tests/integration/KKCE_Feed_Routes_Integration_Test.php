@@ -61,6 +61,7 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 	public function tear_down() {
 		global $wp_rest_server;
 		$wp_rest_server = null;
+		unset( $_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW'], $GLOBALS['wp_rest_application_password_uuid'] );
 		foreach ( $this->registered as $post_type ) {
 			unregister_post_type( $post_type );
 		}
@@ -91,11 +92,118 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 	/**
 	 * GET request to a feed.
 	 *
-	 * @param string $slug Slug in the address.
+	 * @param string               $slug   Slug in the address.
+	 * @param array<string, mixed> $params Query parameters.
 	 * @return WP_REST_Response
 	 */
-	private function get( string $slug ): WP_REST_Response {
-		return rest_do_request( new WP_REST_Request( 'GET', '/kkce/v1/' . $slug ) );
+	private function get( string $slug, array $params = array() ): WP_REST_Response {
+		$request = new WP_REST_Request( 'GET', '/kkce/v1/' . $slug );
+		$request->set_query_params( $params );
+
+		return rest_do_request( $request );
+	}
+
+	/**
+	 * Serves a GET through WordPress's authentication, dispatch and header-sending pipeline.
+	 *
+	 * Only the final PHP header emission is captured: rest_do_request() alone does not exercise it.
+	 *
+	 * @param string $slug Feed slug.
+	 * @return array{status: int, headers: array<string, string>} Emitted status and lowercase header names.
+	 */
+	private function served_get( string $slug ): array {
+		global $wp_rest_server;
+
+		$wp_rest_server = new class() extends WP_REST_Server {
+			/** @var array<string, string> Headers emitted by the real serving pipeline. */
+			public array $sent_headers = array();
+
+			/** @var int Emitted HTTP status. */
+			public int $sent_status = 200;
+
+			/** Captures a header instead of emitting it from the PHPUnit CLI process. */
+			public function send_header( $key, $value ) {
+				$this->sent_headers[ strtolower( $key ) ] = $value;
+			}
+
+			/** Removes a previously captured header. */
+			public function remove_header( $key ) {
+				unset( $this->sent_headers[ strtolower( $key ) ] );
+			}
+
+			/** Captures the status instead of emitting it from the PHPUnit CLI process. */
+			protected function set_status( $code ) {
+				$this->sent_status = $code;
+			}
+		};
+		do_action( 'rest_api_init', $wp_rest_server );
+
+		$previous_get    = $_GET;
+		$previous_post   = $_POST;
+		$previous_method = $_SERVER['REQUEST_METHOD'] ?? null;
+		$_GET           = array();
+		$_POST          = array();
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		ob_start();
+		try {
+			$wp_rest_server->serve_request( '/kkce/v1/' . $slug );
+			return array( 'status' => $wp_rest_server->sent_status, 'headers' => $wp_rest_server->sent_headers );
+		} finally {
+			ob_end_clean();
+			$_GET  = $previous_get;
+			$_POST = $previous_post;
+			if ( null === $previous_method ) {
+				unset( $_SERVER['REQUEST_METHOD'] );
+			} else {
+				$_SERVER['REQUEST_METHOD'] = $previous_method;
+			}
+		}
+	}
+
+	/**
+	 * Authenticates the next requests with a new Application Password of a user, the way WordPress does for a
+	 * REST request with Basic authentication.
+	 *
+	 * @param int $user_id User.
+	 * @return void
+	 */
+	private function sign_in_with_application_password( int $user_id ): void {
+		add_filter( 'application_password_is_api_request', '__return_true' );
+		add_filter( 'wp_is_application_passwords_available', '__return_true' );
+		unset( $GLOBALS['wp_rest_application_password_uuid'] );
+
+		list( $password ) = WP_Application_Passwords::create_new_application_password( $user_id, array( 'name' => 'Importer' ) );
+		$_SERVER['PHP_AUTH_USER'] = get_userdata( $user_id )->user_login;
+		$_SERVER['PHP_AUTH_PW']   = $password;
+
+		$authenticated = wp_validate_application_password( false );
+		$this->assertSame( $user_id, $authenticated );
+		$this->assertNotNull( rest_get_authenticated_app_password() );
+		wp_set_current_user( $authenticated );
+	}
+
+	/**
+	 * Sets the modified date of an item, local and GMT, as WordPress would store them.
+	 *
+	 * @param int    $post_id ID of the item.
+	 * @param string $gmt     Modified date in GMT (`Y-m-d H:i:s`).
+	 * @param string $local   Modified date in the time zone of the site.
+	 * @return void
+	 */
+	private function modified( int $post_id, string $gmt, string $local ): void {
+		global $wpdb;
+		$wpdb->update( $wpdb->posts, array( 'post_modified_gmt' => $gmt, 'post_modified' => $local ), array( 'ID' => $post_id ) );
+		clean_post_cache( $post_id );
+	}
+
+	/**
+	 * IDs of the items of a response (the feed maps `core.id` to `id`).
+	 *
+	 * @param WP_REST_Response $response Response.
+	 * @return list<int>
+	 */
+	private function ids( WP_REST_Response $response ): array {
+		return array_map( static fn( $item ) => $item->id, $response->get_data()['items'] );
 	}
 
 	/**
@@ -174,6 +282,25 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 
 		$this->assertArrayHasKey( $route, $routes );
 		$this->assertSame( array( 'GET' => true ), $routes[ $route ][0]['methods'] );
+	}
+
+	/**
+	 * The route of the feeds is listed in the REST index by default; the setting hides it from the index of the site
+	 * and of the namespace, while the feeds keep answering.
+	 */
+	public function test_the_setting_shows_or_hides_the_route_in_the_rest_index() {
+		$this->feed( 'news' );
+		$route = '/kkce/v1/(?P<slug>' . KKCE\Feed_Validator::SLUG_PATTERN . ')';
+
+		$this->assertArrayHasKey( $route, rest_do_request( new WP_REST_Request( 'GET', '/' ) )->get_data()['routes'] );
+		$this->assertArrayHasKey( $route, rest_do_request( new WP_REST_Request( 'GET', '/kkce/v1' ) )->get_data()['routes'] );
+
+		$this->settings( array( 'show_in_index' => false ) );
+		$this->start_server();
+
+		$this->assertArrayNotHasKey( $route, rest_do_request( new WP_REST_Request( 'GET', '/' ) )->get_data()['routes'] );
+		$this->assertArrayNotHasKey( $route, rest_do_request( new WP_REST_Request( 'GET', '/kkce/v1' ) )->get_data()['routes'] );
+		$this->assertSame( 200, $this->get( 'news' )->get_status() );
 	}
 
 	/**
@@ -267,21 +394,136 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An authenticated feed, or any feed when the settings require authentication, answers 401 for now,
-	 * also to an administrator: the authentication of the feeds is not available yet.
+	 * An authenticated feed, or any feed when the settings require authentication, answers 401 without an
+	 * Application Password: also to an administrator signed in another way (cookie).
 	 */
-	public function test_feeds_that_need_authentication_give_401() {
+	public function test_feeds_that_need_authentication_give_401_without_an_application_password() {
 		$this->feed( 'private-feed', array( 'access' => Feed_Meta::ACCESS_AUTHENTICATED ) );
 		$this->feed( 'news' );
 		$this->item();
 
-		$this->assertSame( 401, $this->get( 'private-feed' )->get_status() );
+		$response = $this->get( 'private-feed' );
+		$this->assertSame( 401, $response->get_status() );
+		$this->assertSame( Feed_Routes::ERROR_AUTHENTICATION, $response->as_error()->get_error_code() );
+
+		// Signed in with the session cookie and the capability, but without an Application Password.
+		get_userdata( self::$admin )->add_cap( 'kkce_read_export' );
 		wp_set_current_user( self::$admin );
+		$this->assertTrue( current_user_can( 'kkce_read_export' ) );
 		$this->assertSame( 401, $this->get( 'private-feed' )->get_status() );
 
 		wp_set_current_user( 0 );
 		$this->settings( array( 'require_auth' => true ) );
 		$this->assertSame( 401, $this->get( 'news' )->get_status() );
+	}
+
+	/**
+	 * With an Application Password, a user with the capability of the feeds reads an authenticated feed, and
+	 * any feed when the settings require authentication; a user without it gets 403.
+	 */
+	public function test_an_application_password_opens_the_feed_to_the_capability() {
+		$this->feed( 'private-feed', array( 'access' => Feed_Meta::ACCESS_AUTHENTICATED ) );
+		$this->feed( 'news' );
+		$this->item();
+		$reader = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		get_userdata( $reader )->add_cap( 'kkce_read_export' );
+		$other = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		$this->sign_in_with_application_password( $reader );
+		$this->assertSame( 200, $this->get( 'private-feed' )->get_status() );
+		$this->settings( array( 'require_auth' => true ) );
+		$this->assertSame( 200, $this->get( 'news' )->get_status() );
+
+		$this->sign_in_with_application_password( $other );
+		$response = $this->get( 'private-feed' );
+		$this->assertSame( 403, $response->get_status() );
+		$this->assertSame( 'rest_forbidden', $response->as_error()->get_error_code() );
+		$this->assertSame( 403, $this->get( 'news' )->get_status() );
+	}
+
+	/**
+	 * A served 401 advertises Basic authentication; successful and forbidden responses do not challenge.
+	 *
+	 * @dataProvider served_authentication_cases
+	 * @param bool $public         Whether the feed is public.
+	 * @param bool $authenticated  Whether the request uses a valid Application Password.
+	 * @param bool $capability     Whether its user can read exports.
+	 * @param int  $expected_status Expected HTTP status.
+	 */
+	public function test_served_feed_authentication_headers( bool $public, bool $authenticated, bool $capability, int $expected_status ) {
+		$this->feed( 'header-check', array( 'access' => $public ? Feed_Meta::ACCESS_PUBLIC : Feed_Meta::ACCESS_AUTHENTICATED ) );
+		$had_auth_status = array_key_exists( 'wp_rest_application_password_status', $GLOBALS );
+		$auth_status     = $GLOBALS['wp_rest_application_password_status'] ?? null;
+		$GLOBALS['wp_rest_application_password_status'] = null;
+
+		try {
+			if ( $authenticated ) {
+				$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+				if ( $capability ) {
+					get_userdata( $user_id )->add_cap( 'kkce_read_export' );
+				}
+				$this->sign_in_with_application_password( $user_id );
+			}
+
+			$response = $this->served_get( 'header-check' );
+			$this->assertSame( $expected_status, $response['status'] );
+			if ( 401 === $expected_status ) {
+				// RFC 9110 section 15.5.2 requires a challenge; Application Passwords use Basic authentication.
+				$this->assertArrayHasKey( 'www-authenticate', $response['headers'], 'A served 401 must advertise its authentication scheme.' );
+				$this->assertMatchesRegularExpression( '/^Basic\s+.*\brealm="[^"]+"/i', $response['headers']['www-authenticate'] );
+			} else {
+				$this->assertArrayNotHasKey( 'www-authenticate', $response['headers'] );
+			}
+		} finally {
+			if ( $had_auth_status ) {
+				$GLOBALS['wp_rest_application_password_status'] = $auth_status;
+			} else {
+				unset( $GLOBALS['wp_rest_application_password_status'] );
+			}
+		}
+	}
+
+	/**
+	 * Header cases complement the existing permission tests by serving the complete REST response.
+	 *
+	 * @return array<string, array{bool, bool, bool, int}> Access, authentication, capability and status.
+	 */
+	public function served_authentication_cases(): array {
+		return array(
+			'authenticated feed without credentials'       => array( false, false, false, 401 ),
+			'authenticated feed without export capability' => array( false, true, false, 403 ),
+			'authenticated feed with export capability'    => array( false, true, true, 200 ),
+			'public feed without credentials'              => array( true, false, false, 200 ),
+		);
+	}
+
+	/**
+	 * An authenticated feed gives the same data as a public one: a block that shows the current user renders as
+	 * for a visitor, and the user of the request is still signed in afterwards.
+	 */
+	public function test_an_authenticated_feed_gives_the_data_of_a_visitor() {
+		register_block_type(
+			'kkce-test/viewer',
+			array( 'render_callback' => static fn() => '<p>viewer:' . get_current_user_id() . '</p>' )
+		);
+		$rows = array( array( 'key' => 'body', 'kind' => 'field', 'type' => 'html', 'sources' => array( '*' => array( 'core.content' ) ) ) );
+		$this->feed( 'public-feed', array( 'rows' => $rows ) );
+		$this->feed( 'private-feed', array( 'rows' => $rows, 'access' => Feed_Meta::ACCESS_AUTHENTICATED ) );
+		$this->item( array( 'post_content' => '<!-- wp:kkce-test/viewer /-->' ) );
+		$reader = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		get_userdata( $reader )->add_cap( 'kkce_read_export' );
+
+		try {
+			$public = $this->get( 'public-feed' )->get_data()['items'];
+			$this->sign_in_with_application_password( $reader );
+			$private = $this->get( 'private-feed' )->get_data()['items'];
+		} finally {
+			unregister_block_type( 'kkce-test/viewer' );
+		}
+
+		$this->assertStringContainsString( 'viewer:0', $public[0]->body );
+		$this->assertEquals( $public, $private );
+		$this->assertSame( $reader, get_current_user_id() );
 	}
 
 	/**
@@ -362,5 +604,126 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 
 		$this->assertSame( 2, $data['pagination']['total'] );
 		$this->assertEqualsCanonicalizing( array( 'A post', 'A page' ), array_map( static fn( $item ) => $item->title, $data['items'] ) );
+	}
+
+	/**
+	 * `page` and `per_page` choose the page; the requested items per page replace the ones of the feed.
+	 */
+	public function test_page_and_per_page_choose_the_page() {
+		$this->feed( 'news', array( 'per_page' => '2' ) );
+		$ids = array();
+		foreach ( array( '01', '02', '03', '04', '05' ) as $day ) {
+			$ids[] = $this->item( array( 'post_date' => "2026-01-$day 10:00:00" ) );
+		}
+
+		$this->assertSame( array_slice( $ids, 2, 2 ), $this->ids( $this->get( 'news', array( 'page' => 2 ) ) ) );
+		$this->assertSame( array( $ids[4] ), $this->ids( $this->get( 'news', array( 'page' => 3 ) ) ) );
+
+		$response = $this->get( 'news', array( 'page' => 2, 'per_page' => 3 ) );
+		$this->assertSame( array_slice( $ids, 3, 2 ), $this->ids( $response ) );
+		$this->assertSame( array( 'page' => 2, 'per_page' => 3, 'total' => 5, 'total_pages' => 2 ), $response->get_data()['pagination'] );
+	}
+
+	/**
+	 * A page after the last one is an empty page with the real total, not an error.
+	 */
+	public function test_a_page_after_the_last_one_is_empty() {
+		$this->feed( 'news', array( 'per_page' => '2' ) );
+		$this->item();
+		$this->item();
+		$this->item();
+
+		$response = $this->get( 'news', array( 'page' => 5 ) );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array(), $response->get_data()['items'] );
+		$this->assertSame( array( 'page' => 5, 'per_page' => 2, 'total' => 3, 'total_pages' => 2 ), $response->get_data()['pagination'] );
+	}
+
+	/**
+	 * Items per page above the global maximum are refused with the maximum in the message, never reduced.
+	 */
+	public function test_per_page_above_the_maximum_gives_400() {
+		$this->feed( 'news' );
+		$this->settings( array( 'max_per_page' => 20 ) );
+
+		$this->assertSame( 200, $this->get( 'news', array( 'per_page' => 20 ) )->get_status() );
+
+		$response = $this->get( 'news', array( 'per_page' => 21 ) );
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'rest_invalid_param', $response->as_error()->get_error_code() );
+		$this->assertStringContainsString( '20', wp_json_encode( $response->get_data() ) );
+	}
+
+	/**
+	 * Values that are not whole numbers of at least 1 are refused.
+	 *
+	 * @dataProvider invalid_parameter_provider
+	 *
+	 * @param array<string, mixed> $params Query parameters.
+	 */
+	public function test_invalid_parameters_give_400( array $params ) {
+		$this->feed( 'news' );
+
+		$response = $this->get( 'news', $params );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'rest_invalid_param', $response->as_error()->get_error_code() );
+	}
+
+	/**
+	 * Data for test_invalid_parameters_give_400().
+	 *
+	 * @return array<string, array{0: array<string, mixed>}>
+	 */
+	public function invalid_parameter_provider(): array {
+		return array(
+			'page zero'         => array( array( 'page' => '0' ) ),
+			'negative page'     => array( array( 'page' => '-1' ) ),
+			'page as text'      => array( array( 'page' => 'two' ) ),
+			'decimal page'      => array( array( 'page' => '1.5' ) ),
+			'per_page zero'     => array( array( 'per_page' => '0' ) ),
+			'per_page as text'  => array( array( 'per_page' => 'all' ) ),
+		);
+	}
+
+	/**
+	 * Items are ordered by modified date in GMT, then by ID: also with the same date, across post types, when
+	 * the local times repeat at the end of daylight saving time, and whatever the time zone of the site.
+	 */
+	public function test_items_are_ordered_by_modified_gmt_then_id() {
+		update_option( 'timezone_string', 'Europe/Rome' );
+		$this->feed( 'mixed', array( 'post_types' => array( 'post', 'page' ) ) );
+		$late  = $this->item();
+		$same1 = $this->item( array( 'post_type' => 'page' ) );
+		$same2 = $this->item();
+		$dst1  = $this->item( array( 'post_type' => 'page' ) );
+		$dst2  = $this->item();
+
+		// 25 October 2026, end of daylight saving time in Rome: 02:00-03:00 local happens twice.
+		$this->modified( $dst1, '2026-10-25 00:30:00', '2026-10-25 02:30:00' ); // 02:30 CEST.
+		$this->modified( $dst2, '2026-10-25 01:10:00', '2026-10-25 02:10:00' ); // 02:10 CET, later in GMT.
+		$this->modified( $same1, '2026-10-26 08:00:00', '2026-10-26 09:00:00' );
+		$this->modified( $same2, '2026-10-26 08:00:00', '2026-10-26 09:00:00' );
+		$this->modified( $late, '2026-10-27 08:00:00', '2026-10-27 09:00:00' );
+
+		$expected = array( $dst1, $dst2, $same1, $same2, $late );
+		$this->assertSame( $expected, $this->ids( $this->get( 'mixed' ) ) );
+
+		update_option( 'timezone_string', 'America/New_York' );
+		$this->assertSame( $expected, $this->ids( $this->get( 'mixed' ) ) );
+	}
+
+	/**
+	 * The order of the feeds does not change the order of other queries.
+	 */
+	public function test_the_order_does_not_leak_to_other_queries() {
+		$this->feed( 'news' );
+		$this->item();
+		$this->get( 'news' );
+
+		$query = new WP_Query( array( 'post_type' => 'post', 'orderby' => 'title' ) );
+
+		$this->assertStringNotContainsString( 'post_modified_gmt', $query->request );
 	}
 }

@@ -104,4 +104,13 @@ class KKCE_Feed_Response_Unit_Test extends KKCE_Unit_Test_Case {
 			'above a lowered max'   => array( 50, 20, 20 ),
 		);
 	}
+
+	/**
+	 * A requested value replaces the one of the feed, above or below it (the route refuses one above the maximum).
+	 */
+	public function test_a_requested_per_page_replaces_the_one_of_the_feed() {
+		$this->assertSame( 10, Feed_Response::per_page( 50, 100, 10 ) );
+		$this->assertSame( 80, Feed_Response::per_page( 50, 100, 80 ) );
+		$this->assertSame( 50, Feed_Response::per_page( 50, 100, null ) );
+	}
 }

@@ -952,6 +952,12 @@
 			}
 
 			refresh.addEventListener( 'click', run );
+			results.addEventListener( 'input', function ( event ) {
+				if ( event.target.classList.contains( 'kkce-preview-item' ) ) {
+					// The picker emits input before change; neither changes the feed configuration.
+					event.stopPropagation();
+				}
+			} );
 			results.addEventListener( 'change', function ( event ) {
 				const picker = event.target;
 				if ( ! picker.classList.contains( 'kkce-preview-item' ) ) {

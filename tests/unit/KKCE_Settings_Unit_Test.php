@@ -18,10 +18,11 @@ class KKCE_Settings_Unit_Test extends KKCE_Unit_Test_Case {
 	public function test_defaults() {
 		$this->assertSame(
 			array(
-				'enabled'      => true,
-				'require_auth' => false,
-				'max_per_page' => 100,
-				'remove_data'  => false,
+				'enabled'       => true,
+				'require_auth'  => false,
+				'max_per_page'  => 100,
+				'remove_data'   => false,
+				'show_in_index' => true,
 			),
 			Settings::defaults()
 		);
@@ -59,10 +60,11 @@ class KKCE_Settings_Unit_Test extends KKCE_Unit_Test_Case {
 	 */
 	public function test_normalize_keeps_valid_values() {
 		$stored = array(
-			'enabled'      => false,
-			'require_auth' => true,
-			'max_per_page' => 250,
-			'remove_data'  => true,
+			'enabled'       => false,
+			'require_auth'  => true,
+			'max_per_page'  => 250,
+			'remove_data'   => true,
+			'show_in_index' => false,
 		);
 
 		$this->assertSame( $stored, Settings::normalize( $stored ) );
@@ -96,6 +98,8 @@ class KKCE_Settings_Unit_Test extends KKCE_Unit_Test_Case {
 			'auth null'          => array( 'require_auth', null, true ),
 			'remove data text'   => array( 'remove_data', 'yes please', false ),
 			'remove data number' => array( 'remove_data', 7, false ),
+			'index text'         => array( 'show_in_index', 'maybe', true ),
+			'index null'         => array( 'show_in_index', null, true ),
 		);
 	}
 
@@ -132,14 +136,15 @@ class KKCE_Settings_Unit_Test extends KKCE_Unit_Test_Case {
 	/**
 	 * Previous values used by the form tests.
 	 *
-	 * @return array{enabled: bool, require_auth: bool, max_per_page: int, remove_data: bool}
+	 * @return array{enabled: bool, require_auth: bool, max_per_page: int, remove_data: bool, show_in_index: bool}
 	 */
 	private function previous(): array {
 		return array(
-			'enabled'      => true,
-			'require_auth' => false,
-			'max_per_page' => 150,
-			'remove_data'  => false,
+			'enabled'       => true,
+			'require_auth'  => false,
+			'max_per_page'  => 150,
+			'remove_data'   => false,
+			'show_in_index' => true,
 		);
 	}
 
@@ -158,10 +163,11 @@ class KKCE_Settings_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( array(), $result['errors'] );
 		$this->assertSame(
 			array(
-				'enabled'      => false,
-				'require_auth' => true,
-				'max_per_page' => 250,
-				'remove_data'  => false,
+				'enabled'       => false,
+				'require_auth'  => true,
+				'max_per_page'  => 250,
+				'remove_data'   => false,
+				'show_in_index' => false,
 			),
 			$result['values']
 		);
@@ -224,7 +230,7 @@ class KKCE_Settings_Unit_Test extends KKCE_Unit_Test_Case {
 	 */
 	public function test_process_ignores_unknown_keys_and_non_arrays() {
 		$result = Settings::process( array( 'enabled' => '1', 'surprise' => 'x' ), $this->previous() );
-		$this->assertSame( array( 'enabled', 'require_auth', 'max_per_page', 'remove_data' ), array_keys( $result['values'] ) );
+		$this->assertSame( array( 'enabled', 'require_auth', 'max_per_page', 'remove_data', 'show_in_index' ), array_keys( $result['values'] ) );
 
 		foreach ( array( 'text', null, 5 ) as $input ) {
 			$result = Settings::process( $input, $this->previous() );

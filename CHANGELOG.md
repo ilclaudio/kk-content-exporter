@@ -11,7 +11,12 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 ## [0.0.4] - Unreleased
 ### Added
-- Feed endpoint `GET /wp-json/kkce/v1/<slug>`: first page of a published, enabled, public feed.
+- Feed endpoint `GET /wp-json/kkce/v1/<slug>` for published, enabled, public feeds.
+- Pages of a feed with `page` and `per_page`, in a stable order by modified date (GMT) and ID.
+- Authenticated feeds: read with an Application Password of a user with the capability `kkce_read_export`.
+- Setting to show or hide the feed endpoint in the REST API index (shown by default).
+### Fixed
+- Choosing an item in the preview no longer triggers an unsaved-changes warning.
 
 ## [0.0.3] - 2026-11-19
 ### Added

@@ -93,6 +93,8 @@ class KKCE_Secret_Scan_Unit_Test extends KKCE_Unit_Test_Case {
 			'private key'              => array( '-----BEGIN ' . 'RSA PRIVATE KEY-----FAKE' ),
 			'GitHub token'             => array( 'gh' . 'p_FAKE' . str_repeat( 'a', 36 ) ),
 			'credentials in a URL'     => array( 'https://' . 'FAKEuser:FAKEpass' . '@example.com/' ),
+			'JSON password'            => array( '"' . $pw . '": "FAKEfakeFAKE1234"' ),
+			'text around a variable'   => array( '"' . $pw . '": "FAKEfake {{ _.wp_user }}"' ),
 		);
 	}
 
@@ -124,6 +126,9 @@ class KKCE_Secret_Scan_Unit_Test extends KKCE_Unit_Test_Case {
 			'six short words'          => array( 'when this test runs from here' ),
 			'plugin code'              => array( "\$title = 'Latest News';" ),
 			'per page setting'         => array( "'per_page' => 50," ),
+			// A request collection (tests/routes/) refers to a variable of its environment, never to a value.
+			'variable reference'       => array( '"' . $pw . '": "{{ _.wp_app_password }}"' ),
+			'variable without spaces'  => array( "'" . $pw . "' => '{{_.wp_app_password_without_capability}}'" ),
 		);
 	}
 }

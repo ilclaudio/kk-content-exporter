@@ -44,7 +44,9 @@ Examples: `Feature: Add the kkce_feed post type and its meta`,
 
 - Install the hooks once per clone: `composer run hooks:install` (`git config core.hooksPath .githooks`).
 - `.githooks/pre-commit` runs, in this order, and stops at the first failure:
-  1. secret scan of the staged changes (`check-staged-secrets.sh`; it prints line numbers, never values);
+  1. secret scan of the staged changes (`check-staged-secrets.sh`; it prints line numbers, never values; a quoted
+     value that is only a template variable, such as `"{{ _.wp_app_password }}"` in `tests/routes/`, is not scanned,
+     operator decision of 2026-11-20, covered by `KKCE_Secret_Scan_Unit_Test`);
   2. `php -l` on the staged PHP files (`check-staged-php-lint.sh`);
   3. PHPCS on the staged PHP files, errors only (`check-staged-phpcs.sh`);
   4. PHPStan on the whole plugin (`check-phpstan.sh`);

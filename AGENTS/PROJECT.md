@@ -65,7 +65,8 @@ downloads, timeouts, import logs and scheduling.
   source content and makes no external request.
 - Source post types: public ones only (`public => true`), `attachment` excluded.
 - Settings page (Settings API), submenu "Settings" of the Content Exporter menu, option `kkce_settings`:
-  master switch of the endpoints, authentication required for every feed, maximum items per page (100 by
+  master switch of the endpoints, listing of the feed endpoint in the REST API index (on by default; it hides
+  nothing from a request), authentication required for every feed, maximum items per page (100 by
   default, no ceiling; a feed cannot exceed it), removal of data on uninstall (off by default). Log retention
   is added in Phase 3 together with the log. The page also reports what could keep the feeds from working
   (REST API blocked for anonymous requests, Application Passwords unavailable); it changes nothing by itself.

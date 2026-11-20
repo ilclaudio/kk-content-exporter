@@ -91,25 +91,31 @@ final class Settings_Page {
 		add_settings_section( self::SECTION, '', '__return_empty_string', self::MENU_SLUG );
 
 		$fields = array(
-			'enabled'      => array(
+			'enabled'       => array(
 				'title'       => __( 'Endpoints', 'kk-content-exporter' ),
 				'type'        => 'checkbox',
 				'label'       => __( 'Serve the feeds', 'kk-content-exporter' ),
 				'description' => __( 'Turn it off to stop every feed from answering. The feeds and their settings are kept.', 'kk-content-exporter' ),
 			),
-			'require_auth' => array(
+			'show_in_index' => array(
+				'title'       => __( 'REST API index', 'kk-content-exporter' ),
+				'type'        => 'checkbox',
+				'label'       => __( 'Show the feed endpoint in the REST API index', 'kk-content-exporter' ),
+				'description' => __( 'The index of the REST API (/wp-json/) describes the address and the parameters of the feeds, which helps whoever connects an importer. Turn it off to leave the endpoint out of the index: the feeds keep answering, so this does not protect them.', 'kk-content-exporter' ),
+			),
+			'require_auth'  => array(
 				'title'       => __( 'Authentication', 'kk-content-exporter' ),
 				'type'        => 'checkbox',
 				'label'       => __( 'Require authentication for all feeds', 'kk-content-exporter' ),
 				'description' => __( 'It takes precedence over the access chosen in each feed.', 'kk-content-exporter' ),
 			),
-			'max_per_page' => array(
+			'max_per_page'  => array(
 				'title'       => __( 'Maximum items per page', 'kk-content-exporter' ),
 				'type'        => 'number',
 				'label'       => '',
 				'description' => __( 'The largest number of items that a feed can serve in one page. There is no upper limit: very high values make every response heavy and are your responsibility.', 'kk-content-exporter' ),
 			),
-			'remove_data'  => array(
+			'remove_data'   => array(
 				'title'       => __( 'Uninstall', 'kk-content-exporter' ),
 				'type'        => 'checkbox',
 				'label'       => __( 'Delete all the data of the plugin when the plugin is deleted', 'kk-content-exporter' ),

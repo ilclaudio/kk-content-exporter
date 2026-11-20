@@ -17,9 +17,10 @@ defined( 'ABSPATH' ) || exit;
  * `sanitize_option()` are the thin layer that talks to WordPress.
  *
  * A stored value that is present but damaged never opens or deletes anything: the endpoints switch
- * goes off, the authentication goes on and the data removal goes off.
+ * goes off, the authentication goes on and the data removal goes off. The listing of the feed route in the
+ * REST index stays on, as by default: it protects nothing, it only makes the route easier to find.
  *
- * @phpstan-type SettingsValues array{enabled: bool, require_auth: bool, max_per_page: int, remove_data: bool}
+ * @phpstan-type SettingsValues array{enabled: bool, require_auth: bool, max_per_page: int, remove_data: bool, show_in_index: bool}
  */
 final class Settings {
 
@@ -37,22 +38,24 @@ final class Settings {
 	 * The switches, with the value taken when the stored one is damaged (always the safe side).
 	 */
 	private const SWITCHES = array(
-		'enabled'      => false,
-		'require_auth' => true,
-		'remove_data'  => false,
+		'enabled'       => false,
+		'require_auth'  => true,
+		'remove_data'   => false,
+		'show_in_index' => true,
 	);
 
 	/**
 	 * The defaults of the settings.
 	 *
-	 * @return array{enabled: bool, require_auth: bool, max_per_page: int, remove_data: bool}
+	 * @return array{enabled: bool, require_auth: bool, max_per_page: int, remove_data: bool, show_in_index: bool}
 	 */
 	public static function defaults(): array {
 		return array(
-			'enabled'      => true,
-			'require_auth' => false,
-			'max_per_page' => self::DEFAULT_MAX_PER_PAGE,
-			'remove_data'  => false,
+			'enabled'       => true,
+			'require_auth'  => false,
+			'max_per_page'  => self::DEFAULT_MAX_PER_PAGE,
+			'remove_data'   => false,
+			'show_in_index' => true,
 		);
 	}
 
@@ -60,7 +63,7 @@ final class Settings {
 	 * Turns the stored option into complete, valid settings.
 	 *
 	 * @param mixed $stored Value of the option.
-	 * @return array{enabled: bool, require_auth: bool, max_per_page: int, remove_data: bool}
+	 * @return array{enabled: bool, require_auth: bool, max_per_page: int, remove_data: bool, show_in_index: bool}
 	 */
 	public static function normalize( $stored ): array {
 		$values = self::defaults();
@@ -129,7 +132,7 @@ final class Settings {
 	/**
 	 * Current settings, always complete and valid.
 	 *
-	 * @return array{enabled: bool, require_auth: bool, max_per_page: int, remove_data: bool}
+	 * @return array{enabled: bool, require_auth: bool, max_per_page: int, remove_data: bool, show_in_index: bool}
 	 */
 	public static function get(): array {
 		return self::normalize( get_option( self::OPTION, array() ) );
@@ -139,7 +142,7 @@ final class Settings {
 	 * Sanitize callback of the option, used by the Settings API and by `update_option()`.
 	 *
 	 * @param mixed $input Submitted value.
-	 * @return array{enabled: bool, require_auth: bool, max_per_page: int, remove_data: bool} The value to store.
+	 * @return array{enabled: bool, require_auth: bool, max_per_page: int, remove_data: bool, show_in_index: bool} The value to store.
 	 */
 	public static function sanitize_option( $input ): array {
 		$result = self::process( $input, self::get() );

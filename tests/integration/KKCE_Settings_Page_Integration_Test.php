@@ -133,10 +133,11 @@ class KKCE_Settings_Page_Integration_Test extends WP_UnitTestCase {
 
 		$this->assertSame(
 			array(
-				'enabled'      => true,
-				'require_auth' => false,
-				'max_per_page' => 250,
-				'remove_data'  => false,
+				'enabled'       => true,
+				'require_auth'  => false,
+				'max_per_page'  => 250,
+				'remove_data'   => false,
+				'show_in_index' => false,
 			),
 			get_option( Settings::OPTION )
 		);
@@ -172,6 +173,7 @@ class KKCE_Settings_Page_Integration_Test extends WP_UnitTestCase {
 		$this->assertMatchesRegularExpression( '/name="kkce_settings\[require_auth\]"[^>]*checked/', $html );
 		$this->assertDoesNotMatchRegularExpression( '/name="kkce_settings\[enabled\]"[^>]*checked/', $html, 'The switch was saved off.' );
 		$this->assertDoesNotMatchRegularExpression( '/name="kkce_settings\[remove_data\]"[^>]*checked/', $html );
+		$this->assertDoesNotMatchRegularExpression( '/name="kkce_settings\[show_in_index\]"[^>]*checked/', $html, 'The box was saved off.' );
 	}
 
 	/**
@@ -181,6 +183,7 @@ class KKCE_Settings_Page_Integration_Test extends WP_UnitTestCase {
 		$html = $this->page();
 
 		$this->assertMatchesRegularExpression( '/name="kkce_settings\[enabled\]"[^>]*checked/', $html );
+		$this->assertMatchesRegularExpression( '/name="kkce_settings\[show_in_index\]"[^>]*checked/', $html );
 		$this->assertDoesNotMatchRegularExpression( '/name="kkce_settings\[require_auth\]"[^>]*checked/', $html );
 		$this->assertDoesNotMatchRegularExpression( '/name="kkce_settings\[remove_data\]"[^>]*checked/', $html );
 		$this->assertStringContainsString( 'value="100"', $html );

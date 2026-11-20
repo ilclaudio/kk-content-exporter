@@ -10,51 +10,92 @@ Stable tag: 0.0.4
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-Exposes published content of a chosen post type as configurable, read-only JSON feeds.
+Publish selected WordPress content as read-only JSON feeds through a REST API, with the fields and structure you choose.
 
 == Description ==
 
-KK Content Exporter lets an administrator choose a post type, configure one or more feeds and map the fields of the content to freely named JSON keys. Each feed is served by a read-only REST endpoint.
+KK Content Exporter lets you share selected WordPress content with other websites and applications through read-only JSON feeds, accessed via a REST API.
 
-**This is a development version.** Feeds can already be created and configured, and their mapping of the WordPress core fields can be built, previewed and saved, but the feeds are not served yet: the endpoints, post meta, taxonomies, images, ACF and CMB2 fields arrive before version 1.0.0.
+Choose the content and fields to include, give the fields your own names, and combine different content types in one feed with a common structure.
 
-Planned for version 1.0.0:
+= Features =
 
-* Feeds stored in a private administrative post type.
-* Free mapping of WordPress fields, selected post meta, taxonomies, featured image and language to JSON keys.
-* Optional, read-only support for simple fields of Advanced Custom Fields, CMB2 and Polylang, when those plugins are active. None of them is required.
-* Public or authenticated (Application Passwords) feeds, with pagination and incremental reading.
-* A settings page to switch every feed off, to require authentication for all feeds and to set the maximum number of items per page. It also tells you when something keeps the feeds from working, such as a REST API blocked for anonymous requests.
-* Only published, non password-protected content is ever exported. The plugin never writes to the source content.
+* Include one or more content types and selected WordPress fields or custom fields (post meta).
+* Rename fields and build values using fixed text, templates, lookup tables and conditions.
+* Preview the JSON before saving your feed.
+* Share public feeds or require an Application Password, with pagination and a configurable page limit.
 
-The plugin makes no request to external services.
+Only published, non-password-protected content and selected fields are exported. The plugin makes no requests to external services; other systems read or import the feed themselves.
+
+= Development status =
+
+This plugin is in development. Date filters and sources for taxonomies, featured images, language, ACF and CMB2 are planned for version 1.0.0. ACF, CMB2 and Polylang will be optional.
 
 == Installation ==
+
+= Install and activate =
 
 1. Upload the `kk-content-exporter` folder to `/wp-content/plugins/`, or install the plugin from the Plugins screen.
 2. Activate the plugin through the Plugins screen.
 
+= Create your first feed =
+
+This example creates a public feed of post titles and links. You need at least one published post without a password to see sample data.
+
+1. In the WordPress admin, open **Content Exporter > Add New** and name the feed **News**.
+2. In **Feed settings**, enter `news` in **Slug** and select **Posts** under **Source**.
+3. Under **Access**, choose **Public: anyone can read the feed**. For this public example, **Require authentication for all feeds** must be off in **Content Exporter > Settings**.
+4. In **Mapping**, click **Add row**. Use **Rule** = **Field**, choose **Title**, and set **JSON key** to `title`.
+5. Add a second row with **Rule** = **Field**, **Permalink** as the field, and `url` as the **JSON key**.
+6. Check the preview, then check **Enable the feed** and click **Publish** (or **Update** for an existing feed). The feed must be both published and enabled.
+
+= Read the feed =
+
+Copy the feed URL shown below **Slug** and open it in your browser. For the example above:
+
+`https://example.com/wp-json/kkce/v1/news`
+
+Use your site's address in place of `https://example.com`. Applications read the same URL with an HTTP `GET` request and no request body. From a terminal, for example:
+
+    curl 'https://example.com/wp-json/kkce/v1/news?page=1&per_page=10'
+
+Here, `page=1` selects the first page and `per_page=10` requests ten items. Increase `page` to read the next page; the page size cannot exceed the maximum in the plugin settings.
+
+The JSON response contains `items` (the selected fields), `pagination` (page information) and `meta` (feed information).
+
+= Global settings =
+
+Open **Content Exporter > Settings** to see the **Content Exporter settings** page. These settings apply to all feeds. Click **Save Changes** to apply them.
+
+* **Endpoints — Serve the feeds** (on by default): the main switch for serving feeds. Turn it off to stop all feed endpoints from answering. Your feeds and their configuration are kept. When it is on, each feed must still be published and enabled individually.
+* **REST API index — Show the feed endpoint in the REST API index** (on by default): lets tools discover the feed route and its parameters through `/wp-json/`. Turning it off hides that description, but feeds can still be read at their URLs. Use authentication to restrict access.
+* **Authentication — Require authentication for all feeds** (off by default): requires an authorized user's Application Password for every feed, including those marked **Public**. Leave it off to use each feed's own **Access** setting. See the authenticated-feed FAQ below for connection requirements.
+* **Maximum items per page** (100 by default): the largest page any feed can return. Enter a whole number of at least 1. A feed configured above this maximum is limited to it; a request that explicitly asks for more is rejected. There is no fixed upper limit, but large pages may slow down the site.
+* **Uninstall — Delete all the data of the plugin when the plugin is deleted** (off by default): when enabled, deleting the plugin permanently removes feeds, their configuration, global settings and the access permission added by the plugin. Deactivation alone does not remove them. Leave this off to keep the configuration for a later reinstall. Source content is always kept.
+
+= Diagnostic messages =
+
+The settings page may also warn about:
+
+* **Public REST access blocked:** another plugin or a site setting may prevent anonymous readers from opening public feeds.
+* **Application Passwords unavailable:** authenticated feeds need this WordPress feature, normally available over HTTPS or in a local development environment.
+* **Sensitive fields included:** enabled feeds contain fields explicitly confirmed as sensitive or personal. Review whether those values should be shared, especially in public feeds.
+
+These messages describe possible problems; they do not change settings or repair the site automatically.
+
 == Frequently Asked Questions ==
 
-= Does the plugin change the native REST API? =
+= How do I read an authenticated feed? =
 
-No. Feeds are served under their own namespace and the plugin does not change the `show_in_rest` setting of any post type.
+Choose **Authenticated** under **Access** and save the feed. Your application must use HTTPS and a WordPress Application Password for an authorized user. Administrators receive access when the plugin is activated. Being logged into WordPress in a browser is not enough.
 
-= Are drafts or private posts exported? =
+= Does the plugin change my content or WordPress's REST API? =
 
-No. Only published content that is not protected by a password is exported.
+No. It leaves the original content, its visibility and WordPress's existing REST API unchanged. Feeds have their own addresses and configuration.
 
 = Does the plugin work on a multisite network? =
 
 It works on a single site. Network activation is not supported in this version: activate the plugin on each site where you need it.
-
-= What happens to my feeds when I delete the plugin? =
-
-By default nothing is deleted: the feeds and their settings stay in the database, so you can install the plugin again. To remove everything, turn on "Delete all the data of the plugin when the plugin is deleted" in Content Exporter > Settings before you delete the plugin. The removal is permanent.
-
-= Why is there a maximum of items per page? =
-
-It protects your site: a feed cannot serve more items in a page than the maximum you set (100 by default). There is no upper limit for the maximum itself; very high values make each response heavy and are your responsibility.
 
 == Changelog ==
 
