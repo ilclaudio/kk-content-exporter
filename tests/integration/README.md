@@ -68,6 +68,7 @@ number of assertions changes with the version of WordPress.
 | `KKCE_Content_Renderer_Integration_Test.php` | Content and excerpt as clean HTML: blocks, shortcodes only on request, raw text, no external request |
 | `KKCE_Core_Provider_Integration_Test.php` | Values of the core fields of posts and pages: GMT dates, public author attributes only |
 | `KKCE_Environment_Integration_Test.php` | The plugin is loaded, wired and translatable (bundled `it_IT` translation) |
+| `KKCE_Exportable_Post_Types_Integration_Test.php` | The post types a feed can export: public ones only, `attachment` excluded, sorted by label |
 | `KKCE_Feed_Editor_Integration_Test.php` | Saving a feed and its mapping: nonce, capability, validation, refused mapping kept as a draft, activation rules |
 | `KKCE_Feed_List_Integration_Test.php` | Columns of the list of the feeds, escaped, with the mark of the feeds that export sensitive fields |
 | `KKCE_Feed_Meta_Integration_Test.php` | Configuration meta: registered, hidden from REST, sanitized, editable by administrators only |

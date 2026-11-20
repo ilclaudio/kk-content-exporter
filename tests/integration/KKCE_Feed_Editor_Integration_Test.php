@@ -556,19 +556,6 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The selectable source post types are the public ones, `attachment` excluded.
-	 */
-	public function test_selectable_post_types() {
-		$types = Feed_Editor::selectable_post_types();
-
-		$this->assertArrayHasKey( 'post', $types );
-		$this->assertArrayHasKey( 'page', $types );
-		$this->assertArrayNotHasKey( 'attachment', $types );
-		$this->assertArrayNotHasKey( 'kkce_feed', $types );
-		$this->assertArrayNotHasKey( 'revision', $types );
-	}
-
-	/**
 	 * The box prints a nonce, the fields, the current values and nothing unescaped.
 	 */
 	public function test_the_meta_box_prints_the_fields_with_the_current_values() {

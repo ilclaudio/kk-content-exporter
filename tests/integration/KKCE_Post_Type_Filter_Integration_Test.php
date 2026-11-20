@@ -7,6 +7,7 @@
 
 use KKCE\Admin\Feed_Editor;
 use KKCE\Feed_Meta;
+use KKCE\Sources\Exportable_Post_Types;
 
 /**
  * The filter is printed hidden (the script shows it) only when the list of post types is long.
@@ -62,12 +63,12 @@ class KKCE_Post_Type_Filter_Integration_Test extends WP_UnitTestCase {
 	 * @return void
 	 */
 	private function selectable( int $count ): void {
-		for ( $i = count( Feed_Editor::selectable_post_types() ); $i < $count; $i++ ) {
+		for ( $i = count( Exportable_Post_Types::selectable() ); $i < $count; $i++ ) {
 			$name               = 'kkce_test_' . $i;
 			$this->registered[] = $name;
 			register_post_type( $name, array( 'public' => true, 'label' => 'Test type ' . $i ) );
 		}
-		$this->assertCount( $count, Feed_Editor::selectable_post_types() );
+		$this->assertCount( $count, Exportable_Post_Types::selectable() );
 	}
 
 	/**

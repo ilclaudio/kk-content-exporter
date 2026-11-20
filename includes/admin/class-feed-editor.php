@@ -15,6 +15,7 @@ use KKCE\Output\Catalog_Validator;
 use KKCE\Plugin;
 use KKCE\Settings;
 use KKCE\Sources\Catalog_Factory;
+use KKCE\Sources\Exportable_Post_Types;
 use WP_Post;
 
 defined( 'ABSPATH' ) || exit;
@@ -167,25 +168,6 @@ final class Feed_Editor {
 	}
 
 	/**
-	 * Post types a feed can read from: the public ones, `attachment` excluded.
-	 *
-	 * @return array<string, string> Post type key => label, sorted by label.
-	 */
-	public static function selectable_post_types(): array {
-		$types = array();
-
-		foreach ( get_post_types( array( 'public' => true ), 'objects' ) as $name => $type ) {
-			if ( 'attachment' !== $name ) {
-				$types[ $name ] = $type->label;
-			}
-		}
-
-		asort( $types, SORT_NATURAL | SORT_FLAG_CASE );
-
-		return $types;
-	}
-
-	/**
 	 * Post types shown as checkboxes: the selectable ones and, after them, the saved ones that are no
 	 * longer selectable (their plugin deactivated, or no longer public).
 	 *
@@ -199,7 +181,7 @@ final class Feed_Editor {
 	 * @phpstan-param list<string> $saved
 	 */
 	private static function source_choices( array $saved ): array {
-		$choices = self::selectable_post_types();
+		$choices = Exportable_Post_Types::selectable();
 
 		foreach ( $saved as $name ) {
 			if ( ! isset( $choices[ $name ] ) ) {

@@ -7,12 +7,12 @@
 
 namespace KKCE\Rest;
 
-use KKCE\Admin\Feed_Editor;
 use KKCE\Feed_Post_Type;
 use KKCE\Output\Catalog_Validator;
 use KKCE\Output\Item_Exporter;
 use KKCE\Output\Mapping;
 use KKCE\Sources\Catalog_Factory;
+use KKCE\Sources\Exportable_Post_Types;
 use KKCE\Sources\Meta_Keys;
 use KKCE\Sources\Source;
 use WP_Error;
@@ -199,7 +199,8 @@ final class Admin_Routes {
 	 * @return array{post_types: list<string>, unavailable: list<string>, labels: array<string, string>, sources: list<array<string, mixed>>, suggested_rows: list<array<string, mixed>>, refused_meta_keys: list<string>}
 	 */
 	public static function describe_catalog( $requested, $meta_keys = array() ): array {
-		list( $post_types, $unavailable ) = self::split_post_types( $requested );
+		$selectable                       = Exportable_Post_Types::selectable();
+		list( $post_types, $unavailable ) = Exportable_Post_Types::split( $requested, $selectable );
 
 		$keys    = array();
 		$refused = array();
@@ -211,8 +212,7 @@ final class Admin_Routes {
 			}
 		}
 
-		$catalog    = Catalog_Factory::for_post_types( $post_types, true, $keys );
-		$selectable = Feed_Editor::selectable_post_types();
+		$catalog = Catalog_Factory::for_post_types( $post_types, true, $keys );
 
 		$labels = array();
 		foreach ( $post_types as $post_type ) {
@@ -239,7 +239,7 @@ final class Admin_Routes {
 	 */
 	public static function preview( WP_REST_Request $request ) {
 		// The post types come first: without them the catalog is empty and every source would look unknown.
-		list( $post_types ) = self::split_post_types( $request->get_param( 'post_types' ) );
+		list( $post_types ) = Exportable_Post_Types::split( $request->get_param( 'post_types' ), Exportable_Post_Types::selectable() );
 		if ( array() === $post_types ) {
 			return new WP_Error(
 				'kkce_no_post_types',
@@ -308,7 +308,7 @@ final class Admin_Routes {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public static function items( WP_REST_Request $request ) {
-		list( $post_types ) = self::split_post_types( array( $request->get_param( 'post_type' ) ) );
+		list( $post_types ) = Exportable_Post_Types::split( array( $request->get_param( 'post_type' ) ), Exportable_Post_Types::selectable() );
 		if ( array() === $post_types ) {
 			return new WP_Error(
 				'kkce_no_post_types',
@@ -327,28 +327,6 @@ final class Admin_Routes {
 		}
 
 		return new WP_REST_Response( array( 'items' => $items ) );
-	}
-
-	/**
-	 * Splits the requested post types into the selectable ones and the others, without duplicates.
-	 *
-	 * @param mixed $requested Validated `post_types` argument.
-	 * @return array{0: list<string>, 1: list<string>} Selectable post types and the others, in the order of the request.
-	 */
-	private static function split_post_types( $requested ): array {
-		$selectable  = Feed_Editor::selectable_post_types();
-		$available   = array();
-		$unavailable = array();
-
-		foreach ( array_unique( array_map( 'strval', (array) $requested ) ) as $post_type ) {
-			if ( isset( $selectable[ $post_type ] ) ) {
-				$available[] = $post_type;
-			} else {
-				$unavailable[] = $post_type;
-			}
-		}
-
-		return array( $available, $unavailable );
 	}
 
 	/**
