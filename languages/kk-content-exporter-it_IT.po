@@ -8,7 +8,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2026-11-06T22:54:45+01:00\n"
-"PO-Revision-Date: 2026-11-20T17:15:30+00:00\n"
+"PO-Revision-Date: 2026-11-20T17:43:28+00:00\n"
 "Language: it_IT\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Loco https://localise.biz/\n"
@@ -263,7 +263,7 @@ msgid "The mapping editor needs JavaScript. Without it, saving the feed keeps th
 msgstr "L'editor del mapping richiede JavaScript. Senza, salvando il feed il mapping salvato resta invariato."
 
 #: includes/admin/class-settings-page.php:66
-#: includes/admin/class-settings-page.php:155
+#: includes/admin/class-settings-page.php:171
 msgid "Content Exporter settings"
 msgstr "Impostazioni di Content Exporter"
 
@@ -316,31 +316,57 @@ msgid "The largest number of items that a feed can serve in one page. There is n
 msgstr "Il numero massimo di elementi che un feed può servire in una pagina. Non c'è un limite superiore: valori molto alti rendono ogni risposta pesante e sono sotto la tua responsabilità."
 
 #: includes/admin/class-settings-page.php:119
+msgid "Date filters"
+msgstr "Filtri per data"
+
+#: includes/admin/class-settings-page.php:122
+msgid "An importer uses them to read only what changed since its last reading. A filter turned off is refused with an error, never ignored, so an importer never reads more than it asked for."
+msgstr "Un importatore li usa per leggere solo ciò che è cambiato dall'ultima lettura. Un filtro disattivato viene rifiutato con un errore, mai ignorato, così un importatore non legge mai più di quanto ha chiesto."
+
+#. translators: %s: name of a parameter of the feed endpoint, kept in English.
+#: includes/admin/class-settings-page.php:125
+#, php-format
+msgid "%s: items modified at or after the date"
+msgstr "%s: elementi modificati a partire dalla data (inclusa)"
+
+#. translators: %s: name of a parameter of the feed endpoint, kept in English.
+#: includes/admin/class-settings-page.php:127
+#, php-format
+msgid "%s: items modified before the date"
+msgstr "%s: elementi modificati prima della data"
+
+#. translators: %s: name of a parameter of the feed endpoint, kept in English.
+#: includes/admin/class-settings-page.php:129
+#, php-format
+msgid "%s: items published at or after the date"
+msgstr "%s: elementi pubblicati a partire dalla data (inclusa)"
+
+#: includes/admin/class-settings-page.php:133
 msgid "Uninstall"
 msgstr "Disinstallazione"
 
-#: includes/admin/class-settings-page.php:121
+#: includes/admin/class-settings-page.php:135
 msgid "Delete all the data of the plugin when the plugin is deleted"
 msgstr "Elimina tutti i dati del plugin quando il plugin viene eliminato"
 
-#: includes/admin/class-settings-page.php:122
+#: includes/admin/class-settings-page.php:136
 msgid "The feeds, their settings, these settings and the capability are removed permanently. Leave it off to keep them."
 msgstr "I feed, le loro impostazioni, queste impostazioni e la capability vengono rimossi in modo permanente. Lascialo disattivato per conservarli."
 
-#: includes/admin/class-settings-page.php:151
+#: includes/admin/class-settings-page.php:167
 msgid "You do not have permission to access this page."
 msgstr "Non hai il permesso di accedere a questa pagina."
 
-#: includes/admin/class-settings-page.php:226
+#: includes/admin/class-settings-page.php:282
 msgid "The REST API seems to be blocked for anonymous requests, probably by a security plugin or a setting of the site. Public feeds cannot be read until anonymous requests to the REST API are allowed."
 msgstr "L'API REST sembra bloccata per le richieste anonime, probabilmente da un plugin di sicurezza o da un'impostazione del sito. I feed pubblici non possono essere letti finché le richieste anonime all'API REST non sono consentite."
 
-#: includes/admin/class-settings-page.php:230
+#: includes/admin/class-settings-page.php:288
 msgid "Some feeds require authentication, but Application Passwords are not available on this site: WordPress offers them only over HTTPS or in a local environment. Authenticated feeds cannot be read until then."
 msgstr "Alcuni feed richiedono l'autenticazione, ma le Application Password non sono disponibili su questo sito: WordPress le offre solo tramite HTTPS o in un ambiente locale. I feed autenticati non possono essere letti finché non lo sono."
 
 #. translators: %s: titles of the feeds, separated by commas.
-#: includes/admin/class-settings-page.php:237
+#: includes/admin/class-settings-page.php:295
 #, php-format
 msgid "These enabled feeds export fields confirmed as sensitive or personal: %s. Check that this is intended, above all for public feeds."
 msgstr "Questi feed attivi esportano campi confermati come sensibili o personali: %s. Verifica che sia voluto, soprattutto per i feed pubblici."
@@ -397,15 +423,15 @@ msgstr "Nessun feed nel cestino."
 msgid "All Feeds"
 msgstr "Tutti i feed"
 
-#: includes/class-plugin.php:133
+#: includes/class-plugin.php:134
 msgid "Development version: feeds can be configured, but they are not served yet."
 msgstr "Versione di sviluppo: i feed si possono configurare, ma non sono ancora esposti."
 
-#: includes/class-settings.php:166
+#: includes/class-settings.php:173
 msgid "The maximum items per page must be a whole number of at least 1. The previous value was kept."
 msgstr "Il massimo di elementi per pagina deve essere un numero intero di almeno 1. È stato mantenuto il valore precedente."
 
-#: includes/class-settings.php:169
+#: includes/class-settings.php:176
 msgid "A setting was not valid and the previous value was kept."
 msgstr "Un'impostazione non era valida ed è stato mantenuto il valore precedente."
 
@@ -446,33 +472,61 @@ msgstr "Il mapping non è valido."
 msgid "No published item of the feed post types has this ID."
 msgstr "Nessun elemento pubblicato dei tipi di contenuto del feed ha questo ID."
 
-#: includes/rest/class-feed-routes.php:93
+#: includes/rest/class-feed-routes.php:94
 msgid "Slug of the feed."
 msgstr "Slug del feed."
 
-#: includes/rest/class-feed-routes.php:97
+#: includes/rest/class-feed-routes.php:98
 msgid "Page of the items, from 1."
 msgstr "Pagina degli elementi, da 1."
 
-#: includes/rest/class-feed-routes.php:104
+#: includes/rest/class-feed-routes.php:105
 msgid "Items per page; by default the value of the feed, at most the maximum of the settings."
 msgstr "Elementi per pagina; per impostazione predefinita il valore del feed, al massimo il valore massimo delle impostazioni."
 
-#: includes/rest/class-feed-routes.php:146
+#: includes/rest/class-feed-routes.php:110
+msgid "Items modified at or after this moment (included), for example 2026-11-01T10:00:00Z."
+msgstr "Elementi modificati a partire da questo momento (incluso), per esempio 2026-11-01T10:00:00Z."
+
+#: includes/rest/class-feed-routes.php:111
+msgid "Items modified before this moment (excluded), for example 2026-11-01T10:00:00Z."
+msgstr "Elementi modificati prima di questo momento (escluso), per esempio 2026-11-01T10:00:00Z."
+
+#: includes/rest/class-feed-routes.php:112
+msgid "Items published at or after this moment (included), for example 2026-11-01T10:00:00Z."
+msgstr "Elementi pubblicati a partire da questo momento (incluso), per esempio 2026-11-01T10:00:00Z."
+
+#: includes/rest/class-feed-routes.php:150
 msgid "Sorry, you are not allowed to read this feed."
 msgstr "Non hai il permesso di leggere questo feed."
 
-#: includes/rest/class-feed-routes.php:153
+#: includes/rest/class-feed-routes.php:157
 msgid "Authentication with an Application Password is required to read this feed."
 msgstr "Per leggere questo feed è necessaria l'autenticazione con una password per le applicazioni."
 
 #. translators: %d: maximum items per page set in the settings of the plugin.
-#: includes/rest/class-feed-routes.php:179
+#: includes/rest/class-feed-routes.php:225
 #, php-format
 msgid "per_page must be at most %d."
 msgstr "per_page deve essere al massimo %d."
 
-#: includes/rest/class-feed-routes.php:337
+#. translators: %s: name of a parameter of the feed endpoint.
+#: includes/rest/class-feed-routes.php:270
+#, php-format
+msgid "%s is turned off on this site."
+msgstr "%s è disattivato su questo sito."
+
+#. translators: 1: name of a parameter of the feed endpoint, 2: example of a date.
+#: includes/rest/class-feed-routes.php:272
+#, php-format
+msgid "%1$s must be a date with a time zone, for example %2$s."
+msgstr "%1$s deve essere una data con il fuso orario, per esempio %2$s."
+
+#: includes/rest/class-feed-routes.php:329
+msgid "modified_after must be earlier than modified_before."
+msgstr "modified_after deve essere precedente a modified_before."
+
+#: includes/rest/class-feed-routes.php:452
 msgid "No feed is available at this address."
 msgstr "Nessun feed è disponibile a questo indirizzo."
 

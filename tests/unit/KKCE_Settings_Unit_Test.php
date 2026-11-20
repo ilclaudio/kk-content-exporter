@@ -18,11 +18,14 @@ class KKCE_Settings_Unit_Test extends KKCE_Unit_Test_Case {
 	public function test_defaults() {
 		$this->assertSame(
 			array(
-				'enabled'       => true,
-				'require_auth'  => false,
-				'max_per_page'  => 100,
-				'remove_data'   => false,
-				'show_in_index' => true,
+				'enabled'                => true,
+				'require_auth'           => false,
+				'max_per_page'           => 100,
+				'remove_data'            => false,
+				'show_in_index'          => true,
+				'filter_modified_after'  => true,
+				'filter_modified_before' => true,
+				'filter_published_after' => true,
 			),
 			Settings::defaults()
 		);
@@ -60,11 +63,14 @@ class KKCE_Settings_Unit_Test extends KKCE_Unit_Test_Case {
 	 */
 	public function test_normalize_keeps_valid_values() {
 		$stored = array(
-			'enabled'       => false,
-			'require_auth'  => true,
-			'max_per_page'  => 250,
-			'remove_data'   => true,
-			'show_in_index' => false,
+			'enabled'                => false,
+			'require_auth'           => true,
+			'max_per_page'           => 250,
+			'remove_data'            => true,
+			'show_in_index'          => false,
+			'filter_modified_after'  => false,
+			'filter_modified_before' => true,
+			'filter_published_after' => false,
 		);
 
 		$this->assertSame( $stored, Settings::normalize( $stored ) );
@@ -100,6 +106,8 @@ class KKCE_Settings_Unit_Test extends KKCE_Unit_Test_Case {
 			'remove data number' => array( 'remove_data', 7, false ),
 			'index text'         => array( 'show_in_index', 'maybe', true ),
 			'index null'         => array( 'show_in_index', null, true ),
+			'date filter text'   => array( 'filter_modified_after', 'maybe', true ),
+			'date filter array'  => array( 'filter_published_after', array( 0 ), true ),
 		);
 	}
 
@@ -136,15 +144,18 @@ class KKCE_Settings_Unit_Test extends KKCE_Unit_Test_Case {
 	/**
 	 * Previous values used by the form tests.
 	 *
-	 * @return array{enabled: bool, require_auth: bool, max_per_page: int, remove_data: bool, show_in_index: bool}
+	 * @return array{enabled: bool, require_auth: bool, max_per_page: int, remove_data: bool, show_in_index: bool, filter_modified_after: bool, filter_modified_before: bool, filter_published_after: bool}
 	 */
 	private function previous(): array {
 		return array(
-			'enabled'       => true,
-			'require_auth'  => false,
-			'max_per_page'  => 150,
-			'remove_data'   => false,
-			'show_in_index' => true,
+			'enabled'                => true,
+			'require_auth'           => false,
+			'max_per_page'           => 150,
+			'remove_data'            => false,
+			'show_in_index'          => true,
+			'filter_modified_after'  => true,
+			'filter_modified_before' => true,
+			'filter_published_after' => true,
 		);
 	}
 
@@ -154,8 +165,9 @@ class KKCE_Settings_Unit_Test extends KKCE_Unit_Test_Case {
 	public function test_process_reads_the_checkboxes_and_the_maximum() {
 		$result = Settings::process(
 			array(
-				'require_auth' => '1',
-				'max_per_page' => '250',
+				'require_auth'           => '1',
+				'max_per_page'           => '250',
+				'filter_modified_before' => '1',
 			),
 			$this->previous()
 		);
@@ -163,11 +175,14 @@ class KKCE_Settings_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( array(), $result['errors'] );
 		$this->assertSame(
 			array(
-				'enabled'       => false,
-				'require_auth'  => true,
-				'max_per_page'  => 250,
-				'remove_data'   => false,
-				'show_in_index' => false,
+				'enabled'                => false,
+				'require_auth'           => true,
+				'max_per_page'           => 250,
+				'remove_data'            => false,
+				'show_in_index'          => false,
+				'filter_modified_after'  => false,
+				'filter_modified_before' => true,
+				'filter_published_after' => false,
 			),
 			$result['values']
 		);
@@ -230,7 +245,7 @@ class KKCE_Settings_Unit_Test extends KKCE_Unit_Test_Case {
 	 */
 	public function test_process_ignores_unknown_keys_and_non_arrays() {
 		$result = Settings::process( array( 'enabled' => '1', 'surprise' => 'x' ), $this->previous() );
-		$this->assertSame( array( 'enabled', 'require_auth', 'max_per_page', 'remove_data', 'show_in_index' ), array_keys( $result['values'] ) );
+		$this->assertSame( array( 'enabled', 'require_auth', 'max_per_page', 'remove_data', 'show_in_index', 'filter_modified_after', 'filter_modified_before', 'filter_published_after' ), array_keys( $result['values'] ) );
 
 		foreach ( array( 'text', null, 5 ) as $input ) {
 			$result = Settings::process( $input, $this->previous() );

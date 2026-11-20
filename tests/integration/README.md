@@ -70,7 +70,7 @@ number of assertions changes with the version of WordPress.
 | `KKCE_Environment_Integration_Test.php` | The plugin is loaded, wired and translatable (bundled `it_IT` translation) |
 | `KKCE_Exportable_Post_Types_Integration_Test.php` | The post types a feed can export: public ones only, `attachment` excluded, sorted by label |
 | `KKCE_Feed_Editor_Integration_Test.php` | Saving a feed and its mapping: nonce, capability, validation, refused mapping kept as a draft, activation rules |
-| `KKCE_Feed_Routes_Integration_Test.php` | The endpoint of a feed: switch of the settings, 404 for feeds that cannot be served, Application Password and capability for feeds that need authentication (401, 403, same data as a public feed), published public data only, computed as a visitor, pages and their parameters, order by GMT modified date across daylight saving time and time zones, isolation between feeds |
+| `KKCE_Feed_Routes_Integration_Test.php` | The endpoint of a feed: switch of the settings, 404 for feeds that cannot be served, Application Password and capability for feeds that need authentication (401, 403, same data as a public feed), published public data only, computed as a visitor, pages and their parameters, order by GMT modified date across daylight saving time and time zones, date filters (half-open interval, time zones, switches of the settings), isolation between feeds |
 | `KKCE_Feed_List_Integration_Test.php` | Columns of the list of the feeds, escaped, with the mark of the feeds that export sensitive fields |
 | `KKCE_Feed_Meta_Integration_Test.php` | Configuration meta: registered, hidden from REST, sanitized, editable by administrators only |
 | `KKCE_Feed_Post_Type_Integration_Test.php` | The post type `kkce_feed`: private, without REST routes, title only, administrators only |
@@ -78,16 +78,23 @@ number of assertions changes with the version of WordPress.
 | `KKCE_Item_Exporter_Integration_Test.php` | An item is exported with the values a visitor would see; the current user is restored |
 | `KKCE_Mapping_Box_Integration_Test.php` | The Mapping box: initial data, refused mapping shown again, script and style on the feed screens only |
 | `KKCE_Post_Type_Filter_Integration_Test.php` | The filter of the post types appears only when the list is long |
-| `KKCE_Settings_Page_Integration_Test.php` | The settings page: administrators only, sanitized values, diagnostics |
+| `KKCE_Settings_Page_Integration_Test.php` | The settings page: administrators only, sanitized values, the group of the date filters, diagnostics |
 | `KKCE_Uninstaller_Integration_Test.php` | Nothing is removed unless the administrator chose it; then feeds, settings and capability go |
 
-## Adding a test
+### Authentication response headers
 
 The feed-route tests also include `test_served_feed_authentication_headers` (four cases). It uses
 `WP_REST_Server::serve_request()` and captures the emitted status and headers, rather than relying
 only on `rest_do_request()`. It requires a Basic `WWW-Authenticate` challenge on a 401 response and
 checks that public success, authenticated success and a capability-related 403 do not add one.
+Two further served-response tests cover anonymous admin requests and invalid Application Passwords
+on public feeds. Focused filter tests check that core and foreign routes (including a foreign callback
+inside the admin namespace), existing challenges and disabled Application Passwords remain unchanged.
+Availability is enabled only within test fixtures and restored afterwards; production code respects
+WordPress's existing availability decision.
 This covers WordPress's response-serving pipeline, not headers added later by a web server or proxy.
+
+## Adding a test
 
 1. Create `tests/integration/KKCE_<Area>_Integration_Test.php` with a class of the same name extending
    `WP_UnitTestCase`; use `self::factory()` to create posts, users and terms.

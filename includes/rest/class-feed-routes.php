@@ -16,6 +16,7 @@ use KKCE\Plugin;
 use KKCE\Settings;
 use KKCE\Sources\Exportable_Post_Types;
 use WP_Error;
+use WP_HTTP_Response;
 use WP_Post;
 use WP_Query;
 use WP_REST_Request;
@@ -89,23 +90,26 @@ final class Feed_Routes {
 				'permission_callback' => array( self::class, 'can_read' ),
 				'show_in_index'       => $settings['show_in_index'],
 				'args'                => array(
-					self::SLUG => array(
+					self::SLUG        => array(
 						'description' => __( 'Slug of the feed.', 'kk-content-exporter' ),
 						'type'        => 'string',
 					),
-					'page'     => array(
+					'page'            => array(
 						'description' => __( 'Page of the items, from 1.', 'kk-content-exporter' ),
 						'type'        => 'integer',
 						'minimum'     => 1,
 						'maximum'     => self::MAX_PAGE,
 						'default'     => 1,
 					),
-					'per_page' => array(
+					'per_page'        => array(
 						'description'       => __( 'Items per page; by default the value of the feed, at most the maximum of the settings.', 'kk-content-exporter' ),
 						'type'              => 'integer',
 						'minimum'           => 1,
 						'validate_callback' => array( self::class, 'validate_per_page' ),
 					),
+					'modified_after'  => self::date_filter_arg( __( 'Items modified at or after this moment (included), for example 2026-11-01T10:00:00Z.', 'kk-content-exporter' ) ),
+					'modified_before' => self::date_filter_arg( __( 'Items modified before this moment (excluded), for example 2026-11-01T10:00:00Z.', 'kk-content-exporter' ) ),
+					'published_after' => self::date_filter_arg( __( 'Items published at or after this moment (included), for example 2026-11-01T10:00:00Z.', 'kk-content-exporter' ) ),
 				),
 			)
 		);
@@ -156,6 +160,64 @@ final class Feed_Routes {
 	}
 
 	/**
+	 * Adds an available HTTP Basic challenge to 401 responses of KKCE-owned REST endpoints only.
+	 *
+	 * Runs after authentication as well as dispatch, so errors from WordPress's Application Password
+	 * handler receive the challenge too, even on public feeds. Existing challenges and non-KKCE
+	 * responses are preserved; WordPress's authentication availability is never changed.
+	 * Hooked on `rest_post_dispatch`.
+	 *
+	 * @param mixed           $response REST response.
+	 * @param WP_REST_Server  $server   REST server with the registered endpoint callbacks.
+	 * @param WP_REST_Request $request  Request being served.
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 * @return mixed Response, with a challenge when applicable.
+	 */
+	public static function authentication_challenge( $response, WP_REST_Server $server, WP_REST_Request $request ) {
+		if ( ! $response instanceof WP_HTTP_Response || 401 !== $response->get_status()
+			|| ( 0 !== strncasecmp( $request->get_route(), '/' . Plugin::REST_NAMESPACE . '/', strlen( Plugin::REST_NAMESPACE ) + 2 )
+				&& 0 !== strncasecmp( $request->get_route(), '/' . Admin_Routes::NAMESPACE . '/', strlen( Admin_Routes::NAMESPACE ) + 2 ) )
+		) {
+			return $response;
+		}
+
+		// Resolve the first matching method exactly as dispatch does. Another plugin can own a route
+		// even inside our namespace, so a prefix alone is not proof that its response belongs to us.
+		$owned = false;
+		foreach ( $server->get_routes() as $route => $handlers ) {
+			if ( 1 !== preg_match( '@^' . $route . '$@i', $request->get_route() ) ) {
+				continue;
+			}
+			foreach ( $handlers as $handler ) {
+				$method = $request->get_method();
+				if ( 'HEAD' === $method && empty( $handler['methods']['HEAD'] ) ) {
+					$method = 'GET';
+				}
+				if ( empty( $handler['methods'][ $method ] ) ) {
+					continue;
+				}
+				$callback = $handler['callback'] ?? null;
+				$owned    = is_array( $callback ) && isset( $callback[0] )
+					&& in_array( $callback[0], array( self::class, Admin_Routes::class ), true );
+				break 2;
+			}
+		}
+
+		if ( ! $owned || ! wp_is_application_passwords_available() ) {
+			return $response;
+		}
+
+		foreach ( array_keys( $response->get_headers() ) as $name ) {
+			if ( 0 === strcasecmp( $name, 'WWW-Authenticate' ) ) {
+				return $response;
+			}
+		}
+
+		$response->header( 'WWW-Authenticate', 'Basic realm="KK Content Exporter"' );
+		return $response;
+	}
+
+	/**
 	 * Checks the requested items per page: a whole number of at least 1, not above the maximum of the settings.
 	 *
 	 * @param mixed           $value   Value of the parameter.
@@ -182,6 +244,50 @@ final class Feed_Routes {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Schema of a date filter: a text, checked by `validate_date_filter()`.
+	 *
+	 * @param string $description Description of the filter.
+	 * @return array<string, mixed>
+	 */
+	private static function date_filter_arg( string $description ): array {
+		return array(
+			'description'       => $description,
+			'type'              => 'string',
+			'validate_callback' => array( self::class, 'validate_date_filter' ),
+		);
+	}
+
+	/**
+	 * Checks a date filter: turned on in the settings, and a date with a time zone (`Date_Filters`).
+	 *
+	 * @param mixed           $value   Value of the parameter.
+	 * @param WP_REST_Request $request Request.
+	 * @param string          $param   Name of the parameter.
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 * @return true|WP_Error
+	 */
+	public static function validate_date_filter( $value, WP_REST_Request $request, string $param ) {
+		$filter = Date_Filters::FILTERS[ $param ] ?? null;
+		if ( null === $filter ) {
+			return true;
+		}
+
+		$code = Date_Filters::check_value( $value, Settings::get()[ $filter['setting'] ] );
+		if ( Date_Filters::VALID === $code ) {
+			return true;
+		}
+
+		$message = Date_Filters::ERROR_DISABLED === $code
+			/* translators: %s: name of a parameter of the feed endpoint. */
+			? sprintf( __( '%s is turned off on this site.', 'kk-content-exporter' ), $param )
+			/* translators: 1: name of a parameter of the feed endpoint, 2: example of a date. */
+			: sprintf( __( '%1$s must be a date with a time zone, for example %2$s.', 'kk-content-exporter' ), $param, '2026-11-01T10:00:00Z' );
+
+		return new WP_Error( 'rest_invalid_param', $message, array( 'status' => 400 ) );
 	}
 
 	/**
@@ -228,12 +334,33 @@ final class Feed_Routes {
 			null === $requested ? null : (int) $requested
 		);
 
+		$dates = array();
+		foreach ( array_keys( Date_Filters::FILTERS ) as $name ) {
+			$date = Date_Filters::parse( $request->get_param( $name ) );
+			if ( null !== $date ) {
+				$dates[ $name ] = $date;
+			}
+		}
+		if ( Date_Filters::empty_interval( $dates['modified_after'] ?? null, $dates['modified_before'] ?? null ) ) {
+			$message = __( 'modified_after must be earlier than modified_before.', 'kk-content-exporter' );
+
+			return new WP_Error(
+				'rest_invalid_param',
+				$message,
+				array(
+					'status' => 400,
+					'params' => array( 'modified_after' => $message ),
+				)
+			);
+		}
+
 		list( $post_types ) = Exportable_Post_Types::split( Feed_Meta::post_types( $feed->ID ), Exportable_Post_Types::selectable() );
 
 		$items = array();
 		$total = 0;
 		if ( array() !== $post_types ) {
-			$query = self::query( $post_types, $page, $per_page );
+			$date_query = Date_Filters::date_query( $dates );
+			$query      = self::query( $post_types, $page, $per_page, $date_query );
 
 			foreach ( $query->posts as $post ) {
 				if ( $post instanceof WP_Post ) {
@@ -244,7 +371,7 @@ final class Feed_Routes {
 
 			// WordPress does not count the items when the page is empty: count them for a page after the last one.
 			if ( array() === $items && $page > 1 ) {
-				$total = (int) self::query( $post_types, 1, 1, true )->found_posts;
+				$total = (int) self::query( $post_types, 1, 1, $date_query, true )->found_posts;
 			}
 		}
 
@@ -254,15 +381,16 @@ final class Feed_Routes {
 	/**
 	 * Query of a page of the items of a feed: published, without a password, in the order of the feeds.
 	 *
-	 * @param string[] $post_types Post types of the feed that can be exported.
-	 * @param int      $page       Page, from 1.
-	 * @param int      $per_page   Items per page.
-	 * @param bool     $ids_only   Whether to load the IDs only (to count the items).
+	 * @param string[]                 $post_types Post types of the feed that can be exported.
+	 * @param int                      $page       Page, from 1.
+	 * @param int                      $per_page   Items per page.
+	 * @param array<int|string, mixed> $date_query Clauses of the date filters (`Date_Filters::date_query()`), or empty.
+	 * @param bool                     $ids_only   Whether to load the IDs only (to count the items).
 	 * @return WP_Query
 	 *
 	 * @phpstan-param list<string> $post_types
 	 */
-	private static function query( array $post_types, int $page, int $per_page, bool $ids_only = false ): WP_Query {
+	private static function query( array $post_types, int $page, int $per_page, array $date_query = array(), bool $ids_only = false ): WP_Query {
 		$args = array(
 			'post_type'           => $post_types,
 			'post_status'         => 'publish',
@@ -277,6 +405,9 @@ final class Feed_Routes {
 			'ignore_sticky_posts' => true,
 			self::ORDER_FLAG      => true,
 		);
+		if ( array() !== $date_query ) {
+			$args['date_query'] = $date_query;
+		}
 		if ( $ids_only ) {
 			$args['fields'] = 'ids';
 		}

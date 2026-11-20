@@ -111,6 +111,12 @@ curl --user export-reader 'https://example.com/wp-json/kkce/v1/news'
 When curl prompts for a password, enter the Application Password, not the user's normal login
 password. A browser login alone does not authorize an authenticated feed.
 
+A protected feed responds with HTTP 401 when authentication is required. The plugin adds
+`WWW-Authenticate: Basic realm="KK Content Exporter"` to its own endpoint's 401 responses when
+WordPress Application Passwords are available, including authentication failures on public feeds and
+anonymous admin requests. A valid Application Password without the export capability receives HTTP 403.
+Native WordPress and other plugins' REST responses are left unchanged.
+
 ## Development setup
 
 Tools needed on the development machine: PHP 8.3+ and Composer for the static checks and the unit

@@ -26,7 +26,9 @@
         "wp_user": "",
         "wp_app_password": "",
         "wp_user_without_capability": "",
-        "wp_app_password_without_capability": ""
+        "wp_app_password_without_capability": "",
+        "since": "2026-11-01T00:00:00Z",
+        "until": "2026-12-01T00:00:00Z"
       },
       "dataPropertyOrder": {
         "&": [
@@ -38,7 +40,9 @@
           "wp_user",
           "wp_app_password",
           "wp_user_without_capability",
-          "wp_app_password_without_capability"
+          "wp_app_password_without_capability",
+          "since",
+          "until"
         ]
       },
       "color": null,
@@ -511,6 +515,145 @@
         "password": "{{ _.wp_app_password }}"
       },
       "metaSortKey": -440
+    },
+    {
+      "_id": "fld_kkce_dates",
+      "_type": "request_group",
+      "parentId": "wrk_kkce_feed_endpoint",
+      "name": "5. Date filters",
+      "description": "Filters on the dates of the items (step 1.5). Dates are written as the feed writes them: ISO 8601 with a time zone, for example 2026-11-01T10:00:00Z, or an offset such as +01:00. Half-open interval: after included, before excluded. Set since and until in the base environment. Each filter can be turned off in Content Exporter > Settings: then it answers 400.",
+      "environment": {},
+      "metaSortKey": -500
+    },
+    {
+      "_id": "req_kkce_modified_after",
+      "_type": "request",
+      "parentId": "fld_kkce_dates",
+      "name": "Modified since (modified_after)",
+      "description": "Expected: 200 with the items modified at or after since. The next reading of an importer uses the meta.generated_at of the previous response.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "modified_after",
+          "value": "{{ _.since }}",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -510
+    },
+    {
+      "_id": "req_kkce_modified_interval",
+      "_type": "request",
+      "parentId": "fld_kkce_dates",
+      "name": "Modified in an interval (after and before)",
+      "description": "Expected: 200 with the items modified from since (included) to until (excluded).",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "modified_after",
+          "value": "{{ _.since }}",
+          "disabled": false
+        },
+        {
+          "name": "modified_before",
+          "value": "{{ _.until }}",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -520
+    },
+    {
+      "_id": "req_kkce_published_after",
+      "_type": "request",
+      "parentId": "fld_kkce_dates",
+      "name": "Published since (published_after)",
+      "description": "Expected: 200 with the items published at or after since, whatever their modified date.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "published_after",
+          "value": "{{ _.since }}",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -530
+    },
+    {
+      "_id": "req_kkce_date_offset",
+      "_type": "request",
+      "parentId": "fld_kkce_dates",
+      "name": "Date with an offset (+01:00)",
+      "description": "Expected: 200; 2026-11-01T01:00:00+01:00 is the same moment as 2026-11-01T00:00:00Z.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "modified_after",
+          "value": "2026-11-01T01:00:00+01:00",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -540
+    },
+    {
+      "_id": "req_kkce_date_without_zone",
+      "_type": "request",
+      "parentId": "fld_kkce_dates",
+      "name": "Date without a time zone (400)",
+      "description": "Expected: 400 rest_invalid_param, with an example of the right form.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "modified_after",
+          "value": "2026-11-01T10:00:00",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -550
+    },
+    {
+      "_id": "req_kkce_date_empty_interval",
+      "_type": "request",
+      "parentId": "fld_kkce_dates",
+      "name": "Empty interval (400)",
+      "description": "Expected: 400 rest_invalid_param: modified_after must be earlier than modified_before.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "modified_after",
+          "value": "{{ _.until }}",
+          "disabled": false
+        },
+        {
+          "name": "modified_before",
+          "value": "{{ _.since }}",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -560
     }
   ]
 }

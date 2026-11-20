@@ -115,6 +115,20 @@ final class Settings_Page {
 				'label'       => '',
 				'description' => __( 'The largest number of items that a feed can serve in one page. There is no upper limit: very high values make every response heavy and are your responsibility.', 'kk-content-exporter' ),
 			),
+			'date_filters'  => array(
+				'title'       => __( 'Date filters', 'kk-content-exporter' ),
+				'type'        => 'group',
+				'label'       => '',
+				'description' => __( 'An importer uses them to read only what changed since its last reading. A filter turned off is refused with an error, never ignored, so an importer never reads more than it asked for.', 'kk-content-exporter' ),
+				'options'     => array(
+					/* translators: %s: name of a parameter of the feed endpoint, kept in English. */
+					'filter_modified_after'  => sprintf( __( '%s: items modified at or after the date', 'kk-content-exporter' ), 'modified_after' ),
+					/* translators: %s: name of a parameter of the feed endpoint, kept in English. */
+					'filter_modified_before' => sprintf( __( '%s: items modified before the date', 'kk-content-exporter' ), 'modified_before' ),
+					/* translators: %s: name of a parameter of the feed endpoint, kept in English. */
+					'filter_published_after' => sprintf( __( '%s: items published at or after the date', 'kk-content-exporter' ), 'published_after' ),
+				),
+			),
 			'remove_data'   => array(
 				'title'       => __( 'Uninstall', 'kk-content-exporter' ),
 				'type'        => 'checkbox',
@@ -132,9 +146,11 @@ final class Settings_Page {
 				self::SECTION,
 				array(
 					'key'         => $key,
+					'title'       => $field['title'],
 					'type'        => $field['type'],
 					'label'       => $field['label'],
 					'description' => $field['description'],
+					'options'     => $field['options'] ?? array(),
 					'label_for'   => 'number' === $field['type'] ? self::field_id( $key ) : '',
 				)
 			);
@@ -185,6 +201,11 @@ final class Settings_Page {
 		$key      = isset( $args['key'] ) && is_string( $args['key'] ) ? $args['key'] : '';
 		$settings = Settings::get();
 
+		if ( 'group' === ( $args['type'] ?? '' ) ) {
+			self::render_group( $key, $args, $settings );
+			return;
+		}
+
 		if ( ! array_key_exists( $key, $settings ) ) {
 			return;
 		}
@@ -212,6 +233,41 @@ final class Settings_Page {
 	}
 
 	/**
+	 * Prints a group of boxes of one row, each bound to its own setting, in a fieldset named by the title of the row.
+	 *
+	 * @param string               $key      Name of the row.
+	 * @param array<mixed>         $args     Arguments given to `add_settings_field()`, with `options` (setting => label).
+	 * @param array<string, mixed> $settings Current settings.
+	 * @return void
+	 */
+	private static function render_group( string $key, array $args, array $settings ): void {
+		$id          = self::field_id( $key );
+		$title       = isset( $args['title'] ) && is_string( $args['title'] ) ? $args['title'] : '';
+		$description = isset( $args['description'] ) && is_string( $args['description'] ) ? $args['description'] : '';
+		$options     = isset( $args['options'] ) && is_array( $args['options'] ) ? $args['options'] : array();
+		?>
+		<fieldset aria-describedby="<?php echo esc_attr( $id ); ?>-help">
+			<legend class="screen-reader-text"><?php echo esc_html( $title ); ?></legend>
+			<?php
+			foreach ( $options as $setting => $label ) {
+				if ( ! is_string( $setting ) || ! is_string( $label ) || ! array_key_exists( $setting, $settings ) ) {
+					continue;
+				}
+				$box_id = self::field_id( $setting );
+				?>
+				<label for="<?php echo esc_attr( $box_id ); ?>">
+					<input type="checkbox" id="<?php echo esc_attr( $box_id ); ?>" name="<?php echo esc_attr( Settings::OPTION . '[' . $setting . ']' ); ?>" value="1"<?php checked( true === $settings[ $setting ] ); ?>>
+					<?php echo esc_html( $label ); ?>
+				</label><br>
+				<?php
+			}
+			?>
+		</fieldset>
+		<p class="description" id="<?php echo esc_attr( $id ); ?>-help"><?php echo esc_html( $description ); ?></p>
+		<?php
+	}
+
+	/**
 	 * What could keep the feeds from working, as messages for the administrator.
 	 *
 	 * Nothing is changed and no request is made: the REST API is checked by running its own filter as an
@@ -226,11 +282,13 @@ final class Settings_Page {
 			$messages[] = __( 'The REST API seems to be blocked for anonymous requests, probably by a security plugin or a setting of the site. Public feeds cannot be read until anonymous requests to the REST API are allowed.', 'kk-content-exporter' );
 		}
 
-		if ( self::has_active_authenticated_feed() && ! wp_is_application_passwords_available() ) {
+		$feeds = self::enabled_feed_findings();
+
+		if ( $feeds['authenticated'] && ! wp_is_application_passwords_available() ) {
 			$messages[] = __( 'Some feeds require authentication, but Application Passwords are not available on this site: WordPress offers them only over HTTPS or in a local environment. Authenticated feeds cannot be read until then.', 'kk-content-exporter' );
 		}
 
-		$sensitive = self::active_feeds_with_sensitive_fields();
+		$sensitive = $feeds['sensitive'];
 		if ( array() !== $sensitive ) {
 			$messages[] = sprintf(
 				/* translators: %s: titles of the feeds, separated by commas. */
@@ -243,21 +301,38 @@ final class Settings_Page {
 	}
 
 	/**
-	 * Titles of the enabled feeds whose mapping confirms sensitive sources (the step 11 decision of
-	 * 2026-11-10: the administrator sees which feeds export them).
+	 * What the diagnostics need to know about the enabled feeds, read in one pass over the feeds.
 	 *
-	 * @return list<string> Plain text titles.
+	 * - `authenticated`: whether an enabled feed needs authentication, by its access or by the global
+	 *   requirement; an access that is not exactly `public` counts as authenticated, as everywhere in the plugin.
+	 * - `sensitive`: the titles of the enabled feeds whose mapping confirms sensitive sources (the step 11
+	 *   decision of 2026-11-10: the administrator sees which feeds export them), as plain text.
+	 *
+	 * @return array{authenticated: bool, sensitive: list<string>}
 	 */
-	private static function active_feeds_with_sensitive_fields(): array {
-		$titles = array();
+	private static function enabled_feed_findings(): array {
+		$require_auth  = Settings::get()['require_auth'];
+		$authenticated = false;
+		$sensitive     = array();
 
 		foreach ( self::diagnostic_feeds() as $feed_id ) {
-			if ( Feed_Meta::sanitize_active( get_post_meta( $feed_id, Feed_Meta::META_ACTIVE, true ) ) && array() !== Sensitive_Keys::confirmed_sources( Feed_Meta::mapping( $feed_id ) ) ) {
-				$titles[] = wp_strip_all_tags( get_the_title( $feed_id ) );
+			if ( ! Feed_Meta::sanitize_active( get_post_meta( $feed_id, Feed_Meta::META_ACTIVE, true ) ) ) {
+				continue;
+			}
+
+			if ( $require_auth || Feed_Meta::ACCESS_AUTHENTICATED === Feed_Meta::sanitize_access( get_post_meta( $feed_id, Feed_Meta::META_ACCESS, true ) ) ) {
+				$authenticated = true;
+			}
+
+			if ( array() !== Sensitive_Keys::confirmed_sources( Feed_Meta::mapping( $feed_id ) ) ) {
+				$sensitive[] = wp_strip_all_tags( get_the_title( $feed_id ) );
 			}
 		}
 
-		return $titles;
+		return array(
+			'authenticated' => $authenticated,
+			'sensitive'     => $sensitive,
+		);
 	}
 
 	/**
@@ -303,29 +378,6 @@ final class Settings_Page {
 		}
 
 		return $result instanceof WP_Error && 'rest_cookie_invalid_nonce' !== $result->get_error_code();
-	}
-
-	/**
-	 * Whether an enabled feed needs authentication, by its access or by the global requirement.
-	 *
-	 * An access that is not exactly `public` counts as authenticated, as everywhere in the plugin.
-	 *
-	 * @return bool
-	 */
-	private static function has_active_authenticated_feed(): bool {
-		$require_auth = Settings::get()['require_auth'];
-
-		foreach ( self::diagnostic_feeds() as $feed_id ) {
-			if ( ! Feed_Meta::sanitize_active( get_post_meta( $feed_id, Feed_Meta::META_ACTIVE, true ) ) ) {
-				continue;
-			}
-
-			if ( $require_auth || Feed_Meta::ACCESS_AUTHENTICATED === Feed_Meta::sanitize_access( get_post_meta( $feed_id, Feed_Meta::META_ACCESS, true ) ) ) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	/**

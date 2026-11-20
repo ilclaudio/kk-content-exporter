@@ -133,11 +133,14 @@ class KKCE_Settings_Page_Integration_Test extends WP_UnitTestCase {
 
 		$this->assertSame(
 			array(
-				'enabled'       => true,
-				'require_auth'  => false,
-				'max_per_page'  => 250,
-				'remove_data'   => false,
-				'show_in_index' => false,
+				'enabled'                => true,
+				'require_auth'           => false,
+				'max_per_page'           => 250,
+				'remove_data'            => false,
+				'show_in_index'          => false,
+				'filter_modified_after'  => false,
+				'filter_modified_before' => false,
+				'filter_published_after' => false,
 			),
 			get_option( Settings::OPTION )
 		);
@@ -177,6 +180,22 @@ class KKCE_Settings_Page_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The three date filters are one row of the page: a group of boxes with a legend, each with its own label.
+	 */
+	public function test_the_date_filters_are_one_group_of_boxes() {
+		update_option( Settings::OPTION, array( 'filter_modified_after' => '1', 'filter_published_after' => '1' ) );
+
+		$html = $this->page();
+
+		$this->assertSame( 1, substr_count( $html, '<fieldset' ), 'One group of boxes.' );
+		$this->assertMatchesRegularExpression( '/<legend class="screen-reader-text">[^<]+<\/legend>/', $html );
+		$this->assertMatchesRegularExpression( '/name="kkce_settings\[filter_modified_after\]"[^>]*checked/', $html );
+		$this->assertDoesNotMatchRegularExpression( '/name="kkce_settings\[filter_modified_before\]"[^>]*checked/', $html );
+		$this->assertMatchesRegularExpression( '/name="kkce_settings\[filter_published_after\]"[^>]*checked/', $html );
+		$this->assertStringContainsString( 'modified_before', $html, 'Every box names its parameter.' );
+	}
+
+	/**
 	 * Before any save the page shows the defaults: endpoints on, authentication not required, 100, no removal.
 	 */
 	public function test_the_page_shows_the_defaults_before_any_save() {
@@ -184,6 +203,9 @@ class KKCE_Settings_Page_Integration_Test extends WP_UnitTestCase {
 
 		$this->assertMatchesRegularExpression( '/name="kkce_settings\[enabled\]"[^>]*checked/', $html );
 		$this->assertMatchesRegularExpression( '/name="kkce_settings\[show_in_index\]"[^>]*checked/', $html );
+		foreach ( array( 'filter_modified_after', 'filter_modified_before', 'filter_published_after' ) as $key ) {
+			$this->assertMatchesRegularExpression( '/name="kkce_settings\[' . $key . '\]"[^>]*checked/', $html, $key );
+		}
 		$this->assertDoesNotMatchRegularExpression( '/name="kkce_settings\[require_auth\]"[^>]*checked/', $html );
 		$this->assertDoesNotMatchRegularExpression( '/name="kkce_settings\[remove_data\]"[^>]*checked/', $html );
 		$this->assertStringContainsString( 'value="100"', $html );

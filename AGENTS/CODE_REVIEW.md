@@ -38,6 +38,14 @@ recorded in the progress file; reconcile new or changed paths rather than resett
 
 ## Checks
 
+- **REST interoperability:** apply *REST API standards* in `AGENTS/CODING_STANDARDS.md` to implemented
+  feed and admin routes. Separate normative HTTP/JSON/authentication failures from WordPress
+  conventions, documented contract choices and future features. Include headers and serving-pipeline
+  coverage, not status-code assertions alone. Record static evidence separately from executed tests
+  and actual HTTP checks; do not claim blanket compliance from a partial review.
+- **Non-interference:** verify that shared hooks only affect KKCE-owned registered endpoints and
+  preserve core/third-party REST responses, authentication and normal WordPress behavior. Check
+  ownership guards, existing headers, cleanup of temporary hooks/globals and isolation regressions.
 - **Export correctness**: mapping of every source type; distinction between missing value, empty
   string, `0` and `false`; type conversions and their failures (`null` + log); every key of the mapping in every item; dates in ISO 8601 UTC and
   date-only values; relative-to-absolute URLs in HTML; image metadata; pagination arithmetic, stable

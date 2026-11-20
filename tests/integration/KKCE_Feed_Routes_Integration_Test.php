@@ -108,10 +108,12 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 	 *
 	 * Only the final PHP header emission is captured: rest_do_request() alone does not exercise it.
 	 *
-	 * @param string $slug Feed slug.
+	 * @param string               $slug      Feed slug or path within the requested namespace.
+	 * @param array<string, mixed> $params    Query parameters.
+	 * @param string               $namespace REST namespace.
 	 * @return array{status: int, headers: array<string, string>} Emitted status and lowercase header names.
 	 */
-	private function served_get( string $slug ): array {
+	private function served_get( string $slug, array $params = array(), string $namespace = 'kkce/v1' ): array {
 		global $wp_rest_server;
 
 		$wp_rest_server = new class() extends WP_REST_Server {
@@ -141,12 +143,12 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 		$previous_get    = $_GET;
 		$previous_post   = $_POST;
 		$previous_method = $_SERVER['REQUEST_METHOD'] ?? null;
-		$_GET           = array();
+		$_GET           = $params;
 		$_POST          = array();
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		ob_start();
 		try {
-			$wp_rest_server->serve_request( '/kkce/v1/' . $slug );
+			$wp_rest_server->serve_request( '/' . $namespace . '/' . $slug );
 			return array( 'status' => $wp_rest_server->sent_status, 'headers' => $wp_rest_server->sent_headers );
 		} finally {
 			ob_end_clean();
@@ -451,6 +453,7 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 	 * @param int  $expected_status Expected HTTP status.
 	 */
 	public function test_served_feed_authentication_headers( bool $public, bool $authenticated, bool $capability, int $expected_status ) {
+		add_filter( 'wp_is_application_passwords_available', '__return_true' );
 		$this->feed( 'header-check', array( 'access' => $public ? Feed_Meta::ACCESS_PUBLIC : Feed_Meta::ACCESS_AUTHENTICATED ) );
 		$had_auth_status = array_key_exists( 'wp_rest_application_password_status', $GLOBALS );
 		$auth_status     = $GLOBALS['wp_rest_application_password_status'] ?? null;
@@ -475,6 +478,7 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 				$this->assertArrayNotHasKey( 'www-authenticate', $response['headers'] );
 			}
 		} finally {
+			remove_filter( 'wp_is_application_passwords_available', '__return_true' );
 			if ( $had_auth_status ) {
 				$GLOBALS['wp_rest_application_password_status'] = $auth_status;
 			} else {
@@ -495,6 +499,102 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 			'authenticated feed with export capability'    => array( false, true, true, 200 ),
 			'public feed without credentials'              => array( true, false, false, 200 ),
 		);
+	}
+
+	/**
+	 * An anonymous admin request also needs an applicable challenge on its 401 response.
+	 */
+	public function test_remaining_401_challenges_for_anonymous_admin_requests() {
+		add_filter( 'wp_is_application_passwords_available', '__return_true' );
+		try {
+			$response = $this->served_get( 'items', array( 'post_type' => 'post' ), 'kkce-admin/v1' );
+			$this->assertSame( 401, $response['status'] );
+			$this->assertArrayHasKey( 'www-authenticate', $response['headers'] );
+			$this->assertStringStartsWith( 'Basic ', $response['headers']['www-authenticate'] );
+		} finally {
+			remove_filter( 'wp_is_application_passwords_available', '__return_true' );
+		}
+	}
+
+	/**
+	 * Invalid credentials fail before public-feed dispatch, but still require a challenge.
+	 */
+	public function test_remaining_401_challenges_for_invalid_public_feed_credentials() {
+		$this->feed( 'public-auth-error' );
+		$had_status = array_key_exists( 'wp_rest_application_password_status', $GLOBALS );
+		$old_status = $GLOBALS['wp_rest_application_password_status'] ?? null;
+		$user_id    = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		add_filter( 'application_password_is_api_request', '__return_true' );
+		add_filter( 'wp_is_application_passwords_available', '__return_true' );
+		try {
+			WP_Application_Passwords::create_new_application_password( $user_id, array( 'name' => 'Header regression' ) );
+			$_SERVER['PHP_AUTH_USER'] = get_userdata( $user_id )->user_login;
+			$_SERVER['PHP_AUTH_PW']   = 'deliberately-invalid-test-password';
+			$this->assertFalse( wp_validate_application_password( false ) );
+			$this->assertWPError( $GLOBALS['wp_rest_application_password_status'] );
+			$response = $this->served_get( 'public-auth-error' );
+			$this->assertSame( 401, $response['status'] );
+			$this->assertArrayHasKey( 'www-authenticate', $response['headers'] );
+			$this->assertStringStartsWith( 'Basic ', $response['headers']['www-authenticate'] );
+		} finally {
+			remove_filter( 'application_password_is_api_request', '__return_true' );
+			remove_filter( 'wp_is_application_passwords_available', '__return_true' );
+			if ( $had_status ) {
+				$GLOBALS['wp_rest_application_password_status'] = $old_status;
+			} else {
+				unset( $GLOBALS['wp_rest_application_password_status'] );
+			}
+		}
+	}
+
+	/**
+	 * The global filter must preserve non-KKCE responses, including their existing challenge and body.
+	 */
+	public function test_authentication_challenge_leaves_unrelated_responses_untouched() {
+		add_filter( 'wp_is_application_passwords_available', '__return_true' );
+		// A foreign endpoint can even be registered inside the namespace: ownership is the callback.
+		register_rest_route( 'kkce-admin/v1', '/foreign', array(
+			'methods' => 'GET', 'callback' => '__return_empty_array', 'permission_callback' => '__return_true',
+		) );
+		try {
+			foreach ( array( '/wp/v2/posts', '/other/v1/items', '/kkce/v10/news', '/kkce-admin/v1/foreign' ) as $route ) {
+				$response = new WP_REST_Response( array( 'code' => 'unchanged' ), 401, array( 'X-Other' => 'keep' ) );
+				$headers  = $response->get_headers();
+				$result   = Feed_Routes::authentication_challenge( $response, rest_get_server(), new WP_REST_Request( 'GET', $route ) );
+				$this->assertSame( $response, $result );
+				$this->assertSame( 401, $result->get_status() );
+				$this->assertSame( $headers, $result->get_headers(), $route );
+				$this->assertSame( array( 'code' => 'unchanged' ), $result->get_data() );
+			}
+		} finally {
+			remove_filter( 'wp_is_application_passwords_available', '__return_true' );
+		}
+	}
+
+	/**
+	 * Existing challenges are retained and WordPress's disabled authentication feature is respected.
+	 */
+	public function test_authentication_challenge_respects_existing_headers_and_availability() {
+		$this->feed( 'challenge-guards', array( 'access' => Feed_Meta::ACCESS_AUTHENTICATED ) );
+		$request = new WP_REST_Request( 'GET', '/kkce/v1/challenge-guards' );
+		add_filter( 'wp_is_application_passwords_available', '__return_true' );
+		try {
+			$response = new WP_REST_Response( null, 401, array( 'www-authenticate' => 'Basic realm="Existing"' ) );
+			$headers  = $response->get_headers();
+			Feed_Routes::authentication_challenge( $response, rest_get_server(), $request );
+			$this->assertSame( $headers, $response->get_headers() );
+		} finally {
+			remove_filter( 'wp_is_application_passwords_available', '__return_true' );
+		}
+		add_filter( 'wp_is_application_passwords_available', '__return_false' );
+		try {
+			$response = new WP_REST_Response( null, 401 );
+			Feed_Routes::authentication_challenge( $response, rest_get_server(), $request );
+			$this->assertSame( array(), $response->get_headers() );
+			$this->assertFalse( wp_is_application_passwords_available() );
+		} finally {
+			remove_filter( 'wp_is_application_passwords_available', '__return_false' );
+		}
 	}
 
 	/**
@@ -725,5 +825,134 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 		$query = new WP_Query( array( 'post_type' => 'post', 'orderby' => 'title' ) );
 
 		$this->assertStringNotContainsString( 'post_modified_gmt', $query->request );
+	}
+
+	/**
+	 * Five items modified one hour apart (09:00 to 13:00 GMT on 1 November 2026), published one day apart.
+	 *
+	 * @return list<int> IDs, oldest first.
+	 */
+	private function dated_items(): array {
+		$this->feed( 'news' );
+		$ids = array();
+		foreach ( array( 9, 10, 11, 12, 13 ) as $i => $hour ) {
+			$id = $this->item();
+			$this->modified( $id, sprintf( '2026-11-01 %02d:00:00', $hour ), sprintf( '2026-11-01 %02d:00:00', $hour + 1 ) );
+			global $wpdb;
+			$wpdb->update( $wpdb->posts, array( 'post_date_gmt' => sprintf( '2026-10-%02d 08:00:00', 20 + $i ) ), array( 'ID' => $id ) );
+			clean_post_cache( $id );
+			$ids[] = $id;
+		}
+
+		return $ids;
+	}
+
+	/**
+	 * The interval of the modified date is half-open: `modified_after` included, `modified_before` excluded.
+	 */
+	public function test_modified_after_is_included_and_modified_before_is_excluded() {
+		$ids = $this->dated_items();
+
+		$this->assertSame( array_slice( $ids, 2 ), $this->ids( $this->get( 'news', array( 'modified_after' => '2026-11-01T11:00:00Z' ) ) ) );
+		$this->assertSame( array_slice( $ids, 0, 2 ), $this->ids( $this->get( 'news', array( 'modified_before' => '2026-11-01T11:00:00Z' ) ) ) );
+
+		$response = $this->get( 'news', array( 'modified_after' => '2026-11-01T10:00:00Z', 'modified_before' => '2026-11-01T12:00:00Z' ) );
+		$this->assertSame( array( $ids[1], $ids[2] ), $this->ids( $response ) );
+		$this->assertSame( 2, $response->get_data()['pagination']['total'] );
+	}
+
+	/**
+	 * A time zone is converted to UTC, and fractions of a second are cut, never rounded up.
+	 */
+	public function test_dates_with_a_time_zone_and_fractions() {
+		$ids = $this->dated_items();
+
+		$this->assertSame( array_slice( $ids, 2 ), $this->ids( $this->get( 'news', array( 'modified_after' => '2026-11-01T12:00:00+01:00' ) ) ) );
+		$this->assertSame( array_slice( $ids, 2 ), $this->ids( $this->get( 'news', array( 'modified_after' => '2026-11-01T11:00:00.999Z' ) ) ) );
+	}
+
+	/**
+	 * `published_after` reads the date of publication in GMT, not the modified date.
+	 */
+	public function test_published_after_reads_the_publication_date() {
+		$ids = $this->dated_items();
+
+		$this->assertSame( array_slice( $ids, 3 ), $this->ids( $this->get( 'news', array( 'published_after' => '2026-10-23T08:00:00Z' ) ) ) );
+	}
+
+	/**
+	 * The filters work with the pages: total and pages count the filtered items only.
+	 */
+	public function test_filters_and_pages() {
+		$ids = $this->dated_items();
+
+		$response = $this->get( 'news', array( 'modified_after' => '2026-11-01T10:00:00Z', 'per_page' => 2, 'page' => 2 ) );
+
+		$this->assertSame( array( $ids[3], $ids[4] ), $this->ids( $response ) );
+		$this->assertSame( array( 'page' => 2, 'per_page' => 2, 'total' => 4, 'total_pages' => 2 ), $response->get_data()['pagination'] );
+	}
+
+	/**
+	 * A date without a time zone, or not a date, is refused with an example of the right form.
+	 *
+	 * @dataProvider invalid_date_provider
+	 *
+	 * @param string $param Filter.
+	 * @param string $value Value.
+	 */
+	public function test_an_invalid_date_gives_400( string $param, string $value ) {
+		$this->feed( 'news' );
+
+		$response = $this->get( 'news', array( $param => $value ) );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'rest_invalid_param', $response->as_error()->get_error_code() );
+		$this->assertStringContainsString( '2026-11-01T10:00:00Z', wp_json_encode( $response->get_data() ) );
+	}
+
+	/**
+	 * Data for test_an_invalid_date_gives_400().
+	 *
+	 * @return array<string, array{0: string, 1: string}>
+	 */
+	public function invalid_date_provider(): array {
+		return array(
+			'no time zone'   => array( 'modified_after', '2026-11-01T10:00:00' ),
+			'date only'      => array( 'modified_before', '2026-11-01' ),
+			'impossible day' => array( 'published_after', '2026-02-30T10:00:00Z' ),
+			'words'          => array( 'modified_after', 'yesterday' ),
+		);
+	}
+
+	/**
+	 * An interval of the modified date that cannot contain anything is refused.
+	 */
+	public function test_an_empty_interval_gives_400() {
+		$this->feed( 'news' );
+
+		foreach ( array( '2026-11-01T10:00:00Z', '2026-11-02T10:00:00Z' ) as $after ) {
+			$response = $this->get( 'news', array( 'modified_after' => $after, 'modified_before' => '2026-11-01T10:00:00Z' ) );
+			$this->assertSame( 400, $response->get_status(), $after );
+			$this->assertSame( 'rest_invalid_param', $response->as_error()->get_error_code() );
+		}
+
+		// The same moment written with a time zone is the same moment.
+		$response = $this->get( 'news', array( 'modified_after' => '2026-11-01T11:00:00+01:00', 'modified_before' => '2026-11-01T10:00:00Z' ) );
+		$this->assertSame( 400, $response->get_status() );
+	}
+
+	/**
+	 * A filter turned off in the settings is refused, never ignored; the other filters keep working.
+	 */
+	public function test_a_filter_turned_off_gives_400() {
+		$ids = $this->dated_items();
+		$this->settings( array( 'filter_modified_before' => false ) );
+
+		$response = $this->get( 'news', array( 'modified_before' => '2026-11-01T11:00:00Z' ) );
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'rest_invalid_param', $response->as_error()->get_error_code() );
+		$this->assertStringContainsString( 'modified_before', wp_json_encode( $response->get_data() ) );
+
+		$this->assertSame( array_slice( $ids, 2 ), $this->ids( $this->get( 'news', array( 'modified_after' => '2026-11-01T11:00:00Z' ) ) ) );
 	}
 }

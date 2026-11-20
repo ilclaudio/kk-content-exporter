@@ -96,6 +96,55 @@ WordPress.org Plugin Directory guidelines and the project conventions below.
 - **Logs**: never log credentials, Application Passwords, personal data or exported content.
 
 
+## REST API standards
+
+Apply this checklist to both feed endpoints and administrative REST routes, within their different
+access contracts. Use the official `wp-rest-api` skill and primary sources; separate MUST-level rules
+from recommendations and plugin-specific choices. Do not describe untested behavior as compliant.
+
+- **Isolation (mandatory):** never change core or third-party routes, global authentication, CORS,
+  discovery or response handling to implement a KKCE feature. Shared hooks must verify ownership of
+  the registered endpoint, not just a namespace prefix, and leave unrelated status, headers and body
+  unchanged. Preserve existing authentication challenges. Do not force Application Passwords to be
+  available when WordPress disables them. Restore scoped hooks and globals, including on exceptions.
+  Include core/third-party response sentinels in targeted tests of changes to shared REST hooks.
+- **HTTP semantics:** follow RFC 9110 for methods, status codes and required headers. GET and HEAD
+  must be safe; HEAD must not send a response body. Check OPTIONS/discovery, advertised methods and
+  unsupported-method handling through WordPress's actual serving pipeline, not route callbacks alone.
+- **Authentication:** follow RFC 7617 for Basic authentication with Application Passwords over HTTPS,
+  subject to WordPress's documented local-environment exception. A 401 must include an applicable
+  `WWW-Authenticate` challenge; distinguish missing/invalid required credentials from a 403 permission
+  refusal. Check upstream WordPress authentication failures as well as permission callbacks. Preserve
+  resource-hiding 404 behavior and never include credentials or private details in errors or realms.
+- **Representations:** emit valid interoperable JSON (RFC 8259, UTF-8) with the appropriate media type.
+  Keep errors in WordPress's `code`, `message`, `data` form with the correct HTTP status. The feed
+  container remains `items`, `pagination`, `meta`; RFC 9457 Problem Details and JSON:API are not required
+  merely because this is a REST API. Document any explicit content-negotiation behavior.
+- **Contract:** validate and describe accepted arguments, defaults, bounds and error behavior; check
+  invalid JSON, invalid parameter types, collection/object shapes, empty and out-of-range pages,
+  ordering and date/URL formats. Use RFC 3339-compatible timestamps for API metadata and the existing
+  date-only contract where applicable. Pagination names, limits and total headers are documented
+  conventions, not universal HTTP requirements; the global maximum remains operator-configurable.
+- **Caching and browser clients:** inspect inherited Content-Type, cache directives, CORS and discovery
+  behavior. Apply RFC 9111 when caching is used; do not allow shared caches to expose authenticated or
+  administrative responses. Assess WordPress's defaults before adding custom headers. ETag and
+  Last-Modified support remain a later feature, not a prerequisite for the current release.
+- **Verification:** prefer integration tests for WordPress dispatch, authentication and serialization;
+  capture served headers/body when dispatch alone cannot prove compliance. Use actual HTTP checks to
+  assess web-server/proxy behavior. Unit tests cover pure decisions; E2E tests are unnecessary for
+  protocol-only checks. Run tests only when authorized by the operator; record unexecuted checks.
+
+Primary references:
+
+- https://www.rfc-editor.org/rfc/rfc9110.html (HTTP semantics).
+- https://www.rfc-editor.org/rfc/rfc9111.html (HTTP caching).
+- https://www.rfc-editor.org/rfc/rfc7617.html (Basic authentication).
+- https://www.rfc-editor.org/rfc/rfc8259.html (JSON).
+- https://www.rfc-editor.org/rfc/rfc3339.html (timestamps).
+- https://developer.wordpress.org/rest-api/extending-the-rest-api/routes-and-endpoints/.
+- https://developer.wordpress.org/rest-api/using-the-rest-api/authentication/.
+
+
 ## WordPress.org Plugin Directory Rules
 (Guidelines: https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/; use the
 `wp-plugin-directory-guidelines` skill.)

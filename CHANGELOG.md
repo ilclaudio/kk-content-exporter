@@ -15,8 +15,10 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 - Pages of a feed with `page` and `per_page`, in a stable order by modified date (GMT) and ID.
 - Authenticated feeds: read with an Application Password of a user with the capability `kkce_read_export`.
 - Setting to show or hide the feed endpoint in the REST API index (shown by default).
+- Date filters `modified_after`, `modified_before` and `published_after`, each one can be turned off in the settings.
 ### Fixed
 - Choosing an item in the preview no longer triggers an unsaved-changes warning.
+- HTTP 401 responses on the plugin's own REST endpoints include the Basic authentication challenge when WordPress Application Passwords are available.
 
 ## [0.0.3] - 2026-11-19
 ### Added

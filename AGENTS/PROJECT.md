@@ -85,6 +85,28 @@ order: feed endpoints, a test with the real importer, the restructured mapping e
 documentation, release 1.0.0.
 
 
+## REST API interoperability requirement
+
+**Non-interference is a mandatory requirement.** The plugin must not alter the execution or standard
+behavior of WordPress core, the native REST API, or routes owned by other plugins. Its settings and
+response changes apply only to its own registered routes. Global hooks must return unrelated requests
+and responses unchanged, preserve existing headers, authentication and permission decisions, and never
+enable or disable WordPress features globally. Temporary filters and user/post context changes must
+be restored. Verify this isolation with focused regression tests whenever shared REST hooks change.
+
+The exported API must conform to all applicable HTTP, JSON and authentication standards and follow
+WordPress REST API conventions. This is a project requirement for existing endpoints and future work,
+not a claim that every aspect of the development version has already been verified. The concrete
+review and implementation checklist is in `AGENTS/CODING_STANDARDS.md`, *REST API standards*.
+
+Distinguish mandatory protocol rules from recommended practices and the plugin's documented contract.
+REST has no single certification or universal response, pagination or error format. Preserve the
+WordPress error format and the feed response contract; do not silently introduce a competing format
+or require optional features such as ETags ahead of their planned phase. Review implemented behavior
+against primary sources, record confirmed deviations and test coverage gaps, and state what remains
+unverified. Any intentional exception requires an explicit operator decision with its reason recorded.
+
+
 ## Optional integrations (read-only)
 
 ACF, CMB2 and Polylang are **optional** and never required: the plugin may *read* simple fields of
