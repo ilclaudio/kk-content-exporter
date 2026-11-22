@@ -158,6 +158,80 @@ class KKCE_Core_Provider_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * An attachment with the given file, without writing the file: WordPress builds its URL from the meta.
+	 *
+	 * @param string              $file     File relative to the uploads folder.
+	 * @param string              $mime     MIME type.
+	 * @param array<string,mixed> $metadata Attachment metadata.
+	 * @return int
+	 */
+	private function attachment( string $file, string $mime = 'image/jpeg', array $metadata = array() ): int {
+		$id = self::factory()->attachment->create_object(
+			array(
+				'file'           => $file,
+				'post_mime_type' => $mime,
+				'post_status'    => 'inherit',
+			)
+		);
+		update_post_meta( $id, '_wp_attached_file', $file );
+		if ( array() !== $metadata ) {
+			wp_update_attachment_metadata( $id, $metadata );
+		}
+
+		return $id;
+	}
+
+	/**
+	 * The featured image gives the absolute URL of the uploaded image.
+	 */
+	public function test_the_featured_image_is_the_absolute_url_of_the_image() {
+		$post  = $this->content();
+		$image = $this->attachment( '2026/11/concert.jpg' );
+		set_post_thumbnail( $post, $image );
+
+		$url = Core_Provider::value( $post, 'core.featured_image' );
+
+		$this->assertSame( wp_get_upload_dir()['baseurl'] . '/2026/11/concert.jpg', $url );
+		$this->assertMatchesRegularExpression( '#^https?://#', (string) $url );
+	}
+
+	/**
+	 * A large image scaled down by WordPress gives the original file, not the scaled copy.
+	 */
+	public function test_the_featured_image_is_the_original_of_a_scaled_image() {
+		$post  = $this->content();
+		$image = $this->attachment(
+			'2026/11/poster-scaled.jpg',
+			'image/jpeg',
+			array(
+				'file'           => '2026/11/poster-scaled.jpg',
+				'original_image' => 'poster.jpg',
+			)
+		);
+		set_post_thumbnail( $post, $image );
+
+		$this->assertSame( wp_get_upload_dir()['baseurl'] . '/2026/11/poster.jpg', Core_Provider::value( $post, 'core.featured_image' ) );
+	}
+
+	/**
+	 * Without a usable image the featured image is null: no image, an attachment that is not an image, an
+	 * attachment that no longer exists.
+	 */
+	public function test_the_featured_image_is_null_without_an_image() {
+		$post = $this->content();
+		$this->assertNull( Core_Provider::value( $post, 'core.featured_image' ), 'No featured image.' );
+
+		update_post_meta( $post->ID, '_thumbnail_id', $this->attachment( '2026/11/programme.pdf', 'application/pdf' ) );
+		$this->assertNull( Core_Provider::value( $post, 'core.featured_image' ), 'An attachment that is not an image.' );
+
+		$image = $this->attachment( '2026/11/gone.jpg' );
+		update_post_meta( $post->ID, '_thumbnail_id', $image );
+		wp_delete_post( $image, true );
+		update_post_meta( $post->ID, '_thumbnail_id', $image );
+		$this->assertNull( Core_Provider::value( $post, 'core.featured_image' ), 'An attachment that no longer exists.' );
+	}
+
+	/**
 	 * An identifier that is not a core source gives null.
 	 */
 	public function test_an_unknown_source_gives_null() {

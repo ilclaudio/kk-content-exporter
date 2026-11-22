@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-22T08:56:30+01:00\n"
+"POT-Creation-Date: 2026-11-22T10:55:14+01:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: kk-content-exporter\n"
@@ -54,7 +54,7 @@ msgid "A feed is a read-only JSON address that an external program (for example 
 msgstr ""
 
 #: includes/admin/class-feed-editor.php:215
-#: includes/sources/class-core-provider.php:71
+#: includes/sources/class-core-provider.php:73
 msgid "Slug"
 msgstr ""
 
@@ -534,59 +534,63 @@ msgstr ""
 msgid "modified_after must be earlier than modified_before."
 msgstr ""
 
-#: includes/rest/class-feed-routes.php:476
+#: includes/rest/class-feed-routes.php:477
 msgid "No feed is available at this address."
 msgstr ""
 
-#: includes/sources/class-core-provider.php:70
+#: includes/sources/class-core-provider.php:72
 msgid "ID"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:72
+#: includes/sources/class-core-provider.php:74
 msgid "Title"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:73
+#: includes/sources/class-core-provider.php:75
 msgid "Content"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:74
+#: includes/sources/class-core-provider.php:76
 msgid "Excerpt"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:75
+#: includes/sources/class-core-provider.php:77
 msgid "Permalink"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:76
+#: includes/sources/class-core-provider.php:78
 msgid "Short link (does not change with the slug)"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:77
-msgid "Publish date (UTC)"
-msgstr ""
-
-#: includes/sources/class-core-provider.php:78
-msgid "Last modified date (UTC)"
-msgstr ""
-
 #: includes/sources/class-core-provider.php:79
-msgid "Author ID"
+msgid "Featured image (URL)"
 msgstr ""
 
 #: includes/sources/class-core-provider.php:80
-msgid "Author display name"
+msgid "Publish date (UTC)"
 msgstr ""
 
 #: includes/sources/class-core-provider.php:81
-msgid "Author archive URL"
+msgid "Last modified date (UTC)"
 msgstr ""
 
 #: includes/sources/class-core-provider.php:82
-msgid "Post type (slug)"
+msgid "Author ID"
 msgstr ""
 
 #: includes/sources/class-core-provider.php:83
+msgid "Author display name"
+msgstr ""
+
+#: includes/sources/class-core-provider.php:84
+msgid "Author archive URL"
+msgstr ""
+
+#: includes/sources/class-core-provider.php:85
+msgid "Post type (slug)"
+msgstr ""
+
+#: includes/sources/class-core-provider.php:86
 msgid "Post type (label)"
 msgstr ""
 

@@ -8,7 +8,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2026-11-06T22:54:45+01:00\n"
-"PO-Revision-Date: 2026-11-22T07:56:36+00:00\n"
+"PO-Revision-Date: 2026-11-22T09:55:21+00:00\n"
 "Language: it_IT\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Loco https://localise.biz/\n"
@@ -54,7 +54,7 @@ msgid "A feed is a read-only JSON address that an external program (for example 
 msgstr "Un feed è un indirizzo JSON in sola lettura che un programma esterno (per esempio un importatore su un altro sito) legge per copiare i contenuti pubblicati. Qui scegli il suo indirizzo, i tipi di contenuto che esporta, chi può leggerlo, quanti elementi contiene ogni pagina e se è attivo. Che cosa contiene ogni elemento si sceglie nel box \"Mapping\" qui sotto."
 
 #: includes/admin/class-feed-editor.php:215
-#: includes/sources/class-core-provider.php:71
+#: includes/sources/class-core-provider.php:73
 msgid "Slug"
 msgstr "Slug"
 
@@ -534,59 +534,63 @@ msgstr "%1$s deve essere una data con il fuso orario, per esempio %2$s."
 msgid "modified_after must be earlier than modified_before."
 msgstr "modified_after deve essere precedente a modified_before."
 
-#: includes/rest/class-feed-routes.php:476
+#: includes/rest/class-feed-routes.php:477
 msgid "No feed is available at this address."
 msgstr "Nessun feed è disponibile a questo indirizzo."
 
-#: includes/sources/class-core-provider.php:70
+#: includes/sources/class-core-provider.php:72
 msgid "ID"
 msgstr "ID"
 
-#: includes/sources/class-core-provider.php:72
+#: includes/sources/class-core-provider.php:74
 msgid "Title"
 msgstr "Titolo"
 
-#: includes/sources/class-core-provider.php:73
+#: includes/sources/class-core-provider.php:75
 msgid "Content"
 msgstr "Contenuto"
 
-#: includes/sources/class-core-provider.php:74
+#: includes/sources/class-core-provider.php:76
 msgid "Excerpt"
 msgstr "Riassunto"
 
-#: includes/sources/class-core-provider.php:75
+#: includes/sources/class-core-provider.php:77
 msgid "Permalink"
 msgstr "Permalink"
 
-#: includes/sources/class-core-provider.php:76
+#: includes/sources/class-core-provider.php:78
 msgid "Short link (does not change with the slug)"
 msgstr "Link breve (non cambia con lo slug)"
 
-#: includes/sources/class-core-provider.php:77
+#: includes/sources/class-core-provider.php:79
+msgid "Featured image (URL)"
+msgstr "Immagine in evidenza (URL)"
+
+#: includes/sources/class-core-provider.php:80
 msgid "Publish date (UTC)"
 msgstr "Data di pubblicazione (UTC)"
 
-#: includes/sources/class-core-provider.php:78
+#: includes/sources/class-core-provider.php:81
 msgid "Last modified date (UTC)"
 msgstr "Data dell'ultima modifica (UTC)"
 
-#: includes/sources/class-core-provider.php:79
+#: includes/sources/class-core-provider.php:82
 msgid "Author ID"
 msgstr "ID dell'autore"
 
-#: includes/sources/class-core-provider.php:80
+#: includes/sources/class-core-provider.php:83
 msgid "Author display name"
 msgstr "Nome visualizzato dell'autore"
 
-#: includes/sources/class-core-provider.php:81
+#: includes/sources/class-core-provider.php:84
 msgid "Author archive URL"
 msgstr "URL dell'archivio dell'autore"
 
-#: includes/sources/class-core-provider.php:82
+#: includes/sources/class-core-provider.php:85
 msgid "Post type (slug)"
 msgstr "Tipo di contenuto (slug)"
 
-#: includes/sources/class-core-provider.php:83
+#: includes/sources/class-core-provider.php:86
 msgid "Post type (label)"
 msgstr "Tipo di contenuto (etichetta)"
 

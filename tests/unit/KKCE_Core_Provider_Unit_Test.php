@@ -31,6 +31,7 @@ class KKCE_Core_Provider_Unit_Test extends KKCE_Unit_Test_Case {
 				'core.excerpt'     => 'html',
 				'core.permalink'   => 'url',
 				'core.shortlink'   => 'url',
+				'core.featured_image' => 'url',
 				'core.date'        => 'datetime',
 				'core.modified'    => 'datetime',
 				'core.author.id'   => 'number',

@@ -18,7 +18,7 @@ the plugin's operation, REST API and development workflow.
 
 In development. Feed configuration, the mapping editor with preview and save, WordPress core fields
 and selected post meta are available, along with public and authenticated feeds with pagination and
-date filters. Additional sources (taxonomies, featured images, language, ACF and CMB2 fields) are
+date filters, and the URL of the featured image. Additional sources (taxonomies, language, ACF and CMB2 fields) are
 still being developed.
 
 ## Requirements

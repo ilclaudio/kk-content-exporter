@@ -16,7 +16,8 @@ defined( 'ABSPATH' ) || exit;
  * Declares the core fields of a post, common to every post type, and reads their values.
  *
  * Only public attributes of the author are offered: ID, display name and, as a separate source that
- * needs a confirmation, the URL of the author archive. The e-mail and the login are never offered.
+ * needs a confirmation, the URL of the author archive. The e-mail and the login are never offered. The
+ * featured image is the absolute URL of the original image, null without one.
  * Values are read as stored, without the filters of other plugins: the title is `post_title`, the
  * excerpt is the one written by hand. Content and excerpt go through the controlled rendering of
  * `Content_Renderer` (blocks, optional shortcodes, absolute URLs; `raw` gives the stored text). Dates are the GMT ones, in the database format
@@ -34,20 +35,21 @@ final class Core_Provider {
 	 * administrator. The one list of the core sources: `sources()` adds labels and options to it.
 	 */
 	private const TYPES = array(
-		'core.id'          => 'number',
-		'core.slug'        => 'string',
-		'core.title'       => 'string',
-		'core.content'     => 'html',
-		'core.excerpt'     => 'html',
-		'core.permalink'   => 'url',
-		'core.shortlink'   => 'url',
-		'core.date'        => 'datetime',
-		'core.modified'    => 'datetime',
-		'core.author.id'   => 'number',
-		'core.author.name' => 'string',
-		'core.author.url'  => 'url',
-		'core.type'        => 'string',
-		'core.type_label'  => 'string',
+		'core.id'             => 'number',
+		'core.slug'           => 'string',
+		'core.title'          => 'string',
+		'core.content'        => 'html',
+		'core.excerpt'        => 'html',
+		'core.permalink'      => 'url',
+		'core.shortlink'      => 'url',
+		'core.featured_image' => 'url',
+		'core.date'           => 'datetime',
+		'core.modified'       => 'datetime',
+		'core.author.id'      => 'number',
+		'core.author.name'    => 'string',
+		'core.author.url'     => 'url',
+		'core.type'           => 'string',
+		'core.type_label'     => 'string',
 	);
 
 	/**
@@ -67,20 +69,21 @@ final class Core_Provider {
 	 */
 	public static function sources(): array {
 		$labels = array(
-			'core.id'          => __( 'ID', 'kk-content-exporter' ),
-			'core.slug'        => __( 'Slug', 'kk-content-exporter' ),
-			'core.title'       => __( 'Title', 'kk-content-exporter' ),
-			'core.content'     => __( 'Content', 'kk-content-exporter' ),
-			'core.excerpt'     => __( 'Excerpt', 'kk-content-exporter' ),
-			'core.permalink'   => __( 'Permalink', 'kk-content-exporter' ),
-			'core.shortlink'   => __( 'Short link (does not change with the slug)', 'kk-content-exporter' ),
-			'core.date'        => __( 'Publish date (UTC)', 'kk-content-exporter' ),
-			'core.modified'    => __( 'Last modified date (UTC)', 'kk-content-exporter' ),
-			'core.author.id'   => __( 'Author ID', 'kk-content-exporter' ),
-			'core.author.name' => __( 'Author display name', 'kk-content-exporter' ),
-			'core.author.url'  => __( 'Author archive URL', 'kk-content-exporter' ),
-			'core.type'        => __( 'Post type (slug)', 'kk-content-exporter' ),
-			'core.type_label'  => __( 'Post type (label)', 'kk-content-exporter' ),
+			'core.id'             => __( 'ID', 'kk-content-exporter' ),
+			'core.slug'           => __( 'Slug', 'kk-content-exporter' ),
+			'core.title'          => __( 'Title', 'kk-content-exporter' ),
+			'core.content'        => __( 'Content', 'kk-content-exporter' ),
+			'core.excerpt'        => __( 'Excerpt', 'kk-content-exporter' ),
+			'core.permalink'      => __( 'Permalink', 'kk-content-exporter' ),
+			'core.shortlink'      => __( 'Short link (does not change with the slug)', 'kk-content-exporter' ),
+			'core.featured_image' => __( 'Featured image (URL)', 'kk-content-exporter' ),
+			'core.date'           => __( 'Publish date (UTC)', 'kk-content-exporter' ),
+			'core.modified'       => __( 'Last modified date (UTC)', 'kk-content-exporter' ),
+			'core.author.id'      => __( 'Author ID', 'kk-content-exporter' ),
+			'core.author.name'    => __( 'Author display name', 'kk-content-exporter' ),
+			'core.author.url'     => __( 'Author archive URL', 'kk-content-exporter' ),
+			'core.type'           => __( 'Post type (slug)', 'kk-content-exporter' ),
+			'core.type_label'     => __( 'Post type (label)', 'kk-content-exporter' ),
 		);
 
 		$sources = array();
@@ -110,6 +113,7 @@ final class Core_Provider {
 			'core.excerpt'     => Content_Renderer::render( $post->post_excerpt, $options, true, self::base_url( $post ) ),
 			'core.permalink'   => self::text_or_null( get_permalink( $post ) ),
 			'core.shortlink'   => self::text_or_null( wp_get_shortlink( $post->ID ) ),
+			'core.featured_image' => self::featured_image( $post ),
 			'core.date'        => self::gmt_date( $post->post_date_gmt ),
 			'core.modified'    => self::gmt_date( $post->post_modified_gmt ),
 			'core.author.id'   => self::author_id( $post ),
@@ -149,6 +153,20 @@ final class Core_Provider {
 	 */
 	private static function gmt_date( string $date ): ?string {
 		return '' === $date || '0000-00-00 00:00:00' === $date ? null : $date;
+	}
+
+	/**
+	 * Absolute URL of the featured image as it was uploaded: for a large image that WordPress scaled down,
+	 * the original file, not the "-scaled" copy.
+	 *
+	 * @param WP_Post $post Post.
+	 * @return string|null Null when the post has no featured image, or its attachment is missing or is not
+	 *                     an image.
+	 */
+	private static function featured_image( WP_Post $post ): ?string {
+		$image = get_post_thumbnail_id( $post );
+
+		return false === $image || $image < 1 ? null : self::text_or_null( wp_get_original_image_url( $image ) );
 	}
 
 	/**

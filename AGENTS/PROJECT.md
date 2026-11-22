@@ -47,10 +47,10 @@ downloads, timeouts, import logs and scheduling.
   (value to output, the switch) and Condition (simple if-then-else). Rules are structures filled in by the
   admin interface, not text to parse: there is no expression language in V1.
 - Sources: WordPress fields shared by every post type (ID, title, content, excerpt, permalink,
-  publish/modified dates, public author attributes) listed once; per post type, explicitly selected post
-  meta, simple ACF and CMB2 fields, taxonomies and terms (a JSON list of term names), featured image (the
-  absolute URL of the original image; ID, alt and modified date may be added later), language (fixed per feed
-  or Polylang). Fields of different post types are never merged by name:
+  featured image as the absolute URL of the original image, `null` without one; ID, alt and modified date of
+  the image may be added later; publish/modified dates, public author attributes) listed once; per post type,
+  explicitly selected post meta, simple ACF and CMB2 fields, taxonomies and terms (a JSON list of term names),
+  language (fixed per feed or Polylang). Fields of different post types are never merged by name:
   the administrator decides when they correspond. Rules can only use these selectable sources.
   Repeater, flexible content, groups, relationships and serialized structures are out of V1.
 - Response: `{ "items": [...], "pagination": {...}, "meta": {...} }`; dates in ISO 8601 UTC (date-only
@@ -79,11 +79,11 @@ Out of V1 (after the 1.0.0 release): taxonomy/meta filters, cache with ETag/Last
 endpoint outside `/wp-json/`, cursors, network activation, and an Expression rule kind (a real expression
 language), which is added only for a concrete case that the other rule kinds cannot solve.
 
-Done: foundations, the rule mapping with its editor and preview, core and post meta sources, and the feed
-endpoint (pages, public and authenticated access, date filters, constant query cost per page). Next, in this
-order: a test with the real importer, the restructured mapping editor, the remaining sources (meta dates,
-taxonomies, image, language, ACF, CMB2), configuration export/import, the complete endpoints (`ids`, IDs-only
-mode, log), documentation, release 1.0.0.
+Done: foundations, the rule mapping with its editor and preview, core and post meta sources, the feed
+endpoint (pages, public and authenticated access, date filters, constant query cost per page), a test with the
+real importer and the featured image. Next, in this order: the restructured mapping editor, the remaining
+sources (meta dates, taxonomies, language, ACF, CMB2), configuration export/import, the complete endpoints
+(`ids`, IDs-only mode, log), documentation, release 1.0.0.
 
 
 ## REST API interoperability requirement

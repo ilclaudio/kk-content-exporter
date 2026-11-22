@@ -10,8 +10,8 @@ use KKCE\Feed_Post_Type;
 use KKCE\Settings;
 
 /**
- * A page of a feed costs the same number of database queries with 1 item and with 5: meta, terms and authors
- * are loaded for the whole page, never item by item.
+ * A page of a feed costs the same number of database queries with 1 item and with 5: meta, terms, authors and
+ * featured images are loaded for the whole page, never item by item.
  */
 class KKCE_Feed_Query_Cost_Integration_Test extends WP_UnitTestCase {
 
@@ -55,7 +55,7 @@ class KKCE_Feed_Query_Cost_Integration_Test extends WP_UnitTestCase {
 	private function feed(): void {
 		$sources = array(
 			'core.id', 'core.slug', 'core.title', 'core.content', 'core.excerpt', 'core.permalink', 'core.shortlink',
-			'core.date', 'core.modified', 'core.author.id', 'core.author.name', 'core.author.url', 'core.type', 'core.type_label',
+			'core.featured_image', 'core.date', 'core.modified', 'core.author.id', 'core.author.name', 'core.author.url', 'core.type', 'core.type_label',
 			'meta.kkce_price',
 		);
 		$rows    = array();
@@ -86,7 +86,7 @@ class KKCE_Feed_Query_Cost_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Items with their own author, category and meta, so that nothing is shared between them.
+	 * Items with their own author, category, meta and featured image, so that nothing is shared between them.
 	 *
 	 * @return void
 	 */
@@ -103,6 +103,17 @@ class KKCE_Feed_Query_Cost_Integration_Test extends WP_UnitTestCase {
 				)
 			);
 			add_post_meta( $post, 'kkce_price', (string) $i );
+
+			$image = self::factory()->attachment->create_object(
+				array(
+					'file'           => '2026/11/item-' . $i . '.jpg',
+					'post_mime_type' => 'image/jpeg',
+					'post_status'    => 'inherit',
+				)
+			);
+			update_post_meta( $image, '_wp_attached_file', '2026/11/item-' . $i . '.jpg' );
+			wp_update_attachment_metadata( $image, array( 'file' => '2026/11/item-' . $i . '.jpg' ) );
+			set_post_thumbnail( $post, $image );
 		}
 	}
 

@@ -20,7 +20,7 @@ Choose the content and fields to include, give the fields your own names, and co
 
 = Features =
 
-* Include one or more content types and selected WordPress fields or custom fields (post meta).
+* Include one or more content types and selected WordPress fields, the featured image URL or custom fields (post meta).
 * Rename fields and build values using fixed text, templates, lookup tables and conditions.
 * Preview the JSON before saving your feed.
 * Share public feeds or require an Application Password, with pagination and a configurable page limit.
@@ -30,7 +30,7 @@ Only published, non-password-protected content and selected fields are exported.
 
 = Development status =
 
-This plugin is in development. Feeds are served, with pages, access control and date filters. Sources for taxonomies, featured images, language, ACF and CMB2 are planned for version 1.0.0. ACF, CMB2 and Polylang will be optional.
+This plugin is in development. Feeds are served, with pages, access control and date filters, and can include the URL of the featured image. Sources for taxonomies, language, ACF and CMB2 are planned for version 1.0.0. ACF, CMB2 and Polylang will be optional.
 
 == Installation ==
 
@@ -114,7 +114,7 @@ It works on a single site. Network activation is not supported in this version: 
 == Changelog ==
 
 = 0.0.4 =
-* In development: feed endpoint with pages, access control and date filters; warnings for enabled feeds that are not published.
+* In development: feed endpoint with pages, access control and date filters; featured image URL; warnings for enabled feeds that are not published.
 
 = 0.0.3 =
 * Post meta fields in the mapping: the keys in use, hidden keys listed apart, and any key typed by hand.

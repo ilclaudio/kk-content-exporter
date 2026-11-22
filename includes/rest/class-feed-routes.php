@@ -363,9 +363,10 @@ final class Feed_Routes {
 			$query      = self::query( $post_types, $page, $per_page, $date_query );
 			$posts      = array_values( array_filter( $query->posts, static fn( $post ): bool => $post instanceof WP_Post ) );
 
-			// The query loads meta and terms for the whole page; the authors are loaded here, all at once, so that
-			// the author sources do not cost two queries per item.
+			// The query loads meta and terms for the whole page; the authors and the featured images (attachments
+			// with their meta) are loaded here, all at once, so that their sources do not cost queries per item.
 			update_post_author_caches( $posts );
+			update_post_thumbnail_cache( $query );
 
 			foreach ( $posts as $post ) {
 				$items[] = Item_Exporter::export( $post, $mapping );

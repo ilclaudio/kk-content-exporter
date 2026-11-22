@@ -17,6 +17,7 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 - Setting to show or hide the feed endpoint in the REST API index (shown by default).
 - Date filters `modified_after`, `modified_before` and `published_after` (years 1000 to 9999), each one can be turned off in the settings.
 - Warning in the editor and "Active, not published" in the list for an enabled feed that is not published.
+- Field "Featured image (URL)": the absolute URL of the original image, `null` without one.
 ### Changed
 - A page of a feed costs the same database queries whatever the number of its items.
 - The development note in the Plugins screen no longer says that feeds are not served.
