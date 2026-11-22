@@ -1,19 +1,19 @@
 /**
- * Rule "Field": a chain with a fallback and an exception for a post type, previewed on a post and a page,
- * saved and read back.
+ * Rules "Field" and "Fixed value": a fallback chain and fixed text with post type exceptions, previewed
+ * on a post and a page, saved together and read back.
  *
  * @package KKCE
  */
 
 const { test, expect } = require( '@playwright/test' );
 const { createFixtures, cleanupFixtures } = require( '../support/wp' );
-const { openFeed, preview, saveFeed } = require( '../support/editor' );
+const { openFeed, addRow, preview, saveFeed } = require( '../support/editor' );
 
 test.afterEach( () => {
 	cleanupFixtures();
 } );
 
-test( 'a chain falls back to the next field and a post type can read other fields', async ( { page } ) => {
+test( 'field fallbacks and fixed values keep post type exceptions after saving', async ( { page } ) => {
 	const data = createFixtures( 'field', {
 		post_types: [ 'post', 'page' ],
 		posts: [ { title: 'E2E field post', excerpt: '' } ],
@@ -39,6 +39,16 @@ test( 'a chain falls back to the next field and a post type can read other field
 	await expect( preview( box ) ).toContainText( '"summary": "E2E field post"' );
 	await expect( preview( box ) ).toContainText( '"summary": "kkce-e2e-field-page-0"' );
 
+	const lang = await addRow( box, 'Fixed value', 'lang' );
+	await lang.getByLabel( 'Output type' ).selectOption( { label: 'Text' } );
+	await lang.getByLabel( 'Value (For all post types)' ).fill( 'it' );
+	await lang.getByLabel( 'Different for' ).selectOption( { label: 'Pages' } );
+	await lang.getByRole( 'button', { name: 'Add exception' } ).click();
+	await lang.getByLabel( 'Value (For Pages)' ).fill( 'en' );
+
+	await expect( preview( box ) ).toContainText( '"lang": "it"' );
+	await expect( preview( box ) ).toContainText( '"lang": "en"' );
+
 	await saveFeed( page );
 	await page.reload();
 
@@ -47,4 +57,9 @@ test( 'a chain falls back to the next field and a post type can read other field
 	await expect( saved.getByLabel( 'Otherwise, field 2' ) ).toHaveValue( 'core.title' );
 	await expect( saved.getByRole( 'group', { name: 'For Pages' } ).getByLabel( 'Field', { exact: true } ) ).toHaveValue( 'core.slug' );
 	await expect( preview( box ) ).toContainText( '"summary": "kkce-e2e-field-page-0"' );
+
+	const savedLang = box.getByRole( 'group', { name: /: lang$/ } );
+	await expect( savedLang.getByLabel( 'Value (For all post types)' ) ).toHaveValue( 'it' );
+	await expect( savedLang.getByLabel( 'Value (For Pages)' ) ).toHaveValue( 'en' );
+	await expect( savedLang.getByLabel( 'Output type' ) ).toHaveValue( 'string' );
 } );
