@@ -30,27 +30,66 @@ final class Core_Provider {
 	private const TEXT_OPTIONS = array( 'shortcodes', 'raw' );
 
 	/**
+	 * The technical definition of the core sources: identifier => declared type, in the order shown to the
+	 * administrator. The one list of the core sources: `sources()` adds labels and options to it.
+	 */
+	private const TYPES = array(
+		'core.id'          => 'number',
+		'core.slug'        => 'string',
+		'core.title'       => 'string',
+		'core.content'     => 'html',
+		'core.excerpt'     => 'html',
+		'core.permalink'   => 'url',
+		'core.shortlink'   => 'url',
+		'core.date'        => 'datetime',
+		'core.modified'    => 'datetime',
+		'core.author.id'   => 'number',
+		'core.author.name' => 'string',
+		'core.author.url'  => 'url',
+		'core.type'        => 'string',
+		'core.type_label'  => 'string',
+	);
+
+	/**
+	 * Declared types of the core sources, without labels: what the export of an item needs, without translating
+	 * the labels for every item.
+	 *
+	 * @return array<string, string> Identifier => declared type.
+	 */
+	public static function types(): array {
+		return self::TYPES;
+	}
+
+	/**
 	 * The core sources, in the order shown to the administrator.
 	 *
 	 * @return list<Source>
 	 */
 	public static function sources(): array {
-		return array(
-			new Source( 'core.id', __( 'ID', 'kk-content-exporter' ), '', 'number' ),
-			new Source( 'core.slug', __( 'Slug', 'kk-content-exporter' ), '', 'string' ),
-			new Source( 'core.title', __( 'Title', 'kk-content-exporter' ), '', 'string' ),
-			new Source( 'core.content', __( 'Content', 'kk-content-exporter' ), '', 'html', self::TEXT_OPTIONS ),
-			new Source( 'core.excerpt', __( 'Excerpt', 'kk-content-exporter' ), '', 'html', self::TEXT_OPTIONS ),
-			new Source( 'core.permalink', __( 'Permalink', 'kk-content-exporter' ), '', 'url' ),
-			new Source( 'core.shortlink', __( 'Short link (does not change with the slug)', 'kk-content-exporter' ), '', 'url' ),
-			new Source( 'core.date', __( 'Publish date (UTC)', 'kk-content-exporter' ), '', 'datetime' ),
-			new Source( 'core.modified', __( 'Last modified date (UTC)', 'kk-content-exporter' ), '', 'datetime' ),
-			new Source( 'core.author.id', __( 'Author ID', 'kk-content-exporter' ), '', 'number' ),
-			new Source( 'core.author.name', __( 'Author display name', 'kk-content-exporter' ), '', 'string' ),
-			new Source( 'core.author.url', __( 'Author archive URL', 'kk-content-exporter' ), '', 'url' ),
-			new Source( 'core.type', __( 'Post type (slug)', 'kk-content-exporter' ), '', 'string' ),
-			new Source( 'core.type_label', __( 'Post type (label)', 'kk-content-exporter' ), '', 'string' ),
+		$labels = array(
+			'core.id'          => __( 'ID', 'kk-content-exporter' ),
+			'core.slug'        => __( 'Slug', 'kk-content-exporter' ),
+			'core.title'       => __( 'Title', 'kk-content-exporter' ),
+			'core.content'     => __( 'Content', 'kk-content-exporter' ),
+			'core.excerpt'     => __( 'Excerpt', 'kk-content-exporter' ),
+			'core.permalink'   => __( 'Permalink', 'kk-content-exporter' ),
+			'core.shortlink'   => __( 'Short link (does not change with the slug)', 'kk-content-exporter' ),
+			'core.date'        => __( 'Publish date (UTC)', 'kk-content-exporter' ),
+			'core.modified'    => __( 'Last modified date (UTC)', 'kk-content-exporter' ),
+			'core.author.id'   => __( 'Author ID', 'kk-content-exporter' ),
+			'core.author.name' => __( 'Author display name', 'kk-content-exporter' ),
+			'core.author.url'  => __( 'Author archive URL', 'kk-content-exporter' ),
+			'core.type'        => __( 'Post type (slug)', 'kk-content-exporter' ),
+			'core.type_label'  => __( 'Post type (label)', 'kk-content-exporter' ),
 		);
+
+		$sources = array();
+		foreach ( self::TYPES as $id => $type ) {
+			$options   = in_array( $id, array( 'core.content', 'core.excerpt' ), true ) ? self::TEXT_OPTIONS : array();
+			$sources[] = new Source( $id, $labels[ $id ], '', $type, $options );
+		}
+
+		return $sources;
 	}
 
 	/**

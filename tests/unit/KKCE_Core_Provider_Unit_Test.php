@@ -44,6 +44,19 @@ class KKCE_Core_Provider_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
+	 * The technical list of the types (no labels) is the one the sources are built from: same identifiers, same
+	 * types, same order.
+	 */
+	public function test_the_types_are_those_of_the_sources() {
+		$types = array();
+		foreach ( Core_Provider::sources() as $source ) {
+			$types[ $source->id ] = $source->type;
+		}
+
+		$this->assertSame( $types, Core_Provider::types() );
+	}
+
+	/**
 	 * Every core source is common, has a label, and only content and excerpt have options.
 	 */
 	public function test_the_core_sources_are_common_with_labels_and_options() {

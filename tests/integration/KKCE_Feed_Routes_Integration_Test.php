@@ -649,6 +649,95 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * User-dependent query filters see a visitor for selection and empty-page counts.
+	 */
+	public function test_query_visibility_is_anonymous_for_items_and_totals() {
+		get_userdata( self::$admin )->add_cap( 'kkce_read_export' );
+		$this->feed( 'visitor-public' );
+		$this->feed( 'visitor-private', array( 'access' => Feed_Meta::ACCESS_AUTHENTICATED ) );
+		$visible = $this->item();
+		$hidden  = $this->item();
+		$viewers = array();
+		$filter  = static function ( WP_Query $query ) use ( $hidden, &$viewers ): void {
+			if ( true !== $query->get( 'kkce_feed_order' ) ) {
+				return;
+			}
+			$viewers[] = array( get_current_user_id(), 'ids' === $query->get( 'fields' ) );
+			if ( 0 === get_current_user_id() ) {
+				$query->set( 'post__not_in', array( $hidden ) );
+			}
+		};
+		add_action( 'pre_get_posts', $filter );
+		try {
+			$public = $this->get( 'visitor-public', array( 'per_page' => 2 ) );
+			$this->sign_in_with_application_password( self::$admin );
+			$private = $this->get( 'visitor-private', array( 'per_page' => 2 ) );
+			$empty   = $this->get( 'visitor-private', array( 'per_page' => 1, 'page' => 3 ) );
+			$unrelated = new WP_Query( array( 'post_type' => 'post', 'post_status' => 'publish', 'fields' => 'ids' ) );
+		} finally {
+			remove_action( 'pre_get_posts', $filter );
+		}
+
+		$this->assertSame( self::$admin, get_current_user_id() );
+		$this->assertSame( 200, $private->get_status() );
+		$this->assertSame( array( $visible ), $this->ids( $public ) );
+		$this->assertEquals( $public->get_data()['items'], $private->get_data()['items'] );
+		$this->assertSame( $public->get_data()['pagination'], $private->get_data()['pagination'] );
+		$this->assertSame( array(), $empty->get_data()['items'] );
+		$this->assertSame( 1, $empty->get_data()['pagination']['total'] );
+		$this->assertSame( 1, $empty->get_data()['pagination']['total_pages'] );
+		$this->assertContains( array( 0, true ), $viewers );
+		foreach ( $viewers as $viewer ) {
+			$this->assertSame( 0, $viewer[0] );
+		}
+		$this->assertContains( $hidden, $unrelated->posts );
+	}
+
+	/**
+	 * Both query paths restore the authenticated user and temporary order filter after an exception.
+	 *
+	 * @dataProvider failing_query_provider
+	 * @param bool $ids_only Whether the counting query fails.
+	 */
+	public function test_query_exception_restores_the_authenticated_user( bool $ids_only ) {
+		get_userdata( self::$admin )->add_cap( 'kkce_read_export' );
+		$this->feed( 'visitor-exception', array( 'access' => Feed_Meta::ACCESS_AUTHENTICATED ) );
+		$this->item();
+		$this->sign_in_with_application_password( self::$admin );
+		$viewer = null;
+		$filter = static function ( WP_Query $query ) use ( $ids_only, &$viewer ): void {
+			if ( true === $query->get( 'kkce_feed_order' ) && $ids_only === ( 'ids' === $query->get( 'fields' ) ) ) {
+				$viewer = get_current_user_id();
+				throw new RuntimeException( 'Visibility query failed.' );
+			}
+		};
+		add_action( 'pre_get_posts', $filter );
+		try {
+			try {
+				$this->get( 'visitor-exception', array( 'per_page' => 1, 'page' => $ids_only ? 3 : 1 ) );
+				$this->fail( 'The query exception must propagate.' );
+			} catch ( RuntimeException $error ) {
+				$this->assertSame( 'Visibility query failed.', $error->getMessage() );
+			}
+		} finally {
+			remove_action( 'pre_get_posts', $filter );
+		}
+
+		$this->assertSame( 0, $viewer );
+		$this->assertSame( self::$admin, get_current_user_id() );
+		$this->assertFalse( has_filter( 'posts_orderby', array( Feed_Routes::class, 'order_by_modified_gmt' ) ) );
+	}
+
+	/**
+	 * Query paths that must restore the caller's context.
+	 *
+	 * @return array<string, array{bool}>
+	 */
+	public function failing_query_provider(): array {
+		return array( 'items' => array( false ), 'empty-page count' => array( true ) );
+	}
+
+	/**
 	 * The first page holds the items per page of the feed, never more than the global maximum.
 	 */
 	public function test_the_first_page_holds_the_items_per_page_within_the_maximum() {
@@ -921,6 +1010,7 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 			'date only'      => array( 'modified_before', '2026-11-01' ),
 			'impossible day' => array( 'published_after', '2026-02-30T10:00:00Z' ),
 			'words'          => array( 'modified_after', 'yesterday' ),
+			'remapped year'  => array( 'modified_after', '0050-01-01T00:00:00Z' ),
 		);
 	}
 

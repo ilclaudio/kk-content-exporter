@@ -11,14 +11,18 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 ## [0.0.4] - Unreleased
 ### Added
-- Feed endpoint `GET /wp-json/kkce/v1/<slug>` for published, enabled, public feeds.
+- Feed endpoint `GET /wp-json/kkce/v1/<slug>` for published, enabled feeds.
 - Pages of a feed with `page` and `per_page`, in a stable order by modified date (GMT) and ID.
-- Authenticated feeds: read with an Application Password of a user with the capability `kkce_read_export`.
+- Authenticated feeds: read with an Application Password of a user with the capability `kkce_read_export`; items and totals are the same a visitor would get.
 - Setting to show or hide the feed endpoint in the REST API index (shown by default).
-- Date filters `modified_after`, `modified_before` and `published_after`, each one can be turned off in the settings.
+- Date filters `modified_after`, `modified_before` and `published_after` (years 1000 to 9999), each one can be turned off in the settings.
+- Warning in the editor and "Active, not published" in the list for an enabled feed that is not published.
+### Changed
+- A page of a feed costs the same database queries whatever the number of its items.
+- The development note in the Plugins screen no longer says that feeds are not served.
 ### Fixed
 - Choosing an item in the preview no longer triggers an unsaved-changes warning.
-- HTTP 401 responses on the plugin's own REST endpoints include the Basic authentication challenge when WordPress Application Passwords are available.
+- 401 responses of the plugin's REST routes include a Basic authentication challenge when Application Passwords are available.
 
 ## [0.0.3] - 2026-11-19
 ### Added

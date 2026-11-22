@@ -75,12 +75,10 @@ final class Item_Exporter {
 	 * @return callable(string): ?string Gives null for a source of unknown type (it counts as text).
 	 */
 	private static function declared_types( string $post_type ): callable {
-		$types = array();
-		foreach ( Core_Provider::sources() as $source ) {
-			$types[ $source->id ] = $source->type;
-		}
+		$core = Core_Provider::types();
+		$meta = Meta_Provider::declared_types( $post_type );
 
-		return static fn( string $source ): ?string => $types[ $source ] ?? Meta_Provider::declared_type( $post_type, $source );
+		return static fn( string $source ): ?string => $core[ $source ] ?? $meta( $source );
 	}
 
 	/**

@@ -280,4 +280,47 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 		$this->assertMatchesRegularExpression( '#^Active<br\s*/?><span class="kkce-sensitive">[^<]+</span>$#', $this->cell( 'kkce_status', $sensitive ) );
 		$this->assertSame( 'Active', $this->cell( 'kkce_status', $plain ) );
 	}
+
+	/**
+	 * An enabled feed that is not published does not answer: the status says so. A disabled one stays
+	 * "Disabled" whatever its post status.
+	 *
+	 * @dataProvider unpublished_status_provider
+	 *
+	 * @param string $status Post status of the feed.
+	 */
+	public function test_an_enabled_feed_that_is_not_published_is_marked( string $status ) {
+		$enabled  = $this->feed( array( '_kkce_active' => '1' ) );
+		$disabled = $this->feed( array(), 'other' );
+		foreach ( array( $enabled, $disabled ) as $id ) {
+			$update = array(
+				'ID'          => $id,
+				'post_status' => $status,
+			);
+			if ( 'future' === $status ) {
+				// Both dates: WordPress decides "scheduled" on the GMT one, and keeps the stored GMT date otherwise.
+				$update['post_date_gmt'] = gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS );
+				$update['post_date']     = get_date_from_gmt( $update['post_date_gmt'] );
+			}
+			wp_update_post( $update );
+		}
+
+		$this->assertSame( $status, get_post_status( $enabled ) );
+		$this->assertSame( 'Active, not published', $this->cell( 'kkce_status', $enabled ) );
+		$this->assertSame( 'Disabled', $this->cell( 'kkce_status', $disabled ) );
+	}
+
+	/**
+	 * Data for test_an_enabled_feed_that_is_not_published_is_marked().
+	 *
+	 * @return array<string, array{0: string}>
+	 */
+	public function unpublished_status_provider(): array {
+		return array(
+			'draft'   => array( 'draft' ),
+			'pending' => array( 'pending' ),
+			'future'  => array( 'future' ),
+			'private' => array( 'private' ),
+		);
+	}
 }

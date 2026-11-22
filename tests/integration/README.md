@@ -69,9 +69,11 @@ number of assertions changes with the version of WordPress.
 | `KKCE_Core_Provider_Integration_Test.php` | Values of the core fields of posts and pages: GMT dates, public author attributes only |
 | `KKCE_Environment_Integration_Test.php` | The plugin is loaded, wired and translatable (bundled `it_IT` translation) |
 | `KKCE_Exportable_Post_Types_Integration_Test.php` | The post types a feed can export: public ones only, `attachment` excluded, sorted by label |
-| `KKCE_Feed_Editor_Integration_Test.php` | Saving a feed and its mapping: nonce, capability, validation, refused mapping kept as a draft, activation rules |
+| `KKCE_Feed_Editor_Integration_Test.php` | Saving a feed and its mapping: nonce, capability, validation, refused mapping kept as a draft, activation rules, warning for an enabled feed that is not published |
+| `KKCE_Feed_Modified_Date_Integration_Test.php` | Which changes of an item make it appear again with `modified_after`: a save of the post does, a change of only meta, terms or featured image by code does not (known limit) |
+| `KKCE_Feed_Query_Cost_Integration_Test.php` | A page of a feed costs the same database queries with 1 and with 50 items (authors, meta, terms, permalinks with the category) |
 | `KKCE_Feed_Routes_Integration_Test.php` | The endpoint of a feed: switch of the settings, 404 for feeds that cannot be served, Application Password and capability for feeds that need authentication (401, 403, same data as a public feed), published public data only, computed as a visitor, pages and their parameters, order by GMT modified date across daylight saving time and time zones, date filters (half-open interval, time zones, switches of the settings), isolation between feeds |
-| `KKCE_Feed_List_Integration_Test.php` | Columns of the list of the feeds, escaped, with the mark of the feeds that export sensitive fields |
+| `KKCE_Feed_List_Integration_Test.php` | Columns of the list of the feeds, escaped, with the mark of the feeds that export sensitive fields and of the enabled feeds that are not published |
 | `KKCE_Feed_Meta_Integration_Test.php` | Configuration meta: registered, hidden from REST, sanitized, editable by administrators only |
 | `KKCE_Feed_Post_Type_Integration_Test.php` | The post type `kkce_feed`: private, without REST routes, title only, administrators only |
 | `KKCE_Feed_Url_Integration_Test.php` | The REST address of a feed, and no address for a slug that cannot serve a feed |
@@ -93,6 +95,10 @@ inside the admin namespace), existing challenges and disabled Application Passwo
 Availability is enabled only within test fixtures and restored afterwards; production code respects
 WordPress's existing availability decision.
 This covers WordPress's response-serving pipeline, not headers added later by a web server or proxy.
+
+The feed-route regressions `test_query_visibility_is_anonymous_for_items_and_totals` and
+`test_query_exception_restores_the_authenticated_user` exercise user-dependent query restrictions,
+empty-page counts, unrelated queries and user/filter restoration after failures in either query path.
 
 ## Adding a test
 

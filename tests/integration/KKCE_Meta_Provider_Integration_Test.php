@@ -38,6 +38,7 @@ class KKCE_Meta_Provider_Integration_Test extends WP_UnitTestCase {
 		unregister_meta_key( 'post', 'kkce_seats', 'kkce_event' );
 		unregister_meta_key( 'post', 'kkce_open', 'kkce_event' );
 		unregister_meta_key( 'post', 'kkce_tags', 'kkce_event' );
+		unregister_meta_key( 'post', 'kkce_late', 'kkce_event' );
 		parent::tear_down();
 	}
 
@@ -92,10 +93,23 @@ class KKCE_Meta_Provider_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( 'number', $types['meta.kkce_seats'] );
 		$this->assertSame( 'boolean', $types['meta.kkce_open'] );
 		$this->assertArrayNotHasKey( 'meta.kkce_tags', $types );
-		$this->assertSame( 'number', Meta_Provider::declared_type( 'kkce_event', 'meta.kkce_seats' ) );
-		$this->assertNull( Meta_Provider::declared_type( 'kkce_event', 'meta.kkce_tags' ) );
-		$this->assertSame( 'string', Meta_Provider::declared_type( 'kkce_event', 'meta.unregistered' ) );
-		$this->assertNull( Meta_Provider::declared_type( 'kkce_event', 'core.title' ) );
+		$declared = Meta_Provider::declared_types( 'kkce_event' );
+		$this->assertSame( 'number', $declared( 'meta.kkce_seats' ) );
+		$this->assertNull( $declared( 'meta.kkce_tags' ) );
+		$this->assertSame( 'string', $declared( 'meta.unregistered' ) );
+		$this->assertNull( $declared( 'core.title' ) );
+	}
+
+	/**
+	 * The function of the declared types reads the registrations when it is made: a key registered later counts
+	 * for the next function only, never for a cached one.
+	 */
+	public function test_declared_types_read_the_registrations_when_made() {
+		$before = Meta_Provider::declared_types( 'kkce_event' );
+		register_post_meta( 'kkce_event', 'kkce_late', array( 'type' => 'integer', 'single' => true ) );
+
+		$this->assertSame( 'string', $before( 'meta.kkce_late' ) );
+		$this->assertSame( 'number', Meta_Provider::declared_types( 'kkce_event' )( 'meta.kkce_late' ) );
 	}
 
 	/**

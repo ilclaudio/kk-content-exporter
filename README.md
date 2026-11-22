@@ -17,9 +17,9 @@ the plugin's operation, REST API and development workflow.
 ## Project status
 
 In development. Feed configuration, the mapping editor with preview and save, WordPress core fields
-and selected post meta are available, along with public and authenticated feeds with pagination.
-Date filters and additional sources (taxonomies, featured images, language, ACF and CMB2 fields)
-are still being developed.
+and selected post meta are available, along with public and authenticated feeds with pagination and
+date filters. Additional sources (taxonomies, featured images, language, ACF and CMB2 fields) are
+still being developed.
 
 ## Requirements
 
@@ -57,6 +57,7 @@ each control and the diagnostic messages.
 | REST API index | `show_in_index` | `true` | Includes the feed route and parameter descriptions in REST discovery. Turning it off does not disable or protect feed URLs. |
 | Authentication | `require_auth` | `false` | Overrides per-feed access and requires Application Password authentication for every feed. |
 | Maximum items per page | `max_per_page` | `100` | Positive integer, with no fixed upper ceiling. Caps a feed's configured page size; an explicit `per_page` above it is rejected. |
+| Date filters | `filter_modified_after`, `filter_modified_before`, `filter_published_after` | `true` | Each one allows its date parameter; a request with a parameter turned off is rejected with HTTP 400, never ignored. |
 | Uninstall | `remove_data` | `false` | On plugin deletion, removes feeds, configuration and the export capability from roles and users. Source content is retained; deactivation does not perform cleanup. |
 
 Diagnostics check for blocked anonymous REST access, unavailable Application Passwords and enabled
@@ -68,6 +69,10 @@ of every feed on a large site.
 
 Each feed has its own endpoint: `GET /wp-json/kkce/v1/<feed-slug>`. It must be published and enabled
 before it can be read. Requests have no body; use the exact feed URL shown in the editor.
+
+A missing, unpublished or disabled feed, or one without mapping rows, answers HTTP 404
+(`kkce_feed_not_found`); the editor and the list of the feeds mark an enabled feed that is not
+published. Invalid parameters answer HTTP 400 (`rest_invalid_param`) with an explanation.
 
 ### Public feeds
 
@@ -96,7 +101,23 @@ A feed mapped to `title` and `url` might return:
 feed. Its `generated_at` value is the UTC timestamp when the response was generated.
 
 Use `page` to read successive pages; `per_page` cannot exceed the maximum in the plugin settings.
-Items are ordered by modified date in UTC, then ID, both ascending.
+Items are ordered by modified date in UTC, then ID, both ascending. A page after the last one returns
+an empty `items` list with the real totals.
+
+### Date filters
+
+`modified_after`, `modified_before` (modified date) and `published_after` (publication date) select
+items by date, for example to read only what changed since the previous reading:
+
+```sh
+curl 'https://example.com/wp-json/kkce/v1/news?modified_after=2026-11-01T10:00:00Z'
+```
+
+Dates are ISO 8601 with a time zone (`Z` or an offset such as `+01:00`), with years from 1000 to 9999;
+fractions of a second are ignored. The interval is half-open: `after` includes the date, `before`
+excludes it. A date without a time zone, an empty interval or a filter turned off in the settings
+answers HTTP 400. Changes made by code only to meta, terms or the featured image do not change the
+modified date, so an importer should also read the whole feed from time to time.
 
 ### Authenticated feeds
 

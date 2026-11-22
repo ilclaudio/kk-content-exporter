@@ -82,6 +82,18 @@ final class Feed_Post_Type {
 	}
 
 	/**
+	 * Whether a feed is enabled but not published (draft, pending, scheduled, private), so its address
+	 * answers 404 although the administrator enabled it. The editor and the list of the feeds say so.
+	 *
+	 * @param int $post_id ID of the feed.
+	 * @return bool
+	 */
+	public static function is_enabled_but_unpublished( int $post_id ): bool {
+		return 'publish' !== get_post_status( $post_id )
+			&& Feed_Meta::sanitize_active( get_post_meta( $post_id, Feed_Meta::META_ACTIVE, true ) );
+	}
+
+	/**
 	 * Primitive capabilities of the post type: all of them require the administration capability.
 	 *
 	 * @return array<string, string> Post type capability => required capability.

@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-20T18:43:21+01:00\n"
+"POT-Creation-Date: 2026-11-22T08:56:30+01:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: kk-content-exporter\n"
@@ -54,7 +54,7 @@ msgid "A feed is a read-only JSON address that an external program (for example 
 msgstr ""
 
 #: includes/admin/class-feed-editor.php:215
-#: includes/sources/class-core-provider.php:40
+#: includes/sources/class-core-provider.php:71
 msgid "Slug"
 msgstr ""
 
@@ -114,71 +114,75 @@ msgstr ""
 msgid "A feed needs a slug and at least one source post type to be enabled."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:497
-msgid "Address of the feed:"
+#: includes/admin/class-feed-editor.php:446
+msgid "This feed is enabled but not published: its address answers with a \"not found\" error until the feed is published."
 msgstr ""
 
 #: includes/admin/class-feed-editor.php:505
-msgid "The address answers only while the feed is enabled."
+msgid "Address of the feed:"
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:515
+#: includes/admin/class-feed-editor.php:513
+msgid "The address answers only while the feed is published and enabled."
+msgstr ""
+
+#: includes/admin/class-feed-editor.php:523
 msgid "(required)"
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:619
+#: includes/admin/class-feed-editor.php:627
 msgid "Enter a slug for the feed."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:620
+#: includes/admin/class-feed-editor.php:628
 msgid "The slug can contain only lowercase letters, digits and single dashes between them."
 msgstr ""
 
 #. translators: %d: maximum number of characters of a slug.
-#: includes/admin/class-feed-editor.php:623
+#: includes/admin/class-feed-editor.php:631
 #, php-format
 msgid "The slug can have at most %d characters."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:626
+#: includes/admin/class-feed-editor.php:634
 msgid "This slug is reserved. Choose another one."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:627
+#: includes/admin/class-feed-editor.php:635
 msgid "Another feed already uses this slug."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:628
+#: includes/admin/class-feed-editor.php:636
 msgid "Choose at least one source post type."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:629
+#: includes/admin/class-feed-editor.php:637
 msgid "One of the source post types is not available. The previous sources were kept."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:630
+#: includes/admin/class-feed-editor.php:638
 msgid "The access value is not valid. The previous access was kept."
 msgstr ""
 
 #. translators: %d: maximum number of items per page set in the plugin settings.
-#: includes/admin/class-feed-editor.php:633
+#: includes/admin/class-feed-editor.php:641
 #, php-format
 msgid "Items per page cannot be higher than the maximum set in the plugin settings (%d). The previous value was kept."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:636
+#: includes/admin/class-feed-editor.php:644
 msgid "Items per page must be a whole number of at least 1. The previous value was kept."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:637
+#: includes/admin/class-feed-editor.php:645
 msgid "The feed was saved disabled: set a valid slug and at least one source post type first."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:638
+#: includes/admin/class-feed-editor.php:646
 msgid "The feed was saved disabled: add at least one row to the mapping first."
 msgstr ""
 
-#: includes/admin/class-feed-editor.php:639
+#: includes/admin/class-feed-editor.php:647
 msgid "The mapping was not saved: see the errors in the Mapping box. The previous mapping is still in use."
 msgstr ""
 
@@ -199,14 +203,18 @@ msgid "Public"
 msgstr ""
 
 #: includes/admin/class-feed-list.php:198
-msgid "Active"
-msgstr ""
-
-#: includes/admin/class-feed-list.php:199
 msgid "Disabled"
 msgstr ""
 
-#: includes/admin/class-feed-list.php:211
+#: includes/admin/class-feed-list.php:202
+msgid "Active, not published"
+msgstr ""
+
+#: includes/admin/class-feed-list.php:203
+msgid "Active"
+msgstr ""
+
+#: includes/admin/class-feed-list.php:215
 msgid "Not set"
 msgstr ""
 
@@ -375,56 +383,56 @@ msgstr ""
 msgid "Configurations of the JSON feeds."
 msgstr ""
 
-#: includes/class-feed-post-type.php:114
+#: includes/class-feed-post-type.php:126
 msgid "Feeds"
 msgstr ""
 
-#: includes/class-feed-post-type.php:115
+#: includes/class-feed-post-type.php:127
 msgid "Feed"
 msgstr ""
 
-#: includes/class-feed-post-type.php:116
+#: includes/class-feed-post-type.php:128
 msgid "Content Exporter"
 msgstr ""
 
-#: includes/class-feed-post-type.php:117
+#: includes/class-feed-post-type.php:129
 msgid "Add New"
 msgstr ""
 
-#: includes/class-feed-post-type.php:118
+#: includes/class-feed-post-type.php:130
 msgid "Add New Feed"
 msgstr ""
 
-#: includes/class-feed-post-type.php:119
+#: includes/class-feed-post-type.php:131
 msgid "Edit Feed"
 msgstr ""
 
-#: includes/class-feed-post-type.php:120
+#: includes/class-feed-post-type.php:132
 msgid "New Feed"
 msgstr ""
 
-#: includes/class-feed-post-type.php:121
+#: includes/class-feed-post-type.php:133
 msgid "View Feed"
 msgstr ""
 
-#: includes/class-feed-post-type.php:122
+#: includes/class-feed-post-type.php:134
 msgid "Search Feeds"
 msgstr ""
 
-#: includes/class-feed-post-type.php:123
+#: includes/class-feed-post-type.php:135
 msgid "No feeds found."
 msgstr ""
 
-#: includes/class-feed-post-type.php:124
+#: includes/class-feed-post-type.php:136
 msgid "No feeds found in Trash."
 msgstr ""
 
-#: includes/class-feed-post-type.php:125
+#: includes/class-feed-post-type.php:137
 msgid "All Feeds"
 msgstr ""
 
 #: includes/class-plugin.php:134
-msgid "Development version: feeds can be configured, but they are not served yet."
+msgid "Development version: some sources are not available yet. Not intended for production sites."
 msgstr ""
 
 #: includes/class-settings.php:173
@@ -505,80 +513,80 @@ msgid "Authentication with an Application Password is required to read this feed
 msgstr ""
 
 #. translators: %d: maximum items per page set in the settings of the plugin.
-#: includes/rest/class-feed-routes.php:225
+#: includes/rest/class-feed-routes.php:241
 #, php-format
 msgid "per_page must be at most %d."
 msgstr ""
 
 #. translators: %s: name of a parameter of the feed endpoint.
-#: includes/rest/class-feed-routes.php:270
+#: includes/rest/class-feed-routes.php:286
 #, php-format
 msgid "%s is turned off on this site."
 msgstr ""
 
 #. translators: 1: name of a parameter of the feed endpoint, 2: example of a date.
-#: includes/rest/class-feed-routes.php:272
+#: includes/rest/class-feed-routes.php:288
 #, php-format
 msgid "%1$s must be a date with a time zone, for example %2$s."
 msgstr ""
 
-#: includes/rest/class-feed-routes.php:329
+#: includes/rest/class-feed-routes.php:345
 msgid "modified_after must be earlier than modified_before."
 msgstr ""
 
-#: includes/rest/class-feed-routes.php:452
+#: includes/rest/class-feed-routes.php:476
 msgid "No feed is available at this address."
 msgstr ""
 
-#: includes/sources/class-core-provider.php:39
+#: includes/sources/class-core-provider.php:70
 msgid "ID"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:41
+#: includes/sources/class-core-provider.php:72
 msgid "Title"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:42
+#: includes/sources/class-core-provider.php:73
 msgid "Content"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:43
+#: includes/sources/class-core-provider.php:74
 msgid "Excerpt"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:44
+#: includes/sources/class-core-provider.php:75
 msgid "Permalink"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:45
+#: includes/sources/class-core-provider.php:76
 msgid "Short link (does not change with the slug)"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:46
+#: includes/sources/class-core-provider.php:77
 msgid "Publish date (UTC)"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:47
+#: includes/sources/class-core-provider.php:78
 msgid "Last modified date (UTC)"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:48
+#: includes/sources/class-core-provider.php:79
 msgid "Author ID"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:49
+#: includes/sources/class-core-provider.php:80
 msgid "Author display name"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:50
+#: includes/sources/class-core-provider.php:81
 msgid "Author archive URL"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:51
+#: includes/sources/class-core-provider.php:82
 msgid "Post type (slug)"
 msgstr ""
 
-#: includes/sources/class-core-provider.php:52
+#: includes/sources/class-core-provider.php:83
 msgid "Post type (label)"
 msgstr ""
 

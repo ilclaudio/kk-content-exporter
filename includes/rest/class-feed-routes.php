@@ -361,11 +361,14 @@ final class Feed_Routes {
 		if ( array() !== $post_types ) {
 			$date_query = Date_Filters::date_query( $dates );
 			$query      = self::query( $post_types, $page, $per_page, $date_query );
+			$posts      = array_values( array_filter( $query->posts, static fn( $post ): bool => $post instanceof WP_Post ) );
 
-			foreach ( $query->posts as $post ) {
-				if ( $post instanceof WP_Post ) {
-					$items[] = Item_Exporter::export( $post, $mapping );
-				}
+			// The query loads meta and terms for the whole page; the authors are loaded here, all at once, so that
+			// the author sources do not cost two queries per item.
+			update_post_author_caches( $posts );
+
+			foreach ( $posts as $post ) {
+				$items[] = Item_Exporter::export( $post, $mapping );
 			}
 			$total = (int) $query->found_posts;
 
@@ -380,6 +383,7 @@ final class Feed_Routes {
 
 	/**
 	 * Query of a page of the items of a feed: published, without a password, in the order of the feeds.
+	 * Selection and counting use anonymous visibility; the caller's user is restored even on an exception.
 	 *
 	 * @param string[]                 $post_types Post types of the feed that can be exported.
 	 * @param int                      $page       Page, from 1.
@@ -412,12 +416,16 @@ final class Feed_Routes {
 			$args['fields'] = 'ids';
 		}
 
-		$order = array( self::class, 'order_by_modified_gmt' );
+		$previous_user = get_current_user_id();
+		$order         = array( self::class, 'order_by_modified_gmt' );
 		add_filter( 'posts_orderby', $order, 10, 2 );
 		try {
+			wp_set_current_user( 0 );
+
 			return new WP_Query( $args );
 		} finally {
 			remove_filter( 'posts_orderby', $order, 10 );
+			wp_set_current_user( $previous_user );
 		}
 	}
 

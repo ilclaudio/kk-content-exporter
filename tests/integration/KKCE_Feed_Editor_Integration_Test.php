@@ -545,6 +545,51 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * An enabled feed that is not published answers 404: the editor warns at every visit, until the feed is
+	 * published or disabled. A published feed or a disabled draft shows no warning.
+	 */
+	public function test_an_enabled_feed_that_is_not_published_shows_a_warning() {
+		$feed = $this->feed();
+		set_current_screen( 'kkce_feed' );
+
+		$notices = function () use ( $feed ): string {
+			clean_post_cache( $feed );
+			$GLOBALS['post'] = get_post( $feed );
+			ob_start();
+			do_action( 'admin_notices' );
+
+			return (string) ob_get_clean();
+		};
+
+		$this->assertStringNotContainsString( 'kkce-not-published', $notices(), 'A disabled draft is not warned.' );
+
+		update_post_meta( $feed, '_kkce_active', '1' );
+		$first = $notices();
+		$this->assertStringContainsString( 'notice-warning', $first );
+		$this->assertStringContainsString( 'kkce-not-published', $first );
+		$this->assertStringContainsString( 'not published', $first );
+		$this->assertStringContainsString( 'kkce-not-published', $notices(), 'The warning is shown at every visit.' );
+
+		wp_update_post( array( 'ID' => $feed, 'post_status' => 'publish' ) );
+		$this->assertStringNotContainsString( 'kkce-not-published', $notices(), 'A published feed is not warned.' );
+	}
+
+	/**
+	 * The warning of an unpublished feed appears only on the screen of the feeds.
+	 */
+	public function test_the_unpublished_warning_is_not_shown_on_other_screens() {
+		$feed = $this->feed();
+		update_post_meta( $feed, '_kkce_active', '1' );
+		set_current_screen( 'post' );
+		$GLOBALS['post'] = get_post( $feed );
+
+		ob_start();
+		do_action( 'admin_notices' );
+
+		$this->assertStringNotContainsString( 'kkce-not-published', (string) ob_get_clean() );
+	}
+
+	/**
 	 * The settings box is registered for the feed post type, high in the main column.
 	 */
 	public function test_the_meta_box_is_registered_for_feeds() {

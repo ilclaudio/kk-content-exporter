@@ -126,12 +126,12 @@ final class Plugin {
 	}
 
 	/**
-	 * Note shown while the plugin is in development: feeds can be configured, but not served yet.
+	 * Note shown while the plugin is in development, until version 1.0.0: some sources are missing.
 	 *
 	 * @return string
 	 */
 	public static function development_notice(): string {
-		return __( 'Development version: feeds can be configured, but they are not served yet.', 'kk-content-exporter' );
+		return __( 'Development version: some sources are not available yet. Not intended for production sites.', 'kk-content-exporter' );
 	}
 
 	/**

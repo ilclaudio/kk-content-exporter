@@ -92,21 +92,23 @@ final class Meta_Provider {
 	}
 
 	/**
-	 * Declared type of a meta source of a post type: the registered one, text for the others.
+	 * Declared types of the meta sources of a post type: the registered one, text for the others.
+	 *
+	 * The registrations are read once, when the function is made, and never kept beyond it: a key registered
+	 * later counts for the next function.
 	 *
 	 * @param string $post_type Post type.
-	 * @param string $id        Source identifier (`meta.<key>`).
-	 * @return string|null Null when the identifier is not a selectable meta key, or the key is a structure.
+	 * @return callable(string): ?string Declared type of a source identifier (`meta.<key>`); null when the
+	 *                                   identifier is not a selectable meta key, or the key is a structure.
 	 */
-	public static function declared_type( string $post_type, string $id ): ?string {
-		$key = Meta_Keys::key_from_source( $id );
-		if ( null === $key ) {
-			return null;
-		}
-
+	public static function declared_types( string $post_type ): callable {
 		$registered = get_registered_meta_keys( 'post', $post_type );
 
-		return Meta_Keys::declared_type( $registered[ $key ]['type'] ?? null );
+		return static function ( string $id ) use ( $registered ): ?string {
+			$key = Meta_Keys::key_from_source( $id );
+
+			return null === $key ? null : Meta_Keys::declared_type( $registered[ $key ]['type'] ?? null );
+		};
 	}
 
 	/**

@@ -39,6 +39,8 @@ class KKCE_Date_Filters_Unit_Test extends KKCE_Unit_Test_Case {
 			'offset across the year'    => array( '2027-01-01T00:30:00+01:00', '2026-12-31 23:30:00' ),
 			'zero offset'               => array( '2026-11-01T10:00:00+00:00', '2026-11-01 10:00:00' ),
 			'leap day'                  => array( '2028-02-29T00:00:00Z', '2028-02-29 00:00:00' ),
+			'first supported date'      => array( '1000-01-01T00:00:00Z', '1000-01-01 00:00:00' ),
+			'last supported date'       => array( '9999-12-31T23:59:59Z', '9999-12-31 23:59:59' ),
 		);
 	}
 
@@ -70,6 +72,9 @@ class KKCE_Date_Filters_Unit_Test extends KKCE_Unit_Test_Case {
 			'impossible minute' => array( '2026-11-01T10:60:00Z' ),
 			'impossible offset' => array( '2026-11-01T10:00:00+15:00' ),
 			'year zero'         => array( '0000-01-01T00:00:00Z' ),
+			'remapped year'     => array( '0050-01-01T00:00:00Z' ),
+			'year below range'  => array( '0999-12-31T23:59:59Z' ),
+			'offset underflow'  => array( '1000-01-01T00:00:00+01:00' ),
 			'Unix timestamp'    => array( '1793966400' ),
 			'words'             => array( 'yesterday' ),
 			'empty'             => array( '' ),

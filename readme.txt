@@ -24,12 +24,13 @@ Choose the content and fields to include, give the fields your own names, and co
 * Rename fields and build values using fixed text, templates, lookup tables and conditions.
 * Preview the JSON before saving your feed.
 * Share public feeds or require an Application Password, with pagination and a configurable page limit.
+* Let applications read only what changed, with date filters.
 
 Only published, non-password-protected content and selected fields are exported. The plugin makes no requests to external services; other systems read or import the feed themselves.
 
 = Development status =
 
-This plugin is in development. Date filters and sources for taxonomies, featured images, language, ACF and CMB2 are planned for version 1.0.0. ACF, CMB2 and Polylang will be optional.
+This plugin is in development. Feeds are served, with pages, access control and date filters. Sources for taxonomies, featured images, language, ACF and CMB2 are planned for version 1.0.0. ACF, CMB2 and Polylang will be optional.
 
 == Installation ==
 
@@ -61,7 +62,7 @@ Use your site's address in place of `https://example.com`. Applications read the
 
 Here, `page=1` selects the first page and `per_page=10` requests ten items. Increase `page` to read the next page; the page size cannot exceed the maximum in the plugin settings.
 
-The JSON response contains `items` (the selected fields), `pagination` (page information) and `meta` (feed information).
+The JSON response contains `items` (the selected fields), `pagination` (page information) and `meta` (feed information). Items are sorted by modification date, oldest first, so pages stay stable while an application reads them.
 
 = Global settings =
 
@@ -71,6 +72,7 @@ Open **Content Exporter > Settings** to see the **Content Exporter settings** pa
 * **REST API index — Show the feed endpoint in the REST API index** (on by default): lets tools discover the feed route and its parameters through `/wp-json/`. Turning it off hides that description, but feeds can still be read at their URLs. Use authentication to restrict access.
 * **Authentication — Require authentication for all feeds** (off by default): requires an authorized user's Application Password for every feed, including those marked **Public**. Leave it off to use each feed's own **Access** setting. See the authenticated-feed FAQ below for connection requirements.
 * **Maximum items per page** (100 by default): the largest page any feed can return. Enter a whole number of at least 1. A feed configured above this maximum is limited to it; a request that explicitly asks for more is rejected. There is no fixed upper limit, but large pages may slow down the site.
+* **Date filters** (all on by default): allow applications to use `modified_after`, `modified_before` and `published_after` (see the FAQ below). A filter turned off is rejected with an error, never ignored.
 * **Uninstall — Delete all the data of the plugin when the plugin is deleted** (off by default): when enabled, deleting the plugin permanently removes feeds, their configuration, global settings and the access permission added by the plugin. Deactivation alone does not remove them. Leave this off to keep the configuration for a later reinstall. Source content is always kept.
 
 = Diagnostic messages =
@@ -89,6 +91,18 @@ These messages describe possible problems; they do not change settings or repair
 
 Choose **Authenticated** under **Access** and save the feed. Your application must use HTTPS and a WordPress Application Password for an authorized user. Administrators receive access when the plugin is activated. Being logged into WordPress in a browser is not enough.
 
+= How can an application read only what changed? =
+
+Add `modified_after` with the time of the previous reading, as an ISO 8601 date with a time zone, for example `?modified_after=2026-11-01T10:00:00Z`. `modified_before` and `published_after` work the same way; each filter can be turned off under **Content Exporter > Settings**.
+
+An item is returned again when its modification date changes, which happens every time it is saved, also in the editor. Changes made only to custom fields, categories, tags or the featured image by another plugin or by code, without saving the item, do not change that date: those items are not returned until they are saved again. Applications should therefore also read the whole feed from time to time.
+
+= Why does my feed answer "not found"? =
+
+A feed answers only when it is published, enabled and has at least one mapping row, and while **Serve the feeds** is on in **Content Exporter > Settings**. A draft, pending or scheduled feed answers "not found" even when it is enabled: the editor and the list of the feeds show a warning. Check also that the slug in the address is written exactly as in the feed, in lowercase.
+
+Other errors: a wrong parameter (for example a page size above the maximum or a date without a time zone) gives "bad request" with an explanation; an authenticated feed read without an Application Password gives "unauthorized", and one read by a user without access gives "forbidden".
+
 = Does the plugin change my content or WordPress's REST API? =
 
 No. It leaves the original content, its visibility and WordPress's existing REST API unchanged. Feeds have their own addresses and configuration.
@@ -100,7 +114,7 @@ It works on a single site. Network activation is not supported in this version: 
 == Changelog ==
 
 = 0.0.4 =
-* In development.
+* In development: feed endpoint with pages, access control and date filters; warnings for enabled feeds that are not published.
 
 = 0.0.3 =
 * Post meta fields in the mapping: the keys in use, hidden keys listed apart, and any key typed by hand.

@@ -68,7 +68,7 @@ downloads, timeouts, import logs and scheduling.
   master switch of the endpoints, listing of the feed endpoint in the REST API index (on by default; it hides
   nothing from a request), authentication required for every feed, maximum items per page (100 by
   default, no ceiling; a feed cannot exceed it), removal of data on uninstall (off by default). Log retention
-  is added in Phase 3 together with the log. The page also reports what could keep the feeds from working
+  is added later, together with the log. The page also reports what could keep the feeds from working
   (REST API blocked for anonymous requests, Application Passwords unavailable); it changes nothing by itself.
 - Uninstall: nothing is removed unless the setting is on; then feeds with their meta, the settings and the
   capability `kkce_read_export` (roles and users) are deleted.
@@ -79,10 +79,11 @@ Out of V1 (after the 1.0.0 release): taxonomy/meta filters, cache with ETag/Last
 endpoint outside `/wp-json/`, cursors, network activation, and an Expression rule kind (a real expression
 language), which is added only for a concrete case that the other rule kinds cannot solve.
 
-Done: foundations, the rule mapping with its editor and preview, core and post meta sources. Next, in this
-order: feed endpoints, a test with the real importer, the restructured mapping editor, the remaining sources
-(meta dates, taxonomies, image, language, ACF, CMB2), configuration export/import, the complete endpoints,
-documentation, release 1.0.0.
+Done: foundations, the rule mapping with its editor and preview, core and post meta sources, and the feed
+endpoint (pages, public and authenticated access, date filters, constant query cost per page). Next, in this
+order: a test with the real importer, the restructured mapping editor, the remaining sources (meta dates,
+taxonomies, image, language, ACF, CMB2), configuration export/import, the complete endpoints (`ids`, IDs-only
+mode, log), documentation, release 1.0.0.
 
 
 ## REST API interoperability requirement

@@ -421,7 +421,8 @@ final class Feed_Editor {
 	}
 
 	/**
-	 * Shows, once, the errors of the last save of the feed on the screen of the editor.
+	 * Shows, on the screen of the editor, a warning while the feed is enabled but not published, and, once,
+	 * the errors of the last save of the feed.
 	 *
 	 * Hooked on `admin_notices`.
 	 *
@@ -437,6 +438,13 @@ final class Feed_Editor {
 		$post = get_post();
 		if ( ! $post instanceof WP_Post ) {
 			return;
+		}
+
+		if ( Feed_Post_Type::is_enabled_but_unpublished( $post->ID ) ) {
+			printf(
+				'<div class="notice notice-warning kkce-not-published"><p>%s</p></div>',
+				esc_html__( 'This feed is enabled but not published: its address answers with a "not found" error until the feed is published.', 'kk-content-exporter' )
+			);
 		}
 
 		$key    = self::notice_key( $post->ID );
@@ -502,7 +510,7 @@ final class Feed_Editor {
 				<?php endforeach; ?>
 			</output>
 		</p>
-		<p class="description"><?php esc_html_e( 'The address answers only while the feed is enabled.', 'kk-content-exporter' ); ?></p>
+		<p class="description"><?php esc_html_e( 'The address answers only while the feed is published and enabled.', 'kk-content-exporter' ); ?></p>
 		<?php
 	}
 

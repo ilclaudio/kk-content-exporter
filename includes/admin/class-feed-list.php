@@ -116,7 +116,7 @@ final class Feed_List {
 				self::print_text( self::access_label( get_post_meta( $post_id, Feed_Meta::META_ACCESS, true ) ) );
 				break;
 			case self::COLUMN_STATUS:
-				self::print_text( self::status_label( get_post_meta( $post_id, Feed_Meta::META_ACTIVE, true ) ) );
+				self::print_text( self::status_label( $post_id ) );
 				if ( array() !== Sensitive_Keys::confirmed_sources( Feed_Meta::mapping( $post_id ) ) ) {
 					echo '<br><span class="kkce-sensitive">' . esc_html__( 'Exports sensitive fields', 'kk-content-exporter' ) . '</span>';
 				}
@@ -188,15 +188,19 @@ final class Feed_List {
 	}
 
 	/**
-	 * Label of the status.
+	 * Label of the status: an enabled feed that is not published does not answer, and the label says so.
 	 *
-	 * @param mixed $value Stored active flag.
+	 * @param int $post_id ID of the feed.
 	 * @return string
 	 */
-	private static function status_label( $value ): string {
-		return Feed_Meta::sanitize_active( $value )
-			? __( 'Active', 'kk-content-exporter' )
-			: __( 'Disabled', 'kk-content-exporter' );
+	private static function status_label( int $post_id ): string {
+		if ( ! Feed_Meta::sanitize_active( get_post_meta( $post_id, Feed_Meta::META_ACTIVE, true ) ) ) {
+			return __( 'Disabled', 'kk-content-exporter' );
+		}
+
+		return Feed_Post_Type::is_enabled_but_unpublished( $post_id )
+			? __( 'Active, not published', 'kk-content-exporter' )
+			: __( 'Active', 'kk-content-exporter' );
 	}
 
 	/**

@@ -96,7 +96,7 @@ final class Date_Filters {
 		}
 
 		list( , $year, $month, $day, $hour, $minute, $second ) = array_map( 'intval', array_slice( $parts, 0, 7 ) );
-		if ( $year < 1 || ! checkdate( $month, $day, $year ) || $hour > 23 || $minute > 59 || $second > 59 ) {
+		if ( $year < 1000 || ! checkdate( $month, $day, $year ) || $hour > 23 || $minute > 59 || $second > 59 ) {
 			return null;
 		}
 

@@ -106,6 +106,14 @@ class KKCE_Plugin_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
+	 * The feeds are served since version 0.0.4: the development notice no longer says otherwise.
+	 */
+	public function test_development_notice_does_not_say_that_feeds_are_not_served() {
+		$this->assertStringNotContainsString( 'not served', Plugin::development_notice() );
+		$this->assertStringContainsString( 'Development version', Plugin::development_notice() );
+	}
+
+	/**
 	 * A row meta value that is not an array is returned unchanged.
 	 */
 	public function test_row_meta_with_unexpected_type_is_returned_unchanged() {
