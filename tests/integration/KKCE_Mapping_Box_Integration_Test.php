@@ -16,13 +16,30 @@ use KKCE\Rest\Admin_Routes;
 class KKCE_Mapping_Box_Integration_Test extends WP_UnitTestCase {
 
 	/**
+	 * Administrator who edits the mapping.
+	 *
+	 * @var int
+	 */
+	private static int $admin;
+
+	/**
+	 * Creates the shared administrator once; mapping data remain local to each test.
+	 *
+	 * @param WP_UnitTest_Factory $factory Factory.
+	 * @return void
+	 */
+	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ) {
+		self::$admin = $factory->user->create( array( 'role' => 'administrator' ) );
+	}
+
+	/**
 	 * Registers the meta again (the test case unregisters them) and signs in an administrator.
 	 */
 	public function set_up() {
 		parent::set_up();
 
 		Feed_Meta::register();
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		wp_set_current_user( self::$admin );
 	}
 
 	/**

@@ -20,7 +20,17 @@ class KKCE_Settings_Page_Integration_Test extends WP_UnitTestCase {
 	 *
 	 * @var int
 	 */
-	private int $admin;
+	private static int $admin;
+
+	/**
+	 * Creates the shared administrator once; settings and feeds remain local to each test.
+	 *
+	 * @param WP_UnitTest_Factory $factory Factory.
+	 * @return void
+	 */
+	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ) {
+		self::$admin = $factory->user->create( array( 'role' => 'administrator' ) );
+	}
 
 	/**
 	 * Registers the meta and the setting again (the test case resets them) and signs in an administrator.
@@ -30,8 +40,7 @@ class KKCE_Settings_Page_Integration_Test extends WP_UnitTestCase {
 
 		Feed_Meta::register();
 		Settings_Page::register_settings();
-		$this->admin = self::factory()->user->create( array( 'role' => 'administrator' ) );
-		wp_set_current_user( $this->admin );
+		wp_set_current_user( self::$admin );
 	}
 
 	/**
@@ -225,7 +234,7 @@ class KKCE_Settings_Page_Integration_Test extends WP_UnitTestCase {
 		$messages = Settings_Page::diagnostics();
 
 		$this->assertNotEmpty( $this->only_rest( $messages ) );
-		$this->assertSame( $this->admin, get_current_user_id(), 'The signed-in user is restored.' );
+		$this->assertSame( self::$admin, get_current_user_id(), 'The signed-in user is restored.' );
 	}
 
 	/**

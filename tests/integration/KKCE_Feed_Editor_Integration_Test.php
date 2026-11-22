@@ -19,7 +19,17 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	 *
 	 * @var int
 	 */
-	private int $admin;
+	private static int $admin;
+
+	/**
+	 * Creates the shared administrator once; requests and feeds remain local to each test.
+	 *
+	 * @param WP_UnitTest_Factory $factory Factory.
+	 * @return void
+	 */
+	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ) {
+		self::$admin = $factory->user->create( array( 'role' => 'administrator' ) );
+	}
 
 	/**
 	 * Registers the meta again (the test case unregisters them) and signs in an administrator.
@@ -28,8 +38,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		parent::set_up();
 
 		Feed_Meta::register();
-		$this->admin = self::factory()->user->create( array( 'role' => 'administrator' ) );
-		wp_set_current_user( $this->admin );
+		wp_set_current_user( self::$admin );
 	}
 
 	/**
@@ -278,7 +287,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->submit( $feed, $this->fields( array( 'slug' => $slug, 'per_page' => '7' ) ) );
 
 		$this->assertSame( 'news', get_post_field( 'post_name', $feed ) );
-		$this->assertSame( 'format', get_transient( 'kkce_feed_errors_' . $this->admin . '_' . $feed )['slug'] );
+		$this->assertSame( 'format', get_transient( 'kkce_feed_errors_' . self::$admin . '_' . $feed )['slug'] );
 		$this->assertSame( 7, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ) );
 	}
 
@@ -405,7 +414,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 
 		$this->assertSame( 'news', get_post_field( 'post_name', $feed ), 'The saved slug is kept.' );
 		$this->assertSame( 7, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ) );
-		$this->assertSame( 'empty', get_transient( 'kkce_feed_errors_' . $this->admin . '_' . $feed )['slug'] );
+		$this->assertSame( 'empty', get_transient( 'kkce_feed_errors_' . self::$admin . '_' . $feed )['slug'] );
 	}
 
 	/**
@@ -418,7 +427,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 
 		$this->submit( $feed, $fields );
 
-		$errors = get_transient( 'kkce_feed_errors_' . $this->admin . '_' . $feed );
+		$errors = get_transient( 'kkce_feed_errors_' . self::$admin . '_' . $feed );
 		$this->assertSame( 'empty', $errors['slug'] );
 		$this->assertSame( 'empty', $errors['post_types'] );
 		$this->assertSame( 'incomplete', $errors['active'] );
@@ -712,7 +721,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->submit( $feed, $fields );
 
 		$this->assertSame( array( 'page' ), get_post_meta( $feed, '_kkce_post_type', false ) );
-		$this->assertSame( 'empty', get_transient( 'kkce_feed_errors_' . $this->admin . '_' . $feed )['post_types'] );
+		$this->assertSame( 'empty', get_transient( 'kkce_feed_errors_' . self::$admin . '_' . $feed )['post_types'] );
 	}
 
 	/**
@@ -921,7 +930,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->submit( $feed, $this->fields( array( 'post_types' => array( 'post', 'kkce_never' ) ) ) );
 
 		$this->assertSame( array( 'post' ), Feed_Meta::post_types( $feed ) );
-		$this->assertSame( 'not_allowed', get_transient( 'kkce_feed_errors_' . $this->admin . '_' . $feed )['post_types'] );
+		$this->assertSame( 'not_allowed', get_transient( 'kkce_feed_errors_' . self::$admin . '_' . $feed )['post_types'] );
 	}
 
 	/**

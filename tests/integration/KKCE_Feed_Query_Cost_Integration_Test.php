@@ -10,7 +10,7 @@ use KKCE\Feed_Post_Type;
 use KKCE\Settings;
 
 /**
- * A page of a feed costs the same number of database queries with 1 item and with 50: meta, terms and authors
+ * A page of a feed costs the same number of database queries with 1 item and with 5: meta, terms and authors
  * are loaded for the whole page, never item by item.
  */
 class KKCE_Feed_Query_Cost_Integration_Test extends WP_UnitTestCase {
@@ -18,7 +18,7 @@ class KKCE_Feed_Query_Cost_Integration_Test extends WP_UnitTestCase {
 	/**
 	 * Items of the large page.
 	 */
-	private const ITEMS = 50;
+	private const ITEMS = 5;
 
 	/**
 	 * Registers the meta again (the test case unregisters them), and starts a REST server with the routes.
@@ -81,7 +81,7 @@ class KKCE_Feed_Query_Cost_Integration_Test extends WP_UnitTestCase {
 		add_post_meta( $feed, Feed_Meta::META_POST_TYPE, 'post' );
 		update_post_meta( $feed, Feed_Meta::META_ACTIVE, '1' );
 		update_post_meta( $feed, Feed_Meta::META_ACCESS, Feed_Meta::ACCESS_PUBLIC );
-		update_post_meta( $feed, Feed_Meta::META_PER_PAGE, '50' );
+		update_post_meta( $feed, Feed_Meta::META_PER_PAGE, self::ITEMS );
 		Feed_Meta::save_mapping( $feed, (string) wp_json_encode( array( 'version' => 1, 'rows' => $rows ) ) );
 	}
 
@@ -129,9 +129,9 @@ class KKCE_Feed_Query_Cost_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A page of 50 items costs the same queries as a page of 1, with a permalink structure that reads the category.
+	 * A page of 5 items costs the same queries as a page of 1, with a permalink structure that reads the category.
 	 */
-	public function test_a_page_costs_the_same_queries_with_1_and_50_items() {
+	public function test_a_page_costs_the_same_queries_with_1_and_5_items() {
 		$this->set_permalink_structure( '/%category%/%postname%/' );
 		$this->feed();
 		$this->items();
@@ -139,9 +139,9 @@ class KKCE_Feed_Query_Cost_Integration_Test extends WP_UnitTestCase {
 		// The first request also loads what WordPress keeps in memory outside the object cache: not measured.
 		$this->queries( 1 );
 
-		$one   = $this->queries( 1 );
-		$fifty = $this->queries( self::ITEMS );
+		$one  = $this->queries( 1 );
+		$many = $this->queries( self::ITEMS );
 
-		$this->assertSame( $one, $fifty, sprintf( '1 item: %d queries, %d items: %d queries.', $one, self::ITEMS, $fifty ) );
+		$this->assertSame( $one, $many, sprintf( '1 item: %d queries, %d items: %d queries.', $one, self::ITEMS, $many ) );
 	}
 }

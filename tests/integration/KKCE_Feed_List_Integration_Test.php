@@ -60,7 +60,7 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A configured feed shows its slug, source, access and status.
+	 * A configured feed shows its relative endpoint with the absolute URL in its title, source, access and status.
 	 */
 	public function test_a_configured_feed_is_described_in_the_columns() {
 		$this->set_permalink_structure( '/%postname%/' );
@@ -72,7 +72,7 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assertStringContainsString( '<code>/wp-json/kkce/v1/news</code>', $this->cell( 'kkce_endpoint', $id ) );
+		$this->assertSame( '<span title="' . esc_attr( rest_url( 'kkce/v1/news' ) ) . '"><code>/wp-json/kkce/v1/news</code></span>', $this->cell( 'kkce_endpoint', $id ) );
 		$this->assertSame( esc_html( get_post_type_object( 'page' )->label ), $this->cell( 'kkce_source', $id ) );
 		$this->assertSame( 'Authenticated', $this->cell( 'kkce_access', $id ) );
 		$this->assertSame( 'Active', $this->cell( 'kkce_status', $id ) );
@@ -105,7 +105,7 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A feed with several post types lists their labels, separated by commas, in the saved order.
+	 * A feed lists post type labels and the keys of missing types, separated by commas, in the saved order.
 	 */
 	public function test_several_post_types_are_listed_in_the_source_column() {
 		$id = $this->feed();
@@ -116,15 +116,6 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 		$expected = esc_html( get_post_type_object( 'page' )->label . ', removed-type, ' . get_post_type_object( 'post' )->label );
 
 		$this->assertSame( $expected, $this->cell( 'kkce_source', $id ) );
-	}
-
-	/**
-	 * A source post type that no longer exists is shown by its key.
-	 */
-	public function test_a_missing_source_post_type_is_shown_by_key() {
-		$id = $this->feed( array( '_kkce_post_type' => 'removed-type' ) );
-
-		$this->assertSame( 'removed-type', $this->cell( 'kkce_source', $id ) );
 	}
 
 	/**
@@ -146,18 +137,6 @@ class KKCE_Feed_List_Integration_Test extends WP_UnitTestCase {
 		wp_cache_delete( $id, 'post_meta' );
 
 		$this->assertStringNotContainsString( '<', $this->cell( 'kkce_source', $id ) );
-	}
-
-	/**
-	 * The endpoint column shows the relative address, with the absolute one in the title attribute.
-	 */
-	public function test_the_endpoint_is_the_relative_address_with_the_absolute_one_in_the_title() {
-		$this->set_permalink_structure( '/%postname%/' );
-		$id = $this->feed();
-
-		$output = $this->cell( 'kkce_endpoint', $id );
-
-		$this->assertSame( '<span title="' . esc_attr( rest_url( 'kkce/v1/news' ) ) . '"><code>/wp-json/kkce/v1/news</code></span>', $output );
 	}
 
 	/**

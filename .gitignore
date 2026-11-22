@@ -3,6 +3,7 @@
 
 # Credentials and local configuration: never commit
 tests/integration/wp-tests-config.local.php
+tests/routes/routes.config.json
 wp-config.php
 .env
 .env.*

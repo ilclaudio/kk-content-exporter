@@ -219,7 +219,7 @@ the list of the namespaces. The admin routes are never listed:
   Item queries, including the count for an empty page, also run as an anonymous visitor, so user-dependent
   query filters apply the same visibility to public and authenticated reads. The previous user is restored
   in `finally`, including on query exceptions; authentication and capability checks keep the requesting user. Response:
-  `Output\Feed_Response`. Cost: a page costs the same number of queries with 1 item and with 50 (checked by
+  `Output\Feed_Response`. Cost: a page costs the same number of queries with 1 item and with 5 (checked by
   `KKCE_Feed_Query_Cost_Integration_Test`): the query loads posts, meta and terms of the whole page, and
   `update_post_author_caches()` loads their authors at once before the items are exported.
 - Parameters, validated by their schema (400 `rest_invalid_param` otherwise): `page` (whole number from 1 to

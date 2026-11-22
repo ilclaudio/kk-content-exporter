@@ -17,16 +17,16 @@ class KKCE_Core_Provider_Integration_Test extends WP_UnitTestCase {
 	 *
 	 * @var int
 	 */
-	private int $author;
+	private static int $author;
 
 	/**
-	 * Creates the author.
+	 * Creates the shared author once; posts and pages remain local to each test.
+	 *
+	 * @param WP_UnitTest_Factory $factory Factory.
+	 * @return void
 	 */
-	public function set_up() {
-		parent::set_up();
-
-		$this->set_permalink_structure( '/%postname%/' );
-		$this->author = self::factory()->user->create(
+	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ) {
+		self::$author = $factory->user->create(
 			array(
 				'role'          => 'author',
 				'user_login'    => 'jdoe',
@@ -35,6 +35,15 @@ class KKCE_Core_Provider_Integration_Test extends WP_UnitTestCase {
 				'user_nicename' => 'jane-doe',
 			)
 		);
+	}
+
+	/**
+	 * Sets the permalink structure for each test independently.
+	 */
+	public function set_up() {
+		parent::set_up();
+
+		$this->set_permalink_structure( '/%postname%/' );
 	}
 
 	/**
@@ -52,7 +61,7 @@ class KKCE_Core_Provider_Integration_Test extends WP_UnitTestCase {
 				'post_name'     => 'christmas-concert',
 				'post_content'  => '<!-- wp:paragraph --><p>Hello [gallery]</p><!-- /wp:paragraph -->',
 				'post_excerpt'  => 'A short summary',
-				'post_author'   => $this->author,
+				'post_author'   => self::$author,
 				'post_date'     => '2026-07-01 10:30:00',
 				'post_date_gmt' => '2026-07-01 08:30:00',
 			)
@@ -99,9 +108,9 @@ class KKCE_Core_Provider_Integration_Test extends WP_UnitTestCase {
 	public function test_author_values() {
 		$post = $this->content();
 
-		$this->assertSame( $this->author, Core_Provider::value( $post, 'core.author.id' ) );
+		$this->assertSame( self::$author, Core_Provider::value( $post, 'core.author.id' ) );
 		$this->assertSame( 'Jane Doe', Core_Provider::value( $post, 'core.author.name' ) );
-		$this->assertSame( get_author_posts_url( $this->author ), Core_Provider::value( $post, 'core.author.url' ) );
+		$this->assertSame( get_author_posts_url( self::$author ), Core_Provider::value( $post, 'core.author.url' ) );
 		$this->assertStringContainsString( 'jane-doe', (string) Core_Provider::value( $post, 'core.author.url' ) );
 	}
 

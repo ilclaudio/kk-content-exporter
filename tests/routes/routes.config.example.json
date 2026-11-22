@@ -1,0 +1,17 @@
+{
+  "collection": "Insomnia_Feed_Endpoint.json",
+  "variables": {
+    "base_url": "http://kkce.local",
+    "feed_slug": "feeditem",
+    "unpublished_feed_slug": "feeditem-draft",
+    "missing_feed_slug": "kkce-no-such-feed",
+    "max_per_page": 100,
+    "since": "2026-11-01T00:00:00Z",
+    "until": "2026-12-01T00:00:00Z",
+    "authenticated_feed_slug": "feeditem-auth",
+    "wp_user": "",
+    "wp_app_password": "",
+    "wp_user_without_capability": "",
+    "wp_app_password_without_capability": ""
+  }
+}

@@ -9,7 +9,7 @@
       "_type": "workspace",
       "parentId": null,
       "name": "KK Content Exporter - Feed endpoint",
-      "description": "Manual checks of the public endpoint of a feed: GET /wp-json/kkce/v1/<slug>. Set the base environment first: base_url, feed_slug (a published, enabled, public feed with at least three items) and max_per_page (the maximum of the settings). The authenticated requests need authenticated_feed_slug, wp_user and wp_app_password (an Application Password); never commit their values.",
+      "description": "Manual checks of the public endpoint of a feed: GET /wp-json/kkce/v1/<slug>. Set the base environment first: base_url, feed_slug (a published, enabled, public feed with at least three items), unpublished_feed_slug (an enabled feed left as a draft) and max_per_page (the maximum of the settings). The authenticated requests need authenticated_feed_slug, wp_user and wp_app_password (an Application Password); never commit their values.",
       "scope": "collection"
     },
     {
@@ -19,10 +19,11 @@
       "name": "Base Environment",
       "data": {
         "base_url": "http://kkce.local",
-        "feed_slug": "news",
+        "feed_slug": "feeditem",
         "missing_feed_slug": "kkce-no-such-feed",
+        "unpublished_feed_slug": "feeditem-draft",
         "max_per_page": 100,
-        "authenticated_feed_slug": "",
+        "authenticated_feed_slug": "feeditem-auth",
         "wp_user": "",
         "wp_app_password": "",
         "wp_user_without_capability": "",
@@ -300,6 +301,20 @@
       "metaSortKey": -250
     },
     {
+      "_id": "req_kkce_unpublished_feed",
+      "_type": "request",
+      "parentId": "fld_kkce_errors",
+      "name": "Enabled feed not published (404)",
+      "description": "Expected: 404 kkce_feed_not_found. Create a feed with the slug of unpublished_feed_slug, check \"Enable the feed\" and save it as a draft: the editor shows a warning and the list shows \"Active, not published\". Publish it and the same request answers 200.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.unpublished_feed_slug }}",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -245
+    },
+    {
       "_id": "req_kkce_slug_capitals",
       "_type": "request",
       "parentId": "fld_kkce_errors",
@@ -458,7 +473,6 @@
       "parentId": "env_kkce_feed_endpoint_base",
       "name": "Local credentials (private, fill in here)",
       "data": {
-        "authenticated_feed_slug": "",
         "wp_user": "",
         "wp_app_password": "",
         "wp_user_without_capability": "",
@@ -629,6 +643,26 @@
       "headers": [],
       "authentication": {},
       "metaSortKey": -550
+    },
+    {
+      "_id": "req_kkce_date_year_below_1000",
+      "_type": "request",
+      "parentId": "fld_kkce_dates",
+      "name": "Year below 1000 (400)",
+      "description": "Expected: 400 rest_invalid_param. Dates go from year 1000 to 9999, the years WordPress stores.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "modified_after",
+          "value": "0999-12-31T23:59:59Z",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -552
     },
     {
       "_id": "req_kkce_date_empty_interval",
