@@ -14,7 +14,7 @@ use KKCE\Sources\Source;
 class KKCE_Core_Provider_Unit_Test extends KKCE_Unit_Test_Case {
 
 	/**
-	 * The core sources, with their declared types, in a fixed order.
+	 * The core sources have the expected declared types and order, matching the technical type list.
 	 */
 	public function test_the_core_sources_and_their_types() {
 		$types = array();
@@ -41,17 +41,6 @@ class KKCE_Core_Provider_Unit_Test extends KKCE_Unit_Test_Case {
 			),
 			$types
 		);
-	}
-
-	/**
-	 * The technical list of the types (no labels) is the one the sources are built from: same identifiers, same
-	 * types, same order.
-	 */
-	public function test_the_types_are_those_of_the_sources() {
-		$types = array();
-		foreach ( Core_Provider::sources() as $source ) {
-			$types[ $source->id ] = $source->type;
-		}
 
 		$this->assertSame( $types, Core_Provider::types() );
 	}

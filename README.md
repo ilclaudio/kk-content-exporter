@@ -174,6 +174,8 @@ composer run test:e2e          # end-to-end tests in Chromium
 ```
 
 The three test levels, every command and when to run it: [`tests/README.md`](tests/README.md).
+Manual checks of the feed endpoint on a development site, in Insomnia or with
+`node tests/routes/run-routes.mjs`: [`tests/routes/README.md`](tests/routes/README.md).
 
 Docker environments use separate configurations: `.wp-env.inttest.json` creates
 `wp-env-kk-content-exporter-inttest-<hash>` for integration tests (port 8891), and

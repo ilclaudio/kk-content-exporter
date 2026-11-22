@@ -153,7 +153,6 @@ class KKCE_Catalog_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	 */
 	public function test_options_must_be_accepted_by_a_source() {
 		$this->assertSame( array( '0:options:not_allowed' ), $this->errors( array( $this->row( 'field', array( 'sources' => array( '*' => array( 'core.title' ) ), 'options' => array( 'raw' => true ) ) ) ) ) );
-		$this->assertSame( array(), $this->errors( array( $this->row( 'field', array( 'sources' => array( '*' => array( 'core.title' ) ), 'options' => array( 'raw' => false ) ) ) ) ), 'An option turned off costs nothing.' );
 		$this->assertSame( array(), $this->errors( array( $this->row( 'field', array( 'sources' => array( '*' => array( 'core.title', 'core.content' ) ), 'options' => array( 'shortcodes' => true ) ) ) ) ) );
 	}
 

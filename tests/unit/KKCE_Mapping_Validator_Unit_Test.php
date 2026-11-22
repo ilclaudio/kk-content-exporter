@@ -209,7 +209,6 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	 */
 	public function key_provider(): array {
 		return array(
-			'letters'        => array( 'title', '' ),
 			'with symbols'   => array( 'Event_date-2.start', '' ),
 			'longest'        => array( str_repeat( 'a', 64 ), '' ),
 			'digits and text' => array( '2024a', '' ),

@@ -78,6 +78,11 @@ composer run test:e2e -- -g "previewed"                               # Playwrig
 If a PHPUnit filter matches nothing, PHPUnit prints `No tests executed!` and exits with `0`: always check
 the number of tests run.
 
+Manual checks of the feed endpoint on a development site (not a test level, not run by CI): the Insomnia
+collection of `routes/`, or every request of it from the command line with
+`node tests/routes/run-routes.mjs`, which reads the address of the site and the credentials from the local
+file `tests/routes/routes.config.json` (ignored by Git). Details: [routes/README.md](routes/README.md).
+
 ## What runs where
 
 | Check | `pre-commit` hook | CI on every push and pull request | CI started by hand |
@@ -127,5 +132,5 @@ for a custom installation (PowerShell: `$env:KKCE_TEST_BASH = 'D:/Tools/Git/bin/
 | `integration/` | Integration tests and the test-framework configuration |
 | `e2e/` | End-to-end tests: `specs/` (Playwright tests), `support/` (global setup and login, test data with WP-CLI, helpers of the feed editor, accessibility check) |
 | `bin/` | Node scripts behind the Composer commands: `integration.mjs` (starts the wp-env test environment, runs the integration suite in it) and `e2e.mjs` (starts the development environment, runs Playwright); both first check that Docker answers (`docker.mjs`) |
-| `routes/` | Request collections for manual checks of the REST routes, to import in Insomnia: `Insomnia_Feed_Endpoint.json` for the endpoint of the feeds (set its base environment; credentials stay empty in the repository) |
+| `routes/` | Manual checks of the REST routes: `Insomnia_Feed_Endpoint.json`, the collection of the feed endpoint to import in Insomnia (credentials stay empty in the repository), and `run-routes.mjs`, which runs its requests from the command line with the local `routes.config.json` (model: `routes.config.example.json`); see [routes/README.md](routes/README.md) |
 | `phpstan/` | PHPStan bootstrap with the runtime constants |
