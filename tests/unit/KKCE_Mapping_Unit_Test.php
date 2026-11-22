@@ -117,4 +117,111 @@ class KKCE_Mapping_Unit_Test extends KKCE_Unit_Test_Case {
 			'cut to the limit'      => array( 'meta.' . str_repeat( 'a', 80 ), str_repeat( 'a', 64 ) ),
 		);
 	}
+
+	/**
+	 * The sources of a row, with the field that holds each one and its post type (`*` for the outputs), in the
+	 * order of the row: every place of every chain, every placeholder of every template, inputs and outputs.
+	 *
+	 * @dataProvider row_sources_provider
+	 *
+	 * @param array<string, mixed>                          $row      A well-formed row.
+	 * @param list<array{0: string, 1: string, 2: string}> $expected Field, post type and source.
+	 */
+	public function test_row_sources( array $row, array $expected ) {
+		$this->assertSame( $expected, Mapping::row_sources( $row ) );
+	}
+
+	/**
+	 * Data for test_row_sources().
+	 *
+	 * @return array<string, array{0: array<string, mixed>, 1: list<array{0: string, 1: string, 2: string}>}>
+	 */
+	public function row_sources_provider(): array {
+		return array(
+			'field: chains of every post type'         => array(
+				array(
+					'kind'    => 'field',
+					'sources' => array(
+						'*'     => array( 'core.excerpt', 'core.title' ),
+						'event' => array( 'meta.summary' ),
+					),
+				),
+				array(
+					array( 'sources', '*', 'core.excerpt' ),
+					array( 'sources', '*', 'core.title' ),
+					array( 'sources', 'event', 'meta.summary' ),
+				),
+			),
+			'template: placeholders, alternatives too' => array(
+				array(
+					'kind'      => 'template',
+					'templates' => array(
+						'*'    => '{core.title} – {meta.place|"online"}',
+						'page' => '{core.title}',
+					),
+				),
+				array(
+					array( 'templates', '*', 'core.title' ),
+					array( 'templates', '*', 'meta.place' ),
+					array( 'templates', 'page', 'core.title' ),
+				),
+			),
+			'lookup: inputs, then sources of the outputs' => array(
+				array(
+					'kind'    => 'lookup',
+					'inputs'  => array( '*' => 'core.type' ),
+					'cases'   => array(
+						array( 'match' => 'post', 'output' => array( 'fixed' => 'News' ) ),
+						array( 'match' => 'event', 'output' => array( 'source' => 'meta.label' ) ),
+					),
+					'default' => array( 'source' => 'core.type_label' ),
+				),
+				array(
+					array( 'inputs', '*', 'core.type' ),
+					array( 'cases', '*', 'meta.label' ),
+					array( 'default', '*', 'core.type_label' ),
+				),
+			),
+			'lookup: default that writes the input'    => array(
+				array(
+					'kind'    => 'lookup',
+					'inputs'  => array( 'post' => 'meta.code' ),
+					'cases'   => array( array( 'match' => 'a', 'output' => array( 'fixed' => 'A' ) ) ),
+					'default' => array( 'input' => true ),
+				),
+				array( array( 'inputs', 'post', 'meta.code' ) ),
+			),
+			'condition: input, then and else'         => array(
+				array(
+					'kind'     => 'condition',
+					'inputs'   => array( '*' => 'core.excerpt' ),
+					'operator' => 'empty',
+					'then'     => array( 'source' => 'core.title' ),
+					'else'     => array( 'source' => 'core.excerpt' ),
+				),
+				array(
+					array( 'inputs', '*', 'core.excerpt' ),
+					array( 'then', '*', 'core.title' ),
+					array( 'else', '*', 'core.excerpt' ),
+				),
+			),
+			'condition: fixed outputs'                 => array(
+				array(
+					'kind'     => 'condition',
+					'inputs'   => array( '*' => 'meta.free' ),
+					'operator' => 'equals',
+					'matches'  => '1',
+					'then'     => array( 'fixed' => 'Free' ),
+				),
+				array( array( 'inputs', '*', 'meta.free' ) ),
+			),
+			'fixed: no source'                         => array(
+				array(
+					'kind'   => 'fixed',
+					'values' => array( '*' => 'Site' ),
+				),
+				array(),
+			),
+		);
+	}
 }

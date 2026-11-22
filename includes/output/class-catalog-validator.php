@@ -144,7 +144,7 @@ final class Catalog_Validator {
 	private static function row_errors( array $row, Catalog $catalog ): array {
 		$errors = array();
 
-		foreach ( self::scoped_sources( $row ) as list( $field, $scope, $source ) ) {
+		foreach ( Mapping::row_sources( $row ) as list( $field, $scope, $source ) ) {
 			$types = $catalog->types_for( $source, $scope );
 			if ( null === $types ) {
 				continue;
@@ -162,53 +162,6 @@ final class Catalog_Validator {
 		}
 
 		return $errors;
-	}
-
-	/**
-	 * Sources a row reads, with the field that holds each one and its post type: the key of a map of post
-	 * types, or `*` for the outputs, which apply to every post type.
-	 *
-	 * @param array<string, mixed> $row Row in canonical form.
-	 * @return list<array{0: string, 1: string, 2: string}> Field, post type (or `*`) and source.
-	 */
-	private static function scoped_sources( array $row ): array {
-		$sources = array();
-
-		$maps = array(
-			'field'     => 'sources',
-			'template'  => 'templates',
-			'lookup'    => 'inputs',
-			'condition' => 'inputs',
-		);
-		$name = $maps[ $row['kind'] ] ?? '';
-		foreach ( '' === $name ? array() : (array) $row[ $name ] as $scope => $entry ) {
-			$entries = match ( $row['kind'] ) {
-				'field'    => (array) $entry,
-				'template' => Template::sources( Template::parse( $entry )['parts'] ),
-				default    => array( $entry ),
-			};
-			foreach ( $entries as $source ) {
-				$sources[] = array( $name, (string) $scope, (string) $source );
-			}
-		}
-
-		$outputs = array();
-		if ( 'lookup' === $row['kind'] ) {
-			foreach ( (array) $row['cases'] as $case ) {
-				$outputs[] = array( 'cases', $case['output'] ?? null );
-			}
-			$outputs[] = array( 'default', $row['default'] ?? null );
-		} elseif ( 'condition' === $row['kind'] ) {
-			$outputs[] = array( 'then', $row['then'] ?? null );
-			$outputs[] = array( 'else', $row['else'] ?? null );
-		}
-		foreach ( $outputs as list( $field, $output ) ) {
-			if ( is_array( $output ) && is_string( $output['source'] ?? null ) ) {
-				$sources[] = array( $field, '*', $output['source'] );
-			}
-		}
-
-		return $sources;
 	}
 
 	/**
@@ -230,7 +183,7 @@ final class Catalog_Validator {
 	 */
 	private static function options_accepted( array $row, Catalog $catalog ): bool {
 		$accepted = array();
-		foreach ( self::scoped_sources( $row ) as list( , $scope, $source ) ) {
+		foreach ( Mapping::row_sources( $row ) as list( , $scope, $source ) ) {
 			if ( null === $catalog->types_for( $source, $scope ) ) {
 				// An entry for a post type the feed no longer reads is not checked: its options are not either.
 				return true;

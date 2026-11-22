@@ -11,16 +11,16 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 ## [0.0.4] - Unreleased
 ### Added
-- Feed endpoint `GET /wp-json/kkce/v1/<slug>` for published, enabled feeds.
-- Pages of a feed with `page` and `per_page`, in a stable order by modified date (GMT) and ID.
-- Authenticated feeds: read with an Application Password of a user with the capability `kkce_read_export`; items and totals are the same a visitor would get.
-- Setting to show or hide the feed endpoint in the REST API index (shown by default).
-- Date filters `modified_after`, `modified_before` and `published_after` (years 1000 to 9999), each one can be turned off in the settings.
-- Warning in the editor and "Active, not published" in the list for an enabled feed that is not published.
-- Field "Featured image (URL)": the absolute URL of the original image, `null` without one.
+- Feed endpoint `GET /wp-json/kkce/v1/<slug>` for published, enabled feeds, with `page` and `per_page`, ordered by modified date (GMT) and ID.
+- Authenticated feeds: Application Password of a user with `kkce_read_export`; same data a visitor would get.
+- Date filters `modified_after`, `modified_before` and `published_after`, each one can be turned off.
+- Setting to show or hide the feed endpoint in the REST API index.
+- Field "Featured image (URL)".
+- Warning for an enabled feed that is not published.
+- Development tooling: command-line runner of the Insomnia feed routes.
 ### Changed
 - A page of a feed costs the same database queries whatever the number of its items.
-- The development note in the Plugins screen no longer says that feeds are not served.
+- Mapping editor and validators restructured, without changes of behavior.
 ### Fixed
 - Choosing an item in the preview no longer triggers an unsaved-changes warning.
 - 401 responses of the plugin's REST routes include a Basic authentication challenge when Application Passwords are available.

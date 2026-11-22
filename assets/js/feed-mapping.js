@@ -265,6 +265,54 @@
 	}
 
 	/**
+	 * Appends an element when there is one.
+	 *
+	 * @param {HTMLElement}      parent Parent.
+	 * @param {HTMLElement|null} node   Element, or null.
+	 */
+	function appendIfAny( parent, node ) {
+		if ( node ) {
+			parent.appendChild( node );
+		}
+	}
+
+	/**
+	 * Keeps the scopes of a map whose value passes a check, `*` first, then the exceptions in their order.
+	 *
+	 * @param {Object}   map  Map of post types (or `*`).
+	 * @param {Function} keep Whether a value is kept.
+	 * @return {Object} New map.
+	 */
+	function keptScopes( map, keep ) {
+		const out = {};
+		scopesOf( map ).forEach( function ( scope ) {
+			if ( keep( map[ scope ] ) ) {
+				out[ scope ] = map[ scope ];
+			}
+		} );
+		return out;
+	}
+
+	/**
+	 * Prepares a row for the interface when it enters the editor (saved or refused mapping, proposed rows): an
+	 * editable row always has the general scope `*`, empty when missing, so that drawing only reads the data. The
+	 * hidden field is not affected: empty scopes are left out when the row is written.
+	 *
+	 * @param {Object} row Row of the mapping.
+	 * @return {Object} The same row.
+	 */
+	function withGeneralScope( row ) {
+		if ( ! isEditable( row ) ) {
+			return row;
+		}
+		const name = { field: 'sources', template: 'templates', lookup: 'inputs', condition: 'inputs' }[ row.kind ] || 'values';
+		if ( ! Object.prototype.hasOwnProperty.call( row[ name ], '*' ) ) {
+			row[ name ] = Object.assign( { '*': 'field' === row.kind ? [] : '' }, row[ name ] );
+		}
+		return row;
+	}
+
+	/**
 	 * Sources written in the placeholders of a template, for the warnings only: the server reads the template
 	 * again and checks everything.
 	 *
@@ -390,6 +438,313 @@
 	}
 
 	/**
+	 * Labelled field of a row.
+	 *
+	 * @param {string}      label   Label.
+	 * @param {HTMLElement} control Control.
+	 * @return {HTMLElement} Wrapper.
+	 */
+	function labelled( label, control ) {
+		const wrapper = el( 'div', { className: 'kkce-mapping-field' } );
+		wrapper.appendChild( el( 'label', { htmlFor: control.id }, label ) );
+		wrapper.appendChild( control );
+		return wrapper;
+	}
+
+	/**
+	 * The preview panel: the exported object of one item per checked post type, computed by the server with
+	 * the mapping of the box (saved or not), as a visitor would get it.
+	 *
+	 * It is computed again shortly after every change, and with the "Refresh" button. For every post type the
+	 * latest modified item is used, unless another one is chosen from the latest published items. Only the
+	 * errors are announced to screen readers; the JSON is shown, not read aloud.
+	 *
+	 * @param {Object}   deps              What the panel needs from the editor.
+	 * @param {Element}  deps.layout       Layout of the box, marked while the panel is shown.
+	 * @param {Function} deps.catalog      Current catalog (checked post types, labels).
+	 * @param {Function} deps.hasRows      Whether the mapping has rows.
+	 * @param {Function} deps.mapping      JSON text of the mapping of the box.
+	 * @param {Function} deps.errorMessage Message of an error of the mapping.
+	 * @param {Function} deps.announce     Announces a message to screen readers.
+	 * @param {string}   deps.previewPath  Route of the preview.
+	 * @param {string}   deps.itemsPath    Route of the latest items.
+	 * @return {Object} The panel: `node`, `schedule()`, `typesChanged()`, `setVisible()`.
+	 */
+	function createPreview( deps ) {
+		const node = el( 'section', { className: 'kkce-preview', ariaLabelledby: 'kkce-preview-title', hidden: true } );
+		const refresh = el( 'button', { type: 'button', className: 'button' }, __( 'Refresh', 'kk-content-exporter' ) );
+		const spinner = el( 'span', { className: 'spinner' } );
+		const state = el( 'span', { className: 'kkce-preview-state' } );
+		const errors = el( 'div', { className: 'notice notice-error inline kkce-preview-errors', hidden: true } );
+		const message = el( 'p', { className: 'kkce-preview-message', hidden: true } );
+		const results = el( 'div', { className: 'kkce-preview-results' } );
+		const toolbar = el( 'div', { className: 'kkce-preview-toolbar' } );
+		// Chosen item per post type, latest items per post type, last result per post type.
+		const selected = {};
+		const recent = {};
+		const shown = {};
+		let previewTimer = null;
+		let previewRequest = 0;
+
+		toolbar.appendChild( refresh );
+		toolbar.appendChild( spinner );
+		toolbar.appendChild( state );
+		node.appendChild( el( 'h3', { id: 'kkce-preview-title' }, __( 'Preview', 'kk-content-exporter' ) ) );
+		node.appendChild( el( 'p', { className: 'description' }, __( 'The JSON of one item for each checked post type, computed with the rules of this box (saved or not) as a visitor would get it. Only published items are used.', 'kk-content-exporter' ) ) );
+		node.appendChild( toolbar );
+		node.appendChild( errors );
+		node.appendChild( message );
+		node.appendChild( results );
+
+		/**
+		 * Shows a message above the results, or hides it.
+		 *
+		 * @param {string} text Message, or an empty string.
+		 */
+		function showMessage( text ) {
+			message.textContent = text;
+			message.hidden = '' === text;
+		}
+
+		/**
+		 * Shows the errors of the mapping, or hides them.
+		 *
+		 * @param {Object[]} list Errors returned by the route.
+		 */
+		function showErrors( list ) {
+			errors.textContent = '';
+			errors.hidden = ! list.length;
+			if ( ! list.length ) {
+				return;
+			}
+			errors.appendChild( el( 'p', {}, __( 'The preview is not up to date: correct these points of the mapping.', 'kk-content-exporter' ) ) );
+			const items = el( 'ul' );
+			list.forEach( function ( error ) {
+				items.appendChild( el( 'li', {}, deps.errorMessage( error ) ) );
+			} );
+			errors.appendChild( items );
+		}
+
+		/**
+		 * Label of a post type.
+		 *
+		 * @param {string} postType Post type.
+		 * @return {string} Label.
+		 */
+		function typeLabel( postType ) {
+			return ( deps.catalog().labels || {} )[ postType ] || postType;
+		}
+
+		/**
+		 * Draws the item picker and the result of every checked post type.
+		 */
+		function draw() {
+			const focused = document.activeElement && node.contains( document.activeElement ) ? document.activeElement.id : '';
+			results.textContent = '';
+
+			deps.catalog().post_types.forEach( function ( postType ) {
+				const block = el( 'div', { className: 'kkce-preview-type' } );
+				const options = [ [ '', __( 'Latest modified item', 'kk-content-exporter' ) ] ];
+				( recent[ postType ] || [] ).forEach( function ( item ) {
+					const date = new Date( item.modified ).toLocaleDateString();
+					const title = '' === item.title ? __( '(no title)', 'kk-content-exporter' ) : item.title;
+					/* translators: 1: title of an item, 2: date of its last change, 3: ID of the item. */
+					options.push( [ String( item.id ), sprintf( __( '%1$s (%2$s, ID %3$d)', 'kk-content-exporter' ), title, date, item.id ) ] );
+				} );
+				const picker = select( { id: 'kkce-preview-item-' + postType, className: 'kkce-preview-item', 'data-type': postType }, options, String( selected[ postType ] || '' ) );
+				/* translators: %s: label of a post type. */
+				block.appendChild( labelled( sprintf( __( 'Item of %s', 'kk-content-exporter' ), typeLabel( postType ) ), picker ) );
+
+				const result = shown[ postType ];
+				if ( 'empty' === result ) {
+					/* translators: %s: label of a post type. */
+					block.appendChild( el( 'p', {}, sprintf( __( 'No published item of %s.', 'kk-content-exporter' ), typeLabel( postType ) ) ) );
+				} else if ( result ) {
+					const title = '' === result.post.title ? __( '(no title)', 'kk-content-exporter' ) : result.post.title;
+					/* translators: 1: title of the previewed item, 2: its ID. */
+					block.appendChild( el( 'p', { className: 'kkce-preview-source' }, sprintf( __( '%1$s (ID %2$d)', 'kk-content-exporter' ), title, result.post.id ) ) );
+					// Focusable, so the JSON can be scrolled with the keyboard when it is longer than the panel.
+					const pre = el( 'pre', { className: 'kkce-preview-json', tabIndex: 0 } );
+					pre.appendChild( el( 'code', {}, JSON.stringify( result.data, null, 2 ) ) );
+					block.appendChild( pre );
+				}
+				results.appendChild( block );
+			} );
+
+			if ( focused ) {
+				const target = document.getElementById( focused );
+				if ( target ) {
+					target.focus();
+				}
+			}
+		}
+
+		/**
+		 * Forgets the results shown, so that stale JSON is never shown next to new rules.
+		 */
+		function clearResults() {
+			Object.keys( shown ).forEach( function ( postType ) {
+				delete shown[ postType ];
+			} );
+		}
+
+		/**
+		 * Computes the preview of every checked post type now.
+		 */
+		function run() {
+			window.clearTimeout( previewTimer );
+			const current = ++previewRequest;
+			const postTypes = deps.catalog().post_types.slice();
+
+			// Without rows the panel is hidden (see setVisible()): nothing to compute.
+			if ( ! deps.hasRows() ) {
+				clearResults();
+				return;
+			}
+			if ( ! postTypes.length ) {
+				showErrors( [] );
+				showMessage( __( 'Check at least one post type to see the preview.', 'kk-content-exporter' ) );
+				clearResults();
+				draw();
+				state.textContent = '';
+				return;
+			}
+
+			spinner.classList.add( 'is-active' );
+			state.textContent = __( 'Updating…', 'kk-content-exporter' );
+
+			// One request per post type, so that every type can use its own chosen item.
+			Promise.all( postTypes.map( function ( postType ) {
+				const body = { mapping: deps.mapping(), post_types: [ postType ] };
+				if ( selected[ postType ] ) {
+					body.post_id = selected[ postType ];
+				}
+				return wp.apiFetch( { path: deps.previewPath, method: 'POST', data: body } ).then( function ( response ) {
+					return { postType: postType, response: response };
+				}, function ( error ) {
+					return { postType: postType, error: error || {} };
+				} );
+			} ) ).then( function ( answers ) {
+				if ( current !== previewRequest ) {
+					return;
+				}
+				spinner.classList.remove( 'is-active' );
+
+				const invalid = answers.find( function ( answer ) {
+					return answer.error && 'kkce_invalid_mapping' === answer.error.code;
+				} );
+				if ( invalid ) {
+					const list = ( invalid.error.data && invalid.error.data.errors ) || [];
+					clearResults();
+					draw();
+					showMessage( '' );
+					showErrors( list );
+					state.textContent = '';
+					/* translators: %d: number of errors in the mapping. */
+					deps.announce( sprintf( _n( 'The preview is not up to date: the mapping has %d error.', 'The preview is not up to date: the mapping has %d errors.', list.length, 'kk-content-exporter' ), list.length ) );
+					return;
+				}
+
+				let retry = false;
+				let failed = '';
+				answers.forEach( function ( answer ) {
+					if ( answer.response ) {
+						shown[ answer.postType ] = answer.response.items.length ? answer.response.items[ 0 ] : 'empty';
+					} else if ( 'kkce_item_not_found' === answer.error.code && selected[ answer.postType ] ) {
+						// The chosen item is no longer published: go back to the latest one.
+						delete selected[ answer.postType ];
+						retry = true;
+					} else {
+						delete shown[ answer.postType ];
+						failed = answer.error.message || __( 'The preview could not be computed.', 'kk-content-exporter' );
+					}
+				} );
+
+				showErrors( [] );
+				showMessage( failed );
+				draw();
+				/* translators: %s: time of the last update of the preview. */
+				state.textContent = sprintf( __( 'Updated at %s', 'kk-content-exporter' ), new Date().toLocaleTimeString() );
+				if ( failed ) {
+					deps.announce( failed );
+				}
+				if ( retry ) {
+					run();
+				}
+			} );
+		}
+
+		/**
+		 * Computes the preview again shortly, once the changes stop.
+		 */
+		function schedule() {
+			window.clearTimeout( previewTimer );
+			previewTimer = window.setTimeout( run, PREVIEW_DELAY );
+		}
+
+		/**
+		 * Loads the latest items of the checked post types not loaded yet, then computes the preview.
+		 */
+		function typesChanged() {
+			deps.catalog().post_types.forEach( function ( postType ) {
+				if ( recent[ postType ] ) {
+					return;
+				}
+				recent[ postType ] = [];
+				wp.apiFetch( { path: deps.itemsPath + '?post_type=' + encodeURIComponent( postType ) } ).then( function ( response ) {
+					recent[ postType ] = response.items || [];
+					draw();
+				}, function () {
+					// The picker keeps only "Latest modified item": the preview still works.
+				} );
+			} );
+			draw();
+			schedule();
+		}
+
+		refresh.addEventListener( 'click', run );
+		results.addEventListener( 'input', function ( event ) {
+			if ( event.target.classList.contains( 'kkce-preview-item' ) ) {
+				// The picker emits input before change; neither changes the feed configuration.
+				event.stopPropagation();
+			}
+		} );
+		results.addEventListener( 'change', function ( event ) {
+			const picker = event.target;
+			if ( ! picker.classList.contains( 'kkce-preview-item' ) ) {
+				return;
+			}
+			// Choosing the item to preview changes nothing of the feed: it is not an unsaved change of the page.
+			event.stopPropagation();
+			const postType = picker.getAttribute( 'data-type' );
+			if ( '' === picker.value ) {
+				delete selected[ postType ];
+			} else {
+				selected[ postType ] = parseInt( picker.value, 10 );
+			}
+			schedule();
+		} );
+
+		/**
+		 * Shows the panel only when the mapping has at least one row; without it the rules use the whole width.
+		 *
+		 * @param {boolean} visible Whether the panel is shown.
+		 */
+		function setVisible( visible ) {
+			if ( node.hidden === ! visible ) {
+				return;
+			}
+			node.hidden = ! visible;
+			deps.layout.classList.toggle( 'kkce-has-preview', visible );
+			if ( visible ) {
+				schedule();
+			}
+		}
+
+		return { node: node, schedule: schedule, typesChanged: typesChanged, setVisible: setVisible };
+	}
+
+	/**
 	 * The mapping editor bound to its container.
 	 *
 	 * @param {HTMLElement} container Container printed by the box.
@@ -409,7 +764,7 @@
 		// A saved mapping is never replaced by the proposed rows; an empty one is, until it is touched.
 		let touched = mapping.rows.length > 0;
 		let rows = mapping.rows.map( function ( row ) {
-			return { uid: nextId++, data: row, autoKey: null };
+			return { uid: nextId++, data: withGeneralScope( row ), autoKey: null };
 		} );
 
 		const list = el( 'ol', { className: 'kkce-mapping-rows' } );
@@ -426,7 +781,22 @@
 		// Two columns when the box is wide (rules, then the preview that stays in view), one otherwise: see the CSS.
 		const editor = el( 'div', { className: 'kkce-mapping-editor' } );
 		const layout = el( 'div', { className: 'kkce-mapping-layout' } );
-		const preview = createPreview();
+		const preview = createPreview( {
+			layout: layout,
+			catalog: function () {
+				return catalog;
+			},
+			hasRows: function () {
+				return rows.length > 0;
+			},
+			mapping: function () {
+				return field.value;
+			},
+			errorMessage: errorMessage,
+			announce: announce,
+			previewPath: data.previewPath,
+			itemsPath: data.itemsPath,
+		} );
 
 		container.textContent = '';
 		const refused = renderRefused();
@@ -586,12 +956,7 @@
 			} else if ( 'lookup' === row.kind ) {
 				// Inputs not chosen are left out (none at all: the server reports the empty inputs); the texts to
 				// match lose their spaces at the ends, as the input does; a new empty line is left out.
-				out.inputs = {};
-				scopesOf( row.inputs ).forEach( function ( scope ) {
-					if ( row.inputs[ scope ] ) {
-						out.inputs[ scope ] = row.inputs[ scope ];
-					}
-				} );
+				out.inputs = keptScopes( row.inputs, Boolean );
 				out.cases = row.cases.map( function ( item ) {
 					return { match: String( item.match || '' ).trim(), output: Object.assign( {}, item.output ) };
 				} ).filter( function ( item ) {
@@ -604,12 +969,7 @@
 			} else if ( 'condition' === row.kind ) {
 				// Inputs as in a table. The texts to compare are kept while the check changes, and written only for
 				// the checks that use them: trimmed, without empty lines.
-				out.inputs = {};
-				scopesOf( row.inputs ).forEach( function ( scope ) {
-					if ( row.inputs[ scope ] ) {
-						out.inputs[ scope ] = row.inputs[ scope ];
-					}
-				} );
+				out.inputs = keptScopes( row.inputs, Boolean );
 				const texts = ( row.matches || [] ).map( function ( text ) {
 					return String( text ).trim();
 				} );
@@ -633,12 +993,8 @@
 			} else {
 				// Fixed values and templates: empty texts are left out.
 				const name = 'template' === row.kind ? 'templates' : 'values';
-				out[ name ] = {};
-				scopesOf( row[ name ] ).forEach( function ( scope ) {
-					const value = row[ name ][ scope ];
-					if ( undefined !== value && '' !== value ) {
-						out[ name ][ scope ] = value;
-					}
+				out[ name ] = keptScopes( row[ name ], function ( value ) {
+					return undefined !== value && '' !== value;
 				} );
 			}
 			return out;
@@ -707,290 +1063,6 @@
 			}
 			/* translators: 1: position of the row, 2: output key of the row, 3: setting of the row, 4: what is wrong with it. */
 			return sprintf( __( 'Row %1$d (%2$s), %3$s: %4$s', 'kk-content-exporter' ), error.row + 1, key, label, message );
-		}
-
-		/**
-		 * The preview panel: the exported object of one item per checked post type, computed by the server with
-		 * the mapping of the box (saved or not), as a visitor would get it.
-		 *
-		 * It is computed again shortly after every change, and with the "Refresh" button. For every post type the
-		 * latest modified item is used, unless another one is chosen from the latest published items. Only the
-		 * errors are announced to screen readers; the JSON is shown, not read aloud.
-		 *
-		 * @return {Object} The panel: `node`, `schedule()`, `typesChanged()`, `setVisible()`.
-		 */
-		function createPreview() {
-			const node = el( 'section', { className: 'kkce-preview', ariaLabelledby: 'kkce-preview-title', hidden: true } );
-			const refresh = el( 'button', { type: 'button', className: 'button' }, __( 'Refresh', 'kk-content-exporter' ) );
-			const spinner = el( 'span', { className: 'spinner' } );
-			const state = el( 'span', { className: 'kkce-preview-state' } );
-			const errors = el( 'div', { className: 'notice notice-error inline kkce-preview-errors', hidden: true } );
-			const message = el( 'p', { className: 'kkce-preview-message', hidden: true } );
-			const results = el( 'div', { className: 'kkce-preview-results' } );
-			const toolbar = el( 'div', { className: 'kkce-preview-toolbar' } );
-			// Chosen item per post type, latest items per post type, last result per post type.
-			const selected = {};
-			const recent = {};
-			const shown = {};
-			let previewTimer = null;
-			let previewRequest = 0;
-
-			toolbar.appendChild( refresh );
-			toolbar.appendChild( spinner );
-			toolbar.appendChild( state );
-			node.appendChild( el( 'h3', { id: 'kkce-preview-title' }, __( 'Preview', 'kk-content-exporter' ) ) );
-			node.appendChild( el( 'p', { className: 'description' }, __( 'The JSON of one item for each checked post type, computed with the rules of this box (saved or not) as a visitor would get it. Only published items are used.', 'kk-content-exporter' ) ) );
-			node.appendChild( toolbar );
-			node.appendChild( errors );
-			node.appendChild( message );
-			node.appendChild( results );
-
-			/**
-			 * Shows a message above the results, or hides it.
-			 *
-			 * @param {string} text Message, or an empty string.
-			 */
-			function showMessage( text ) {
-				message.textContent = text;
-				message.hidden = '' === text;
-			}
-
-			/**
-			 * Shows the errors of the mapping, or hides them.
-			 *
-			 * @param {Object[]} list Errors returned by the route.
-			 */
-			function showErrors( list ) {
-				errors.textContent = '';
-				errors.hidden = ! list.length;
-				if ( ! list.length ) {
-					return;
-				}
-				errors.appendChild( el( 'p', {}, __( 'The preview is not up to date: correct these points of the mapping.', 'kk-content-exporter' ) ) );
-				const items = el( 'ul' );
-				list.forEach( function ( error ) {
-					items.appendChild( el( 'li', {}, errorMessage( error ) ) );
-				} );
-				errors.appendChild( items );
-			}
-
-			/**
-			 * Label of a post type.
-			 *
-			 * @param {string} postType Post type.
-			 * @return {string} Label.
-			 */
-			function typeLabel( postType ) {
-				return ( catalog.labels || {} )[ postType ] || postType;
-			}
-
-			/**
-			 * Draws the item picker and the result of every checked post type.
-			 */
-			function draw() {
-				const focused = document.activeElement && node.contains( document.activeElement ) ? document.activeElement.id : '';
-				results.textContent = '';
-
-				catalog.post_types.forEach( function ( postType ) {
-					const block = el( 'div', { className: 'kkce-preview-type' } );
-					const options = [ [ '', __( 'Latest modified item', 'kk-content-exporter' ) ] ];
-					( recent[ postType ] || [] ).forEach( function ( item ) {
-						const date = new Date( item.modified ).toLocaleDateString();
-						const title = '' === item.title ? __( '(no title)', 'kk-content-exporter' ) : item.title;
-						/* translators: 1: title of an item, 2: date of its last change, 3: ID of the item. */
-						options.push( [ String( item.id ), sprintf( __( '%1$s (%2$s, ID %3$d)', 'kk-content-exporter' ), title, date, item.id ) ] );
-					} );
-					const picker = select( { id: 'kkce-preview-item-' + postType, className: 'kkce-preview-item', 'data-type': postType }, options, String( selected[ postType ] || '' ) );
-					/* translators: %s: label of a post type. */
-					block.appendChild( labelled( sprintf( __( 'Item of %s', 'kk-content-exporter' ), typeLabel( postType ) ), picker ) );
-
-					const result = shown[ postType ];
-					if ( 'empty' === result ) {
-						/* translators: %s: label of a post type. */
-						block.appendChild( el( 'p', {}, sprintf( __( 'No published item of %s.', 'kk-content-exporter' ), typeLabel( postType ) ) ) );
-					} else if ( result ) {
-						const title = '' === result.post.title ? __( '(no title)', 'kk-content-exporter' ) : result.post.title;
-						/* translators: 1: title of the previewed item, 2: its ID. */
-						block.appendChild( el( 'p', { className: 'kkce-preview-source' }, sprintf( __( '%1$s (ID %2$d)', 'kk-content-exporter' ), title, result.post.id ) ) );
-						// Focusable, so the JSON can be scrolled with the keyboard when it is longer than the panel.
-						const pre = el( 'pre', { className: 'kkce-preview-json', tabIndex: 0 } );
-						pre.appendChild( el( 'code', {}, JSON.stringify( result.data, null, 2 ) ) );
-						block.appendChild( pre );
-					}
-					results.appendChild( block );
-				} );
-
-				if ( focused ) {
-					const target = document.getElementById( focused );
-					if ( target ) {
-						target.focus();
-					}
-				}
-			}
-
-			/**
-			 * Forgets the results shown, so that stale JSON is never shown next to new rules.
-			 */
-			function clearResults() {
-				Object.keys( shown ).forEach( function ( postType ) {
-					delete shown[ postType ];
-				} );
-			}
-
-			/**
-			 * Computes the preview of every checked post type now.
-			 */
-			function run() {
-				window.clearTimeout( previewTimer );
-				const current = ++previewRequest;
-				const postTypes = catalog.post_types.slice();
-
-				// Without rows the panel is hidden (see setVisible()): nothing to compute.
-				if ( ! rows.length ) {
-					clearResults();
-					return;
-				}
-				if ( ! postTypes.length ) {
-					showErrors( [] );
-					showMessage( __( 'Check at least one post type to see the preview.', 'kk-content-exporter' ) );
-					clearResults();
-					draw();
-					state.textContent = '';
-					return;
-				}
-
-				spinner.classList.add( 'is-active' );
-				state.textContent = __( 'Updating…', 'kk-content-exporter' );
-
-				// One request per post type, so that every type can use its own chosen item.
-				Promise.all( postTypes.map( function ( postType ) {
-					const body = { mapping: field.value, post_types: [ postType ] };
-					if ( selected[ postType ] ) {
-						body.post_id = selected[ postType ];
-					}
-					return wp.apiFetch( { path: data.previewPath, method: 'POST', data: body } ).then( function ( response ) {
-						return { postType: postType, response: response };
-					}, function ( error ) {
-						return { postType: postType, error: error || {} };
-					} );
-				} ) ).then( function ( answers ) {
-					if ( current !== previewRequest ) {
-						return;
-					}
-					spinner.classList.remove( 'is-active' );
-
-					const invalid = answers.find( function ( answer ) {
-						return answer.error && 'kkce_invalid_mapping' === answer.error.code;
-					} );
-					if ( invalid ) {
-						const list = ( invalid.error.data && invalid.error.data.errors ) || [];
-						clearResults();
-						draw();
-						showMessage( '' );
-						showErrors( list );
-						state.textContent = '';
-						/* translators: %d: number of errors in the mapping. */
-						announce( sprintf( _n( 'The preview is not up to date: the mapping has %d error.', 'The preview is not up to date: the mapping has %d errors.', list.length, 'kk-content-exporter' ), list.length ) );
-						return;
-					}
-
-					let retry = false;
-					let failed = '';
-					answers.forEach( function ( answer ) {
-						if ( answer.response ) {
-							shown[ answer.postType ] = answer.response.items.length ? answer.response.items[ 0 ] : 'empty';
-						} else if ( 'kkce_item_not_found' === answer.error.code && selected[ answer.postType ] ) {
-							// The chosen item is no longer published: go back to the latest one.
-							delete selected[ answer.postType ];
-							retry = true;
-						} else {
-							delete shown[ answer.postType ];
-							failed = answer.error.message || __( 'The preview could not be computed.', 'kk-content-exporter' );
-						}
-					} );
-
-					showErrors( [] );
-					showMessage( failed );
-					draw();
-					/* translators: %s: time of the last update of the preview. */
-					state.textContent = sprintf( __( 'Updated at %s', 'kk-content-exporter' ), new Date().toLocaleTimeString() );
-					if ( failed ) {
-						announce( failed );
-					}
-					if ( retry ) {
-						run();
-					}
-				} );
-			}
-
-			/**
-			 * Computes the preview again shortly, once the changes stop.
-			 */
-			function schedule() {
-				window.clearTimeout( previewTimer );
-				previewTimer = window.setTimeout( run, PREVIEW_DELAY );
-			}
-
-			/**
-			 * Loads the latest items of the checked post types not loaded yet, then computes the preview.
-			 */
-			function typesChanged() {
-				catalog.post_types.forEach( function ( postType ) {
-					if ( recent[ postType ] ) {
-						return;
-					}
-					recent[ postType ] = [];
-					wp.apiFetch( { path: data.itemsPath + '?post_type=' + encodeURIComponent( postType ) } ).then( function ( response ) {
-						recent[ postType ] = response.items || [];
-						draw();
-					}, function () {
-						// The picker keeps only "Latest modified item": the preview still works.
-					} );
-				} );
-				draw();
-				schedule();
-			}
-
-			refresh.addEventListener( 'click', run );
-			results.addEventListener( 'input', function ( event ) {
-				if ( event.target.classList.contains( 'kkce-preview-item' ) ) {
-					// The picker emits input before change; neither changes the feed configuration.
-					event.stopPropagation();
-				}
-			} );
-			results.addEventListener( 'change', function ( event ) {
-				const picker = event.target;
-				if ( ! picker.classList.contains( 'kkce-preview-item' ) ) {
-					return;
-				}
-				// Choosing the item to preview changes nothing of the feed: it is not an unsaved change of the page.
-				event.stopPropagation();
-				const postType = picker.getAttribute( 'data-type' );
-				if ( '' === picker.value ) {
-					delete selected[ postType ];
-				} else {
-					selected[ postType ] = parseInt( picker.value, 10 );
-				}
-				schedule();
-			} );
-
-			/**
-			 * Shows the panel only when the mapping has at least one row; without it the rules use the whole width.
-			 *
-			 * @param {boolean} visible Whether the panel is shown.
-			 */
-			function setVisible( visible ) {
-				if ( node.hidden === ! visible ) {
-					return;
-				}
-				node.hidden = ! visible;
-				layout.classList.toggle( 'kkce-has-preview', visible );
-				if ( visible ) {
-					schedule();
-				}
-			}
-
-			return { node: node, schedule: schedule, typesChanged: typesChanged, setVisible: setVisible };
 		}
 
 		/**
@@ -1078,20 +1150,6 @@
 			} );
 
 			return node;
-		}
-
-		/**
-		 * Labelled field of a row.
-		 *
-		 * @param {string}      label   Label.
-		 * @param {HTMLElement} control Control.
-		 * @return {HTMLElement} Wrapper.
-		 */
-		function labelled( label, control ) {
-			const wrapper = el( 'div', { className: 'kkce-mapping-field' } );
-			wrapper.appendChild( el( 'label', { htmlFor: control.id }, label ) );
-			wrapper.appendChild( control );
-			return wrapper;
 		}
 
 		/**
@@ -1540,6 +1598,22 @@
 		}
 
 		/**
+		 * Appends to a row the control of every scope (`*` first, then the exceptions) and the picker that adds
+		 * an exception: the part shared by every rule.
+		 *
+		 * @param {HTMLElement} fieldset    Element of the row.
+		 * @param {Object}      row         Row.
+		 * @param {Function}    renderScope Builds the control of one scope: renderChain, renderTemplate, renderInput
+		 *                                  or renderValue.
+		 */
+		function appendScopes( fieldset, row, renderScope ) {
+			scopesOf( scopeMap( row.data ) ).forEach( function ( scope ) {
+				fieldset.appendChild( renderScope( row, scope ) );
+			} );
+			appendIfAny( fieldset, renderExceptionPicker( row ) );
+		}
+
+		/**
 		 * Builds the element of a row.
 		 *
 		 * @param {Object} row   Row.
@@ -1599,81 +1673,26 @@
 			if ( ! editable ) {
 				fieldset.appendChild( el( 'p', { className: 'kkce-mapping-kept' }, __( 'This rule cannot be edited here yet and is kept unchanged.', 'kk-content-exporter' ) ) );
 			} else if ( 'field' === row.data.kind ) {
-				if ( ! row.data.sources[ '*' ] ) {
-					row.data.sources = Object.assign( { '*': [] }, row.data.sources );
-				}
-				scopesOf( row.data.sources ).forEach( function ( scope ) {
-					fieldset.appendChild( renderChain( row, scope ) );
-				} );
-				const picker = renderExceptionPicker( row );
-				if ( picker ) {
-					fieldset.appendChild( picker );
-				}
-				const options = renderOptions( row );
-				if ( options ) {
-					fieldset.appendChild( options );
-				}
+				appendScopes( fieldset, row, renderChain );
+				appendIfAny( fieldset, renderOptions( row ) );
 			} else if ( 'template' === row.data.kind ) {
-				if ( ! Object.prototype.hasOwnProperty.call( row.data.templates, '*' ) ) {
-					row.data.templates = Object.assign( { '*': '' }, row.data.templates );
-				}
 				fieldset.appendChild( el( 'p', { id: prefix + '-template-help', className: 'description' }, __( 'Write the text and put the fields between braces, for example {core.title}. {a|b|"text"} uses the first one with a value; a part between square brackets, such as {meta.city}[, {meta.address}], is written only when all its fields have a value; write {{, }}, [[ and ]] for a brace or a bracket. "Insert field" writes a field where the cursor is.', 'kk-content-exporter' ) ) );
-				scopesOf( row.data.templates ).forEach( function ( scope ) {
-					fieldset.appendChild( renderTemplate( row, scope ) );
-				} );
-				const picker = renderExceptionPicker( row );
-				if ( picker ) {
-					fieldset.appendChild( picker );
-				}
+				appendScopes( fieldset, row, renderTemplate );
 				// Redrawn alone while the template is typed (see the input handler), so the caret stays.
 				const slot = el( 'div', { className: 'kkce-mapping-warnings-slot' } );
 				fillWarnings( slot, row );
 				fieldset.appendChild( slot );
-			} else if ( 'lookup' === row.data.kind ) {
-				if ( ! Object.prototype.hasOwnProperty.call( row.data.inputs, '*' ) ) {
-					row.data.inputs = Object.assign( { '*': '' }, row.data.inputs );
-				}
-				fieldset.appendChild( el( 'p', { className: 'description' }, __( 'The value of the field is compared with the lines of the table, exactly (capital letters included, spaces at the ends ignored); the first line that matches gives the output. Lists cannot be read.', 'kk-content-exporter' ) ) );
-				scopesOf( row.data.inputs ).forEach( function ( scope ) {
-					fieldset.appendChild( renderInput( row, scope ) );
-				} );
-				const picker = renderExceptionPicker( row );
-				if ( picker ) {
-					fieldset.appendChild( picker );
-				}
-				fieldset.appendChild( renderCases( row ) );
-				const warnings = renderOptions( row );
-				if ( warnings ) {
-					fieldset.appendChild( warnings );
-				}
-			} else if ( 'condition' === row.data.kind ) {
-				if ( ! Object.prototype.hasOwnProperty.call( row.data.inputs, '*' ) ) {
-					row.data.inputs = Object.assign( { '*': '' }, row.data.inputs );
-				}
-				fieldset.appendChild( el( 'p', { className: 'description' }, __( 'One check on one field: when it is true the first output is written, otherwise the second. Values are compared exactly (capital letters included, spaces at the ends ignored); "contains" looks for a text inside the value, or for one element of a list, such as the categories; lists can be checked only with "is empty", "is not empty" and "contains".', 'kk-content-exporter' ) ) );
-				scopesOf( row.data.inputs ).forEach( function ( scope ) {
-					fieldset.appendChild( renderInput( row, scope ) );
-				} );
-				const picker = renderExceptionPicker( row );
-				if ( picker ) {
-					fieldset.appendChild( picker );
-				}
-				fieldset.appendChild( renderCheck( row ) );
-				const warnings = renderOptions( row );
-				if ( warnings ) {
-					fieldset.appendChild( warnings );
-				}
+			} else if ( 'lookup' === row.data.kind || 'condition' === row.data.kind ) {
+				// Same inputs for both rules; only the description and the table or the check differ.
+				const isLookup = 'lookup' === row.data.kind;
+				fieldset.appendChild( el( 'p', { className: 'description' }, isLookup
+					? __( 'The value of the field is compared with the lines of the table, exactly (capital letters included, spaces at the ends ignored); the first line that matches gives the output. Lists cannot be read.', 'kk-content-exporter' )
+					: __( 'One check on one field: when it is true the first output is written, otherwise the second. Values are compared exactly (capital letters included, spaces at the ends ignored); "contains" looks for a text inside the value, or for one element of a list, such as the categories; lists can be checked only with "is empty", "is not empty" and "contains".', 'kk-content-exporter' ) ) );
+				appendScopes( fieldset, row, renderInput );
+				fieldset.appendChild( isLookup ? renderCases( row ) : renderCheck( row ) );
+				appendIfAny( fieldset, renderOptions( row ) );
 			} else {
-				if ( ! Object.prototype.hasOwnProperty.call( row.data.values, '*' ) ) {
-					row.data.values = Object.assign( { '*': '' }, row.data.values );
-				}
-				scopesOf( row.data.values ).forEach( function ( scope ) {
-					fieldset.appendChild( renderValue( row, scope ) );
-				} );
-				const picker = renderExceptionPicker( row );
-				if ( picker ) {
-					fieldset.appendChild( picker );
-				}
+				appendScopes( fieldset, row, renderValue );
 			}
 
 			const actions = el( 'div', { className: 'kkce-mapping-actions' } );
@@ -1776,7 +1795,7 @@
 				return;
 			}
 			rows = ( catalog.suggested_rows || [] ).map( function ( row ) {
-				return { uid: nextId++, data: JSON.parse( JSON.stringify( row ) ), autoKey: row.key };
+				return { uid: nextId++, data: withGeneralScope( JSON.parse( JSON.stringify( row ) ) ), autoKey: row.key };
 			} );
 		}
 

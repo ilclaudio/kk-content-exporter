@@ -744,50 +744,8 @@ final class Mapping_Validator {
 	 */
 	private static function row_sources( array $row ): array {
 		$sources = array();
-
-		if ( 'template' === $row['kind'] ) {
-			foreach ( (array) $row['templates'] as $template ) {
-				foreach ( Template::sources( Template::parse( $template )['parts'] ) as $source ) {
-					$sources[ $source ] ??= 'templates';
-				}
-			}
-
-			return $sources;
-		}
-
-		if ( 'lookup' === $row['kind'] ) {
-			foreach ( (array) $row['inputs'] as $source ) {
-				$sources[ (string) $source ] ??= 'inputs';
-			}
-			foreach ( (array) $row['cases'] as $case ) {
-				if ( isset( $case['output']['source'] ) ) {
-					$sources[ (string) $case['output']['source'] ] ??= 'cases';
-				}
-			}
-			if ( isset( $row['default']['source'] ) ) {
-				$sources[ (string) $row['default']['source'] ] ??= 'default';
-			}
-
-			return $sources;
-		}
-
-		if ( 'condition' === $row['kind'] ) {
-			foreach ( (array) $row['inputs'] as $source ) {
-				$sources[ (string) $source ] ??= 'inputs';
-			}
-			foreach ( array( 'then', 'else' ) as $field ) {
-				if ( isset( $row[ $field ]['source'] ) ) {
-					$sources[ (string) $row[ $field ]['source'] ] ??= $field;
-				}
-			}
-
-			return $sources;
-		}
-
-		foreach ( (array) $row['sources'] as $chain ) {
-			foreach ( (array) $chain as $source ) {
-				$sources[ (string) $source ] ??= 'sources';
-			}
+		foreach ( Mapping::row_sources( $row ) as list( $field, , $source ) ) {
+			$sources[ $source ] ??= $field;
 		}
 
 		return $sources;

@@ -140,4 +140,56 @@ final class Mapping {
 
 		return $key;
 	}
+
+	/**
+	 * Every source a well-formed row reads, in the order of the row: the places of the chains of a `field` row,
+	 * the placeholders of the templates of a `template` row (alternatives included), the inputs of a `lookup` or
+	 * `condition` row, then the sources of its outputs (cases and default of a table, `then` and `else` of a
+	 * condition). The one traversal of the sources of a row: the validators derive their views from it.
+	 *
+	 * @param array<mixed> $row A well-formed row (its maps and outputs have the shapes of the format).
+	 * @return list<array{0: string, 1: string, 2: string}> Field that holds the source, post type of the entry
+	 *                                                      (`*` for the general entry and for the outputs,
+	 *                                                      which apply to every post type) and source.
+	 */
+	public static function row_sources( array $row ): array {
+		$sources = array();
+
+		$maps = array(
+			'field'     => 'sources',
+			'template'  => 'templates',
+			'lookup'    => 'inputs',
+			'condition' => 'inputs',
+		);
+		$kind = $row['kind'] ?? '';
+		$name = $maps[ $kind ] ?? '';
+		foreach ( '' === $name ? array() : (array) ( $row[ $name ] ?? array() ) as $scope => $entry ) {
+			$entries = match ( $kind ) {
+				'field'    => (array) $entry,
+				'template' => Template::sources( Template::parse( $entry )['parts'] ),
+				default    => array( $entry ),
+			};
+			foreach ( $entries as $source ) {
+				$sources[] = array( $name, (string) $scope, (string) $source );
+			}
+		}
+
+		$outputs = array();
+		if ( 'lookup' === $kind ) {
+			foreach ( (array) ( $row['cases'] ?? array() ) as $case ) {
+				$outputs[] = array( 'cases', is_array( $case ) ? $case['output'] ?? null : null );
+			}
+			$outputs[] = array( 'default', $row['default'] ?? null );
+		} elseif ( 'condition' === $kind ) {
+			$outputs[] = array( 'then', $row['then'] ?? null );
+			$outputs[] = array( 'else', $row['else'] ?? null );
+		}
+		foreach ( $outputs as list( $field, $output ) ) {
+			if ( is_array( $output ) && is_string( $output['source'] ?? null ) ) {
+				$sources[] = array( $field, '*', $output['source'] );
+			}
+		}
+
+		return $sources;
+	}
 }
