@@ -17,6 +17,7 @@ class KKCE_Git_Ignore_Unit_Test extends KKCE_Unit_Test_Case {
 	 */
 	const REQUIRED_PATTERNS = array(
 		'tests/integration/wp-tests-config.local.php' => 'local database credentials',
+		'tests/routes/routes.config.json'             => 'Application Passwords of the manual route checks',
 		'/build/'                                      => 'generated release folder, ZIP and reports',
 		'/vendor/'                                     => 'Composer dependencies',
 		'.phpunit.cache/'                              => 'tool caches',

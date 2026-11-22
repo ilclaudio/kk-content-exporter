@@ -57,7 +57,8 @@ Examples: `Feature: Add the kkce_feed post type and its meta`,
 - Before proposing a commit, also run `composer run phpcs` (warnings included: the target is zero),
   `composer run test:integration` when the change touches WordPress behavior, and `composer run test:e2e`
   when it touches the admin screens or their JavaScript.
-- Do not commit secrets, credentials, `.env` files or `tests/integration/wp-tests-config.local.php`.
+- Do not commit secrets, credentials, `.env` files, `tests/integration/wp-tests-config.local.php` or
+  `tests/routes/routes.config.json`.
   If staged files contain potential sensitive data, stop, report only its type and path (never its
   value) and remove it before proceeding. Never commit sensitive data, even with confirmation.
 - Never stage `DEV/`, `AGENTS/ISSUES_TODO.md`, `AGENTS/ISSUES_RESOLVED.md` or
