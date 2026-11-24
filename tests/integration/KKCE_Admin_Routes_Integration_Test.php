@@ -459,6 +459,45 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The preview warns when the exported object shows the login name of the author through the author archive
+	 * URL, and only then: not without the URL in the object, not with a nicename changed from the login, not
+	 * with plain permalinks (the URL carries the ID). The login itself is never in the response.
+	 */
+	public function test_preview_warns_when_the_author_url_shows_the_login() {
+		wp_set_current_user( self::$admin );
+		$this->set_permalink_structure( '/%postname%/' );
+		$author  = self::factory()->user->create( array( 'role' => 'author', 'user_login' => 'Mario.Rossi', 'display_name' => 'Mario Rossi' ) );
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish', 'post_author' => $author ) );
+		$url_row = array( 'key' => 'author', 'kind' => 'field', 'sources' => array( '*' => array( 'core.author.url' ) ), 'confirmed' => array( 'core.author.url' ) );
+		$codes   = function ( array $rows ) use ( $post_id ): array {
+			$response = $this->preview( array( 'mapping' => $this->mapping( $rows ), 'post_types' => array( 'post' ), 'post_id' => $post_id ) );
+			$this->assertSame( 200, $response->get_status() );
+			$this->assertStringNotContainsString( 'Mario.Rossi', (string) wp_json_encode( $response->get_data() ) );
+
+			return array_column( $response->get_data()['items'][0]['notices'], 'code' );
+		};
+
+		$this->assertSame( 'mario-rossi', get_userdata( $author )->user_nicename );
+		$this->assertSame( array( 'author_login' ), $codes( array( $url_row ) ) );
+
+		// In a template the URL is still shown.
+		$template = array( 'key' => 'by', 'kind' => 'template', 'templates' => array( '*' => 'By {core.author.url}' ), 'confirmed' => array( 'core.author.url' ) );
+		$this->assertSame( array( 'author_login' ), $codes( array( $template ) ) );
+
+		// Without the URL in the object there is nothing to say.
+		$this->assertSame( array(), $codes( array( array( 'key' => 'name', 'kind' => 'field', 'sources' => array( '*' => array( 'core.author.name' ) ) ) ) ) );
+
+		// A nicename different from the login hides it.
+		wp_update_user( array( 'ID' => $author, 'user_nicename' => 'the-author' ) );
+		$this->assertSame( array(), $codes( array( $url_row ) ) );
+
+		// With plain permalinks the URL carries only the ID.
+		wp_update_user( array( 'ID' => $author, 'user_nicename' => 'mario-rossi' ) );
+		$this->set_permalink_structure( '' );
+		$this->assertSame( array(), $codes( array( $url_row ) ) );
+	}
+
+	/**
 	 * The preview computes template rows, and refuses a template with a syntax error.
 	 */
 	public function test_preview_of_a_template_row() {

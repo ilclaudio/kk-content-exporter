@@ -69,9 +69,13 @@ test( 'a sensitive field typed in a template asks for its confirmation at once',
 	await expect( template ).toBeFocused();
 	await confirm.check();
 	await expect( preview( box ) ).toContainText( '"author": "By http' );
+	// The author of the item is `admin`, whose archive URL shows the login name: the preview says so.
+	const notice = preview( box ).getByText( 'In this item the author archive URL contains the login name of the author' );
+	await expect( notice ).toBeVisible();
 
 	await template.fill( 'By {core.title}' );
 	await expect( confirm ).toHaveCount( 0 );
+	await expect( notice ).toHaveCount( 0 );
 } );
 
 test( 'the text length limit is serialized only for text and kept on save', async ( { page } ) => {

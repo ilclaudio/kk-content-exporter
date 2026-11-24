@@ -17,6 +17,7 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 - Setting to show or hide the feed endpoint in the REST API index.
 - Field "Featured image (URL)".
 - Warning for an enabled feed that is not published.
+- Preview warning when the author archive URL of an item shows the login name of the author.
 - Development tooling: command-line runner of the Insomnia feed routes.
 ### Changed
 - A page of a feed costs the same database queries whatever the number of its items.

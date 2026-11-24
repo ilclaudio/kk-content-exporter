@@ -610,6 +610,10 @@
 					/* translators: %s: label of a post type. */
 					block.appendChild( el( 'p', {}, sprintf( __( 'No published item of %s.', 'kk-content-exporter' ), typeLabel( postType ) ) ) );
 				} else if ( result ) {
+					// Notices of the server about this item (for example the login name of the author in the JSON).
+					( result.notices || [] ).forEach( function ( notice ) {
+						block.appendChild( el( 'p', { className: 'kkce-mapping-warning kkce-preview-notice', 'data-code': notice.code }, notice.message ) );
+					} );
 					// Focusable, so the JSON can be scrolled with the keyboard. Its height is limited until it is
 					// expanded; the text is always the whole JSON.
 					const pre = el( 'pre', { id: 'kkce-preview-json-' + postType, className: 'kkce-preview-json' + ( expanded[ postType ] ? ' is-expanded' : '' ), tabIndex: 0 } );

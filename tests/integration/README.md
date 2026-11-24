@@ -64,7 +64,7 @@ number of assertions changes with the version of WordPress.
 | File | What it checks |
 |---|---|
 | `KKCE_Activation_Integration_Test.php` | The export capability is granted to administrators on activation, idempotently, and kept on deactivation |
-| `KKCE_Admin_Routes_Integration_Test.php` | The admin REST routes of the mapping editor: permissions, catalog, preview of published public data only, mapping errors |
+| `KKCE_Admin_Routes_Integration_Test.php` | The admin REST routes of the mapping editor: permissions, catalog, preview of published public data only, mapping errors, notice when the author archive URL shows the login |
 | `KKCE_Content_Renderer_Integration_Test.php` | Content and excerpt as clean HTML: blocks, shortcodes only on request, raw text, no external request |
 | `KKCE_Core_Provider_Integration_Test.php` | Values of the core fields of posts and pages: GMT dates, public author attributes only, featured image (original URL, null without a usable image) |
 | `KKCE_Environment_Integration_Test.php` | The plugin is loaded, wired and translatable (bundled `it_IT` translation) |

@@ -33,7 +33,9 @@ defined( 'ABSPATH' ) || exit;
  * - `GET /catalog`: the sources a mapping can use for the given post types.
  * - `POST /preview`: the exported object of an item for a mapping, saved or not. The item is computed
  *   as an anonymous visitor (`Item_Exporter`), and only published items without a password of the given
- *   post types can be previewed: the preview never shows what an endpoint would not export.
+ *   post types can be previewed: the preview never shows what an endpoint would not export. Beside the
+ *   object, `notices` lists what the administrator should know about it (`author_login`: the object shows
+ *   the login name of the author through the author archive URL).
  * - `GET /items`: the latest modified items of a post type that the preview can use (the same rules: published,
  *   without a password), so the editor can choose the item to preview.
  */
@@ -399,21 +401,67 @@ final class Admin_Routes {
 	}
 
 	/**
-	 * Preview of one item: which item, and its exported object.
+	 * Preview of one item: which item, its exported object and the notices about it.
 	 *
 	 * @param WP_Post      $post    Item.
 	 * @param array<mixed> $mapping Canonical mapping.
 	 * @return array<string, mixed>
 	 */
 	private static function preview_item( WP_Post $post, array $mapping ): array {
+		$data    = Item_Exporter::export( $post, $mapping );
+		$notices = array();
+		if ( self::exports_author_login( $post, $data ) ) {
+			$notices[] = array(
+				'code'    => 'author_login',
+				'message' => __( 'In this item the author archive URL contains the login name of the author: whoever reads the feed learns it.', 'kk-content-exporter' ),
+			);
+		}
+
 		return array(
-			'post' => array(
+			'post'    => array(
 				'id'    => $post->ID,
 				'type'  => $post->post_type,
 				'title' => $post->post_title,
 			),
 			// An object, so that an item without values is `{}` in JSON, not `[]`.
-			'data' => (object) Item_Exporter::export( $post, $mapping ),
+			'data'    => (object) $data,
+			'notices' => $notices,
 		);
+	}
+
+	/**
+	 * Whether the exported object of an item shows the login name of its author: one of its texts contains the
+	 * author archive URL, the URL contains the `user_nicename` and the `user_nicename` is the one WordPress
+	 * derives from the login (`sanitize_title()` of its first 50 characters, as `wp_insert_user()` does). The
+	 * login itself never leaves the server: the preview gets only the notice (decision of 2026-11-08).
+	 *
+	 * @param WP_Post              $post Item.
+	 * @param array<string, mixed> $data Exported object of the item.
+	 * @return bool
+	 */
+	private static function exports_author_login( WP_Post $post, array $data ): bool {
+		$author = get_userdata( (int) $post->post_author );
+		if ( false === $author || '' === $author->user_nicename ) {
+			return false;
+		}
+
+		$url = get_author_posts_url( $author->ID, $author->user_nicename );
+		if ( ! str_contains( $url, $author->user_nicename ) ) {
+			// Plain permalinks: the URL carries the ID only.
+			return false;
+		}
+		if ( sanitize_title( mb_substr( $author->user_login, 0, 50 ) ) !== $author->user_nicename ) {
+			return false;
+		}
+
+		$found = false;
+		array_walk_recursive(
+			$data,
+			static function ( $value ) use ( $url, &$found ) {
+				$found = $found || ( is_string( $value ) && str_contains( $value, $url ) );
+			}
+		);
+
+		return $found;
 	}
 }
