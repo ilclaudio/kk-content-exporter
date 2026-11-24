@@ -222,4 +222,33 @@ class KKCE_Catalog_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( array(), ( new Catalog( $sources, array( 'post' ) ) )->suggested_rows() );
 		$this->assertSame( array(), ( new Catalog( array( $this->common( 'core.title' ) ), array( 'post', 'event' ) ) )->suggested_rows(), 'No row without the source.' );
 	}
+
+	/**
+	 * When the catalog has the language of the items (Polylang translates a post type of the feed), the rows `lang`
+	 * and `translation_group` are proposed, after the `type` row; without those sources, none.
+	 */
+	public function test_the_language_rows_are_proposed_with_the_language_sources() {
+		$language = array( $this->common( 'language.code' ), $this->common( 'language.translation_group' ) );
+		$lang     = array(
+			array(
+				'key'     => 'lang',
+				'kind'    => 'field',
+				'type'    => 'string',
+				'sources' => array( '*' => array( 'language.code' ) ),
+			),
+			array(
+				'key'     => 'translation_group',
+				'kind'    => 'field',
+				'type'    => 'string',
+				'sources' => array( '*' => array( 'language.translation_group' ) ),
+			),
+		);
+
+		$this->assertSame( $lang, ( new Catalog( $language, array( 'post' ) ) )->suggested_rows() );
+		$this->assertSame(
+			array_merge( array( 'type' ), array_column( $lang, 'key' ) ),
+			array_column( ( new Catalog( array_merge( array( $this->common( 'core.type' ) ), $language ), array( 'post', 'event' ) ) )->suggested_rows(), 'key' )
+		);
+		$this->assertSame( array(), ( new Catalog( array( $this->common( 'language.site' ) ), array( 'post' ) ) )->suggested_rows(), 'The site language alone proposes nothing.' );
+	}
 }

@@ -13,4 +13,7 @@ parameters:
     - bin
   bootstrapFiles:
     - tests/phpstan/bootstrap.php
+  # Declarations of optional plugins, read and never executed.
+  scanFiles:
+    - tests/phpstan/polylang-stubs.php
   tmpDir: .phpunit.cache/phpstan

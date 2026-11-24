@@ -916,6 +916,9 @@
 		const limit = el( 'p', { className: 'description', hidden: true } );
 		const status = el( 'p', { className: 'screen-reader-text', ariaLive: 'polite' } );
 		const field = el( 'input', { type: 'hidden', name: data.field } );
+		// Shown when Polylang translates the content of the feed and no row exports the language of the items.
+		const languageNotice = el( 'div', { className: 'notice notice-warning inline kkce-mapping-language', hidden: true } );
+		languageNotice.appendChild( el( 'p', {}, __( 'Polylang translates the content of this feed, but no row exports the language of the items: items in different languages cannot be told apart. Add a row with a language field (for example Language code), or let the application read one language at a time with the lang parameter.', 'kk-content-exporter' ) ) );
 
 		// Two columns when the box is wide (rules, then the preview that stays in view), one otherwise: see the CSS.
 		const editor = el( 'div', { className: 'kkce-mapping-editor' } );
@@ -942,7 +945,7 @@
 		if ( refused ) {
 			editor.appendChild( refused );
 		}
-		[ empty, bulk, list, addButton, limit ].forEach( function ( node ) {
+		[ languageNotice, empty, bulk, list, addButton, limit ].forEach( function ( node ) {
 			editor.appendChild( node );
 		} );
 		layout.appendChild( editor );
@@ -1215,6 +1218,7 @@
 					return serialize( row.data );
 				} ),
 			} );
+			checkLanguage();
 			if ( byUser ) {
 				touched = true;
 				field.dispatchEvent( new Event( 'change', { bubbles: true } ) );
@@ -1252,7 +1256,10 @@
 			const node = el( 'select', attrs );
 			node.appendChild( el( 'option', { value: '' }, __( '— Choose a field —', 'kk-content-exporter' ) ) );
 
-			if ( '' !== current && null === findSource( current ) ) {
+			if ( '' !== current && null === findSource( current ) && 0 === current.indexOf( 'language.' ) ) {
+				/* translators: %s: identifier of a language field of Polylang. */
+				node.appendChild( el( 'option', { value: current, selected: true }, sprintf( __( '%s (needs Polylang, active and translating a checked post type)', 'kk-content-exporter' ), current ) ) );
+			} else if ( '' !== current && null === findSource( current ) ) {
 				/* translators: %s: identifier of a field that the post types of the feed do not offer. */
 				node.appendChild( el( 'option', { value: current, selected: true }, sprintf( __( '%s (not offered by the checked post types)', 'kk-content-exporter' ), current ) ) );
 			} else if ( '' !== current && accept && ! accept( findSource( current ) ) ) {
@@ -2063,6 +2070,22 @@
 		}
 
 		/**
+		 * Shows the notice of the language when the catalog has the language of the items (Polylang translates a
+		 * post type of the feed), the mapping has rows, and none of them reads a language of the items. A notice only:
+		 * the feed can still be saved, for example when the application reads one language at a time.
+		 */
+		function checkLanguage() {
+			const languages = [ 'language.code', 'language.locale', 'language.w3c' ];
+			// A row of an unexpected shape is kept as it is and never read: its sources are not known.
+			const exported = rows.some( function ( row ) {
+				return isEditable( row.data ) && rowSources( row.data ).some( function ( id ) {
+					return -1 !== languages.indexOf( id );
+				} );
+			} );
+			languageNotice.hidden = null === findSource( 'language.code' ) || 0 === rows.length || exported;
+		}
+
+		/**
 		 * Draws every row again and moves the focus to an element, by its id.
 		 *
 		 * @param {string} focusId Id of the element to focus, if any.
@@ -2080,6 +2103,7 @@
 			limit.hidden = rows.length < data.maxRows;
 			preview.setVisible( rows.length > 0 );
 			checkKeys();
+			checkLanguage();
 			if ( metaTarget ) {
 				const target = document.getElementById( metaTarget.id );
 				if ( target ) {

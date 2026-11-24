@@ -48,15 +48,20 @@ downloads, timeouts, import logs and scheduling.
   admin interface, not text to parse: there is no expression language in V1.
 - Sources: WordPress fields shared by every post type (ID, title, content, excerpt, permalink,
   featured image as the absolute URL of the original image, `null` without one; ID, alt and modified date of
-  the image may be added later; publish/modified dates, public author attributes) listed once; per post type,
-  explicitly selected post meta, simple ACF and CMB2 fields, taxonomies and terms (a JSON list of term names),
-  language (fixed per feed or Polylang). Fields of different post types are never merged by name:
+  the image may be added later; publish/modified dates, public author attributes) listed once; the language
+  of the site and, with Polylang, the language of each item (code, locale or W3C code) and its translation group
+  (a language fixed per feed is a Fixed value row; WPML is not supported); per post type, explicitly selected
+  post meta (ACF and CMB2 fields are read as post meta, with their stored value) and the public taxonomies (a JSON
+  list of the names of the terms, and the first term as a text). Fields of different post types are never merged by
+  name:
   the administrator decides when they correspond. Rules can only use these selectable sources.
   Repeater, flexible content, groups, relationships and serialized structures are out of V1.
 - Response: `{ "items": [...], "pagination": {...}, "meta": {...} }`; dates in ISO 8601 UTC (date-only
   fields keep `YYYY-MM-DD`); pagination `page` / `per_page` (default 50 per feed; maximum set in the plugin settings, 100 by default, no ceiling); stable order by
   modified date GMT and ID; date filters `modified_after`, `modified_before` and `published_after`,
-  each of which can be turned off in the settings (a disabled filter gives HTTP 400).
+  each of which can be turned off in the settings (a disabled filter gives HTTP 400); optional `lang` with
+  Polylang (the items of one language and those of post types it does not translate; without it, every
+  language).
 - Access: public (anonymous, published data only) or authenticated (HTTPS + Application Password of a
   technical user with the dedicated capability `kkce_read_export`).
 - Never exported: drafts, private or password-protected content, unmapped meta, author e-mail or login.
@@ -75,15 +80,19 @@ downloads, timeouts, import logs and scheduling.
 - Admin interface: native WordPress markup and vanilla JavaScript, no build step.
 - Multisite: network activation is not supported in V1 (single-site operation).
 
+Planned for 1.1.0 (scope of 1.0 reduced on 2026-11-24 to publish earlier): conversion of meta dates (format and
+time zone of the source), ACF and CMB2 fields with their labels and formats, duplication and configuration
+export/import of feeds, the `ids` parameter, the map of the translations of an item.
+
 Out of V1 (after the 1.0.0 release): taxonomy/meta filters, cache with ETag/Last-Modified, WPML, an
 endpoint outside `/wp-json/`, cursors, network activation, and an Expression rule kind (a real expression
 language), which is added only for a concrete case that the other rule kinds cannot solve.
 
 Done: foundations, the rule mapping with its editor and preview, core and post meta sources, the feed
 endpoint (pages, public and authenticated access, date filters, constant query cost per page), a test with the
-real importer and the featured image. Next, in this order: the restructured mapping editor, the remaining
-sources (meta dates, taxonomies, language, ACF, CMB2), configuration export/import, the complete endpoints
-(`ids`, IDs-only mode, log), documentation, release 1.0.0.
+real importer, the featured image, the redesigned mapping editor, the language (sources, `lang` parameter, proposed
+rows) and the taxonomies. Next, in this order: the protection of feed slugs, the IDs-only mode and the log,
+documentation, release 1.0.0.
 
 
 ## REST API interoperability requirement

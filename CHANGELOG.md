@@ -16,9 +16,14 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 - Date filters `modified_after`, `modified_before` and `published_after`, each one can be turned off.
 - Setting to show or hide the feed endpoint in the REST API index.
 - Field "Featured image (URL)".
+- Taxonomy fields: the names of the terms of every public taxonomy as a list, and the first term as a text.
+- Language fields: site language and, with Polylang, the language of each item (code, locale, W3C code) and its translation group.
+- Optional `lang` parameter of the feed endpoint (Polylang): only the items of one language.
+- With Polylang, a new mapping proposes the rows `lang` and `translation_group`, and the editor warns when no row exports the language.
 - Warning for an enabled feed that is not published.
 - Preview warning when the author archive URL of an item shows the login name of the author.
 - Development tooling: command-line runner of the Insomnia feed routes.
+- Development tooling: integration tests with Polylang, in a second run of the suite.
 ### Changed
 - A page of a feed costs the same database queries whatever the number of its items.
 - Mapping editor and validators restructured, without changes of behavior.

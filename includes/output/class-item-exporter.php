@@ -8,7 +8,9 @@
 namespace KKCE\Output;
 
 use KKCE\Sources\Core_Provider;
+use KKCE\Sources\Language_Provider;
 use KKCE\Sources\Meta_Provider;
+use KKCE\Sources\Taxonomy_Provider;
 use WP_Post;
 
 defined( 'ABSPATH' ) || exit;
@@ -68,17 +70,18 @@ final class Item_Exporter {
 	}
 
 	/**
-	 * Declared type of the known sources of a post type, for the rows with the type `auto`: the core ones,
-	 * and the post meta (registered type, text for the others).
+	 * Declared type of the known sources of a post type, for the rows with the type `auto`: the core ones, the
+	 * language ones, the taxonomies (list, text for the first term) and the post meta (registered type, text for the
+	 * others).
 	 *
 	 * @param string $post_type Post type of the item.
 	 * @return callable(string): ?string Gives null for a source of unknown type (it counts as text).
 	 */
 	private static function declared_types( string $post_type ): callable {
-		$core = Core_Provider::types();
+		$core = Core_Provider::types() + Language_Provider::types();
 		$meta = Meta_Provider::declared_types( $post_type );
 
-		return static fn( string $source ): ?string => $core[ $source ] ?? $meta( $source );
+		return static fn( string $source ): ?string => $core[ $source ] ?? Taxonomy_Provider::declared_type( $source ) ?? $meta( $source );
 	}
 
 	/**
@@ -106,9 +109,11 @@ final class Item_Exporter {
 	 */
 	private static function read( WP_Post $post, string $source, array $options ) {
 		return match ( explode( '.', $source, 2 )[0] ) {
-			'core'  => Core_Provider::value( $post, $source, $options ),
-			'meta'  => Meta_Provider::value( $post, $source ),
-			default => null,
+			'core'     => Core_Provider::value( $post, $source, $options ),
+			'language' => Language_Provider::value( $post, $source ),
+			'meta'     => Meta_Provider::value( $post, $source ),
+			'taxonomy' => Taxonomy_Provider::value( $post, $source ),
+			default    => null,
 		};
 	}
 }

@@ -10,8 +10,7 @@ use KKCE\Output\Item_Exporter;
 use KKCE\Output\Mapping;
 use KKCE\Output\Mapping_Validator;
 use KKCE\Rest\Admin_Routes;
-use KKCE\Sources\Catalog;
-use KKCE\Sources\Core_Provider;
+use KKCE\Sources\Catalog_Factory;
 
 /**
  * Only feed administrators reach the routes; the preview shows only published, public data of the chosen post types.
@@ -186,7 +185,7 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 
 		$response = $this->catalog( array( 'post_types' => array( 'post', 'page', 'attachment', 'nope', 'post' ) ) );
 		$data     = $response->get_data();
-		$expected = new Catalog( Core_Provider::sources(), array( 'post', 'page' ) );
+		$expected = Catalog_Factory::for_post_types( array( 'post', 'page' ) );
 
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertSame( array( 'post', 'page' ), $data['post_types'] );

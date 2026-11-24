@@ -27,9 +27,9 @@ Read this file when the operator's request matches a row of the trigger table in
 ### Trigger A: Feed endpoint audit (runtime, read-only)
 Slash alias: `/audit-endpoint <URL>`
 
-Usable on the feed endpoint `GET /wp-json/kkce/v1/<slug>` (pages, access, date filters; see *Public Endpoints and
-Hooks* in `AGENTS/ARCHITECTURE.md`). Parameters planned for later steps (`ids`, the IDs-only mode) do not exist yet:
-report them as not implemented, not as defects.
+Usable on the feed endpoint `GET /wp-json/kkce/v1/<slug>` (pages, access, date filters, `lang` with Polylang; see
+*Public Endpoints and Hooks* in `AGENTS/ARCHITECTURE.md`). Parameters planned for later steps (the IDs-only mode,
+`ids` in 1.1.0) do not exist yet: report them as not implemented, not as defects.
 
 Trigger phrases (or equivalent wording in any language): "Audit endpoint X", "Check the feed X",
 requests to check what a feed URL returns.

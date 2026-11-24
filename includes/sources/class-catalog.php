@@ -158,23 +158,41 @@ final class Catalog {
 	 * Rows that the mapping editor proposes for a new mapping.
 	 *
 	 * In a feed with two or more post types, the row `type` (slug of the post type of every item) tells
-	 * the importer what each item is; it can be renamed or removed. A feed with one post type gets no
-	 * proposal, although the source exists.
+	 * the importer what each item is; a feed with one post type gets no such proposal, although the source
+	 * exists. When the catalog has the language of the items (Polylang translates a post type of the feed),
+	 * the rows `lang` (language code) and `translation_group` tell the importer the language of every item and
+	 * which items are translations of one content. Every proposed row can be renamed or removed.
 	 *
 	 * @return list<array<string, mixed>> Rows in the canonical form of the mapping.
 	 */
 	public function suggested_rows(): array {
-		if ( count( $this->post_types ) < 2 || null === $this->find( 'core.type', '*' ) ) {
-			return array();
+		$rows = array();
+		if ( count( $this->post_types ) >= 2 && null !== $this->find( 'core.type', '*' ) ) {
+			$rows[] = self::field_row( 'type', 'core.type' );
+		}
+		if ( null !== $this->find( 'language.code', '*' ) ) {
+			$rows[] = self::field_row( 'lang', 'language.code' );
+		}
+		if ( null !== $this->find( 'language.translation_group', '*' ) ) {
+			$rows[] = self::field_row( 'translation_group', 'language.translation_group' );
 		}
 
+		return $rows;
+	}
+
+	/**
+	 * A proposed text row that reads one common source.
+	 *
+	 * @param string $key    Key of the row.
+	 * @param string $source Source identifier.
+	 * @return array<string, mixed>
+	 */
+	private static function field_row( string $key, string $source ): array {
 		return array(
-			array(
-				'key'     => 'type',
-				'kind'    => 'field',
-				'type'    => 'string',
-				'sources' => array( '*' => array( 'core.type' ) ),
-			),
+			'key'     => $key,
+			'kind'    => 'field',
+			'type'    => 'string',
+			'sources' => array( '*' => array( $source ) ),
 		);
 	}
 }

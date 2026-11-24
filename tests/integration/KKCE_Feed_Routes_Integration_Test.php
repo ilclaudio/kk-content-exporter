@@ -845,6 +845,21 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Without Polylang `lang` is refused, never ignored: a feed filtered by a language it cannot apply would look
+	 * complete. Without `lang` the feed answers as usual. With Polylang: tests/integration/polylang.
+	 */
+	public function test_lang_without_polylang_gives_400() {
+		$this->feed( 'news' );
+
+		$this->assertSame( 200, $this->get( 'news' )->get_status() );
+
+		$response = $this->get( 'news', array( 'lang' => 'en' ) );
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'rest_invalid_param', $response->as_error()->get_error_code() );
+		$this->assertStringContainsString( 'Polylang', wp_json_encode( $response->get_data() ) );
+	}
+
+	/**
 	 * Values that are not whole numbers of at least 1 are refused.
 	 *
 	 * @dataProvider invalid_parameter_provider

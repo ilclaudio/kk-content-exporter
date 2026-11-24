@@ -12,6 +12,9 @@
  * - WP_TESTS_CONFIG_FILE_PATH: alternative `wp-tests-config.php`.
  * - KKCE_TEST_DB_HOST, KKCE_TEST_DB_USER, KKCE_TEST_DB_PASSWORD, KKCE_TEST_ABSPATH: see
  *   tests/integration/wp-tests-config.php.
+ * - KKCE_TEST_POLYLANG: `1` loads Polylang too, from the plugins folder of the container (mounted by
+ *   `.wp-env.inttest.json`), for the `polylang` test suite. A loaded plugin cannot be unloaded, so the suites
+ *   with and without it run in separate processes (tests/bin/integration.mjs).
  *
  * @package KKCE
  */
@@ -59,6 +62,34 @@ function kkce_tests_load_plugin() {
 	require KKCE_TEST_PLUGIN_DIR . '/kk-content-exporter.php';
 }
 tests_add_filter( 'muplugins_loaded', 'kkce_tests_load_plugin' );
+
+if ( '1' === getenv( 'KKCE_TEST_POLYLANG' ) ) {
+	define( 'KKCE_TEST_POLYLANG_FILE', WP_PLUGIN_DIR . '/polylang/polylang.php' );
+	if ( ! is_readable( KKCE_TEST_POLYLANG_FILE ) ) {
+		fwrite( STDERR, 'Polylang not found in ' . WP_PLUGIN_DIR . "/polylang: start the environment again with `composer run test:integration` (it is mounted by .wp-env.inttest.json).\n" );
+		exit( 1 );
+	}
+
+	/**
+	 * Loads Polylang before WordPress boots, as an active plugin would be. It refuses to start on a version of
+	 * WordPress older than its minimum: its tests are then skipped (see KKCE_Polylang_Test_Case).
+	 *
+	 * @return void
+	 */
+	function kkce_tests_load_polylang() {
+		require KKCE_TEST_POLYLANG_FILE;
+	}
+	tests_add_filter( 'muplugins_loaded', 'kkce_tests_load_polylang' );
+
+	// The feed and the preview are REST requests: Polylang must run as it does there (PLL_REST_Request), not
+	// as on the front end of the site, which it would guess from a command-line process.
+	tests_add_filter(
+		'pll_context',
+		static function () {
+			return 'PLL_REST_Request';
+		}
+	);
+}
 
 /**
  * Keeps all test uploads inside the repository, without writing to the WordPress of the container.

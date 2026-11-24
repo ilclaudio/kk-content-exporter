@@ -8,6 +8,7 @@
     "max_per_page": 100,
     "since": "2026-11-01T00:00:00Z",
     "until": "2026-12-01T00:00:00Z",
+    "language": "",
     "authenticated_feed_slug": "feeditem-auth",
     "wp_user": "",
     "wp_app_password": "",

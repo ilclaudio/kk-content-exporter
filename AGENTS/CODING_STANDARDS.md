@@ -171,7 +171,10 @@ Primary references:
   declares them in `Requires Plugins`.
 - Detect them at runtime (`function_exists( 'get_field' )`, `class_exists( 'CMB2' )`,
   `function_exists( 'pll_get_post_language' )`) inside a dedicated source provider class; never call
-  their functions outside it.
+  their functions outside it (Polylang: `Sources\Language_Provider`, which also serves the `lang` parameter of
+  the endpoint).
+- A mapping saved with their sources keeps working when the plugin is turned off: those sources give
+  `null` and the feed is still served.
 - Read only simple fields (text, HTML, number, boolean, date/time, URL, select, simple lists).
   Repeater, flexible content, groups, relationships and serialized structures are rejected with a clear
   message in V1.
@@ -179,7 +182,13 @@ Primary references:
 - **Never use ACF or CMB2 for the plugin's own fields or meta**: the configuration of `kkce_feed` and
   every plugin setting use core APIs (`register_post_type()`, `register_post_meta()` with
   `show_in_rest => false` and an `auth_callback`, native meta boxes, the Settings API).
-- PHPStan stubs for these plugins are added in Phase 2, together with the first code that uses them.
+- PHPStan stubs for these plugins are added together with the first code that uses them, in
+  `tests/phpstan/` (`scanFiles` of `phpstan.neon.dist`): only the functions the code calls, copied from the
+  version used by the integration tests (Polylang 3.9.2 in `polylang-stubs.php`), or the official stubs
+  package when it has that version.
+- Integration tests with the real plugin run in their own suite and process (`tests/integration/polylang/`,
+  see `tests/integration/README.md`); the plugin is downloaded from WordPress.org only into the test
+  environment.
 
 
 ## Internationalization (i18n)

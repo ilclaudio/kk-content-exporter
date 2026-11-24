@@ -86,7 +86,7 @@ the levels **in this order**: 1. unit, 2. integration, 3. end-to-end (when avail
   capabilities and roles, `WP_Query` results (published only, no password-protected content),
   REST routes (status codes 200/400/401/403/404, schema, `permission_callback`), Application
   Password authentication, activation/uninstall, translations loading, optional integrations with the
-  real ACF/CMB2/Polylang plugins.
+  real plugins (Polylang today, in `tests/integration/polylang/`; ACF and CMB2 in 1.1.0).
 - **End-to-end** (last resort, see *Order of the test levels*): what only a browser shows: the admin
   screens and their JavaScript (the mapping editor, its preview, the save of a feed), the translations of
   the scripts, keyboard use and the accessibility check of the elements of the plugin. Never the only test

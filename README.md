@@ -18,8 +18,8 @@ the plugin's operation, REST API and development workflow.
 
 In development. Feed configuration, the mapping editor with preview and save, WordPress core fields
 and selected post meta are available, along with public and authenticated feeds with pagination and
-date filters, and the URL of the featured image. Additional sources (taxonomies, language, ACF and CMB2 fields) are
-still being developed.
+date filters, the URL of the featured image, the terms of the taxonomies and the language (of the site, and of
+each item with Polylang). The IDs-only mode and the log of the endpoint are still being developed.
 
 ## Requirements
 
@@ -119,6 +119,20 @@ excludes it. A date without a time zone, an empty interval or a filter turned of
 answers HTTP 400. Changes made by code only to meta, terms or the featured image do not change the
 modified date, so an importer should also read the whole feed from time to time.
 
+### Multilingual sites (Polylang)
+
+Without `lang` a feed returns the items of every language. Map the language fields (for example
+**Language code** and **Translation group**) so that each item says its language and which items are
+translations of the same content. To read one language only, add `lang` with a Polylang language code:
+
+```sh
+curl 'https://example.com/wp-json/kkce/v1/news?lang=en'
+```
+
+Items of post types that Polylang does not translate are always included. `lang` combines with pages
+and date filters; an unknown language, or `lang` on a site without Polylang, answers HTTP 400. WPML is
+not supported.
+
 ### Authenticated feeds
 
 For an authenticated feed, use HTTPS and a WordPress Application Password belonging to a user with
@@ -181,6 +195,8 @@ Docker environments use separate configurations: `.wp-env.inttest.json` creates
 `wp-env-kk-content-exporter-inttest-<hash>` for integration tests (port 8891), and
 `.wp-env.e2etest.json` creates `wp-env-kk-content-exporter-e2etest-<hash>` for end-to-end tests (port 8890).
 Use the Composer commands to select the right environment; direct wp-env commands require `--config`.
+The integration environment also downloads Polylang from WordPress.org, a fixed version, for the tests
+in `tests/integration/polylang/`; the plugin itself never requires it.
 
 ## Release
 

@@ -1,7 +1,7 @@
 # Manual checks of the feed endpoint
 
 `Insomnia_Feed_Endpoint.json` is an Insomnia collection (export format 4) of requests to the feed endpoint
-`GET /wp-json/kkce/v1/<slug>`: pages, errors, route and methods, access, date filters. Each request says
+`GET /wp-json/kkce/v1/<slug>`: pages, errors, route and methods, access, date filters, language. Each request says
 in its name the status it expects, for example `Missing feed (404)`; without a status it expects 200.
 
 Import it in Insomnia, or run every request from the command line with `run-routes.mjs`.
@@ -17,6 +17,9 @@ Import it in Insomnia, or run every request from the command line with `run-rout
    - `unpublished_feed_slug`: an enabled feed left as a draft (`feeditem-draft`);
    - `max_per_page`: the maximum items per page of the settings;
    - `since`, `until`: two dates for the date filters, ISO 8601 with a time zone;
+   - `language`: a Polylang language code of the site (`en`), for the requests of *Language (Polylang)*
+     that use it; leave it empty on a site without Polylang and they are skipped. *Unknown language (400)*
+     always runs: it gives 400 with and without Polylang;
    - for the authenticated requests, which are skipped while these values are empty:
      - `authenticated_feed_slug`: a published, enabled feed with the access **Authenticated**
        (`feeditem-auth`), not the public feed;

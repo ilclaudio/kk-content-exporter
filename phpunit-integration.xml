@@ -8,8 +8,14 @@
 	failOnRisky="true"
 >
 	<testsuites>
+		<!-- Without optional plugins. -->
 		<testsuite name="integration">
 			<directory suffix="Test.php">./tests/integration/</directory>
+			<exclude>./tests/integration/polylang/</exclude>
+		</testsuite>
+		<!-- With Polylang loaded: run only with KKCE_TEST_POLYLANG=1 (tests/bin/integration.mjs does it). -->
+		<testsuite name="polylang">
+			<directory suffix="Test.php">./tests/integration/polylang/</directory>
 		</testsuite>
 	</testsuites>
 </phpunit>

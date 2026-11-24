@@ -29,7 +29,8 @@
         "wp_user_without_capability": "",
         "wp_app_password_without_capability": "",
         "since": "2026-11-01T00:00:00Z",
-        "until": "2026-12-01T00:00:00Z"
+        "until": "2026-12-01T00:00:00Z",
+        "language": ""
       },
       "dataPropertyOrder": {
         "&": [
@@ -688,6 +689,115 @@
       "headers": [],
       "authentication": {},
       "metaSortKey": -560
+    },
+    {
+      "_id": "fld_kkce_language",
+      "_type": "request_group",
+      "parentId": "wrk_kkce_feed_endpoint",
+      "name": "6. Language (Polylang)",
+      "description": "The optional lang parameter. The requests that use {{ _.language }} need Polylang with that language on the site and are skipped while the variable is empty; the unknown language gives 400 on every site, with or without Polylang.",
+      "environment": {},
+      "metaSortKey": -600
+    },
+    {
+      "_id": "req_kkce_lang_one",
+      "_type": "request",
+      "parentId": "fld_kkce_language",
+      "name": "One language (lang)",
+      "description": "Expected: 200 with only the items in that language, plus every item of the post types Polylang does not translate. Compare the total with the request without lang.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "lang",
+          "value": "{{ _.language }}",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -610
+    },
+    {
+      "_id": "req_kkce_lang_pages_dates",
+      "_type": "request",
+      "parentId": "fld_kkce_language",
+      "name": "One language, one item per page, modified since (lang)",
+      "description": "Expected: 200; lang combines with pages and date filters, and pagination.total counts only the items of that language.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "lang",
+          "value": "{{ _.language }}",
+          "disabled": false
+        },
+        {
+          "name": "per_page",
+          "value": "1",
+          "disabled": false
+        },
+        {
+          "name": "modified_after",
+          "value": "{{ _.since }}",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -620
+    },
+    {
+      "_id": "req_kkce_lang_page_after_last",
+      "_type": "request",
+      "parentId": "fld_kkce_language",
+      "name": "One language, page after the last one (lang)",
+      "description": "Expected: 200 with empty items and the real total of the language.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "lang",
+          "value": "{{ _.language }}",
+          "disabled": false
+        },
+        {
+          "name": "per_page",
+          "value": "1",
+          "disabled": false
+        },
+        {
+          "name": "page",
+          "value": "100000",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -630
+    },
+    {
+      "_id": "req_kkce_lang_unknown",
+      "_type": "request",
+      "parentId": "fld_kkce_language",
+      "name": "Unknown language (400)",
+      "description": "Expected: 400 rest_invalid_param: with Polylang the message lists the languages of the site, without Polylang it says that lang needs Polylang. Never an ignored parameter.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/wp-json/kkce/v1/{{ _.feed_slug }}",
+      "body": {},
+      "parameters": [
+        {
+          "name": "lang",
+          "value": "zz",
+          "disabled": false
+        }
+      ],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -640
     }
   ]
 }

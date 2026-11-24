@@ -20,7 +20,8 @@ Choose the content and fields to include, give the fields your own names, and co
 
 = Features =
 
-* Include one or more content types and selected WordPress fields, the featured image URL or custom fields (post meta).
+* Include one or more content types and selected WordPress fields, the featured image URL, categories, tags and other taxonomies, or custom fields (post meta).
+* On multilingual sites with Polylang, include the language of each item and the group of its translations, or read one language only.
 * Rename fields and build values using fixed text, templates, lookup tables and conditions.
 * Preview the JSON before saving your feed.
 * Share public feeds or require an Application Password, with pagination and a configurable page limit.
@@ -30,7 +31,7 @@ Only published, non-password-protected content and selected fields are exported.
 
 = Development status =
 
-This plugin is in development. Feeds are served, with pages, access control and date filters, and can include the URL of the featured image. Sources for taxonomies, language, ACF and CMB2 are planned for version 1.0.0. ACF, CMB2 and Polylang will be optional.
+This plugin is in development. Feeds are served, with pages, access control and date filters, and can include the URL of the featured image, the terms of the taxonomies and the language. Polylang is optional.
 
 == Installation ==
 
@@ -97,11 +98,15 @@ Add `modified_after` with the time of the previous reading, as an ISO 8601 date 
 
 An item is returned again when its modification date changes, which happens every time it is saved, also in the editor. Changes made only to custom fields, categories, tags or the featured image by another plugin or by code, without saving the item, do not change that date: those items are not returned until they are saved again. Applications should therefore also read the whole feed from time to time.
 
+= Does it work on a multilingual site? =
+
+Yes, with Polylang. A feed returns every language unless the application adds `lang` with a language code, for example `?lang=en`; items of content types that Polylang does not translate are always included. To export everything in one feed, add the fields **Language code** and **Translation group** to the mapping: each item then says its language, and translations of the same content share the same group. WPML is not supported.
+
 = Why does my feed answer "not found"? =
 
 A feed answers only when it is published, enabled and has at least one mapping row, and while **Serve the feeds** is on in **Content Exporter > Settings**. A draft, pending or scheduled feed answers "not found" even when it is enabled: the editor and the list of the feeds show a warning. Check also that the slug in the address is written exactly as in the feed, in lowercase.
 
-Other errors: a wrong parameter (for example a page size above the maximum or a date without a time zone) gives "bad request" with an explanation; an authenticated feed read without an Application Password gives "unauthorized", and one read by a user without access gives "forbidden".
+Other errors: a wrong parameter (for example a page size above the maximum, a date without a time zone or an unknown language) gives "bad request" with an explanation; an authenticated feed read without an Application Password gives "unauthorized", and one read by a user without access gives "forbidden".
 
 = Does the plugin change my content or WordPress's REST API? =
 
@@ -114,7 +119,7 @@ It works on a single site. Network activation is not supported in this version: 
 == Changelog ==
 
 = 0.0.4 =
-* In development: feed endpoint with pages, access control and date filters; featured image URL; warnings for enabled feeds that are not published.
+* In development: feed endpoint with pages, access control and date filters; featured image URL; terms of the taxonomies; language of the site and, with Polylang, of each item, with the `lang` parameter; warnings for enabled feeds that are not published.
 
 = 0.0.3 =
 * Post meta fields in the mapping: the keys in use, hidden keys listed apart, and any key typed by hand.

@@ -4,5 +4,8 @@
 	"phpVersion": "8.3",
 	"testsEnvironment": false,
 	"plugins": [ "." ],
+	"mappings": {
+		"wp-content/plugins/polylang": "https://downloads.wordpress.org/plugin/polylang.3.9.2.zip"
+	},
 	"port": 8891
 }

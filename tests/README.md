@@ -92,7 +92,7 @@ file `tests/routes/routes.config.json` (ignored by Git). Details: [routes/README
 | Whitespace and conflict markers (`git diff --check` on every file) | No | Yes (`ci.yml`) | No |
 | Release ZIP built and verified | No | Yes (`ci.yml`) | No |
 | `npm audit` of the test tools (fails on critical only) | No | Yes (`ci.yml`) | No |
-| Integration (Docker), WordPress 7.1.4 and 6.4.14 | No | Yes (`ci.yml`) | No |
+| Integration (Docker), WordPress 7.1.4 and 6.4.14, without and with Polylang (its tests are skipped on 6.4) | No | Yes (`ci.yml`) | No |
 | End-to-end | No | No | Yes (workflow *End-to-end tests*, `functional.yml`: *Run workflow*) |
 
 ## What the commit checks
@@ -127,10 +127,10 @@ for a custom installation (PowerShell: `$env:KKCE_TEST_BASH = 'D:/Tools/Git/bin/
 | Path | Content |
 |---|---|
 | `bootstrap-unit.php` | Bootstrap of the unit suite (constants, autoloaders) |
-| `bootstrap-integration.php` | Bootstrap of the integration suite (framework, database safety check, plugin loading) |
+| `bootstrap-integration.php` | Bootstrap of the integration suite (framework, database safety check, plugin loading; Polylang too with `KKCE_TEST_POLYLANG=1`) |
 | `unit/` | Unit tests; `unit/support/` holds `KKCE_Unit_Test_Case` |
-| `integration/` | Integration tests and the test-framework configuration |
+| `integration/` | Integration tests and the test-framework configuration; `integration/polylang/` holds the tests that run with Polylang, in a second PHPUnit process |
 | `e2e/` | End-to-end tests: `specs/` (Playwright tests), `support/` (global setup and login, test data with WP-CLI, helpers of the feed editor, accessibility check) |
-| `bin/` | Node scripts behind the Composer commands: `integration.mjs` (starts the wp-env test environment, runs the integration suite in it) and `e2e.mjs` (starts the development environment, runs Playwright); both first check that Docker answers (`docker.mjs`) |
+| `bin/` | Node scripts behind the Composer commands: `integration.mjs` (starts the wp-env test environment, runs the integration suite in it, without and then with Polylang) and `e2e.mjs` (starts the development environment, runs Playwright); both first check that Docker answers (`docker.mjs`) |
 | `routes/` | Manual checks of the REST routes: `Insomnia_Feed_Endpoint.json`, the collection of the feed endpoint to import in Insomnia (credentials stay empty in the repository), and `run-routes.mjs`, which runs its requests from the command line with the local `routes.config.json` (model: `routes.config.example.json`); see [routes/README.md](routes/README.md) |
-| `phpstan/` | PHPStan bootstrap with the runtime constants |
+| `phpstan/` | PHPStan bootstrap with the runtime constants, and the stubs of the Polylang functions the plugin calls (`polylang-stubs.php`) |

@@ -48,7 +48,8 @@ class KKCE_Feed_Query_Cost_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A feed that maps every core source, the author archive URL confirmed, and a post meta.
+	 * A feed that maps every core source, the author archive URL confirmed, the site language, the taxonomies and a
+	 * post meta.
 	 *
 	 * @return void
 	 */
@@ -56,7 +57,7 @@ class KKCE_Feed_Query_Cost_Integration_Test extends WP_UnitTestCase {
 		$sources = array(
 			'core.id', 'core.slug', 'core.title', 'core.content', 'core.excerpt', 'core.permalink', 'core.shortlink',
 			'core.featured_image', 'core.date', 'core.modified', 'core.author.id', 'core.author.name', 'core.author.url', 'core.type', 'core.type_label',
-			'meta.kkce_price',
+			'language.site', 'taxonomy.category', 'taxonomy.category.first', 'taxonomy.post_tag', 'meta.kkce_price',
 		);
 		$rows    = array();
 		foreach ( $sources as $i => $source ) {
@@ -99,6 +100,7 @@ class KKCE_Feed_Query_Cost_Integration_Test extends WP_UnitTestCase {
 					'post_status'   => 'publish',
 					'post_author'   => $author,
 					'post_category' => array( $category ),
+				'tags_input'    => array( 'tag-' . $i ),
 					'post_content'  => '<!-- wp:paragraph --><p>Item ' . $i . '</p><!-- /wp:paragraph -->',
 				)
 			);

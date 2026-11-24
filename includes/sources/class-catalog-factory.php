@@ -13,8 +13,9 @@ defined( 'ABSPATH' ) || exit;
  * The link between the providers, which read WordPress, and the pure `Catalog`.
  *
  * The only place that knows which providers exist: the admin routes and the saving of the mapping
- * build the catalog of a feed through it. Today the core sources and the post meta; taxonomies, image,
- * language, ACF and CMB2 are added here when their providers arrive.
+ * build the catalog of a feed through it: the core sources, the language (of the site, and of the items with
+ * Polylang), and for every post type its taxonomies and its post meta. ACF and CMB2 (version 1.1.0) are added here
+ * when their providers arrive.
  */
 final class Catalog_Factory {
 
@@ -32,9 +33,9 @@ final class Catalog_Factory {
 	 * @phpstan-param list<string> $meta_keys
 	 */
 	public static function for_post_types( array $post_types, bool $discover = false, array $meta_keys = array() ): Catalog {
-		$sources = Core_Provider::sources();
+		$sources = array_merge( Core_Provider::sources(), Language_Provider::sources( $post_types ) );
 		foreach ( $post_types as $post_type ) {
-			$sources = array_merge( $sources, Meta_Provider::sources( $post_type, $discover, $meta_keys ) );
+			$sources = array_merge( $sources, Taxonomy_Provider::sources( $post_type ), Meta_Provider::sources( $post_type, $discover, $meta_keys ) );
 		}
 
 		return new Catalog( $sources, $post_types );

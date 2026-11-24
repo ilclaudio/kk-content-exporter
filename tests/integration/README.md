@@ -26,6 +26,11 @@ first start downloads WordPress and the Docker images, then it takes about a min
 it is already running), creates the database if it is missing and runs
 `vendor/bin/phpunit -c phpunit-integration.xml` inside the `cli` container, in the folder of the plugin,
 with the configuration of this folder. The WordPress test framework comes with wp-env (`WP_TESTS_DIR`).
+
+PHPUnit runs twice, in separate processes, because a loaded plugin cannot be unloaded: first the
+`integration` suite (every test outside `polylang/`, no optional plugin), then the `polylang` suite (the tests
+in `polylang/`, with Polylang loaded, see *Optional plugins*). Both always run and the command fails when
+either fails; arguments after `--` go to both, so a `--filter` may leave one of them with no test.
 The script first checks that Docker answers: without Docker Desktop running it stops at once and says
 so (the end-to-end command does the same).
 
@@ -45,6 +50,7 @@ value can be changed with an environment variable, for example to run the suite 
 | `KKCE_TEST_ABSPATH` | WordPress folder | `/var/www/html/` |
 | `WP_TESTS_DIR` | Folder of the WordPress test framework | set by wp-env |
 | `WP_TESTS_CONFIG_FILE_PATH` | Test configuration (must use `kkce_wordpress_test`) | this folder's `wp-tests-config.php`, passed by the script |
+| `KKCE_TEST_POLYLANG` | `1` loads Polylang (the `polylang` suite) | unset; the script sets it for the second run |
 
 The configuration also points `WP_PLUGIN_DIR` to the parent folder of this plugin, so that
 `plugin_basename()` returns `kk-content-exporter/kk-content-exporter.php` as on a real site.
@@ -71,17 +77,34 @@ number of assertions changes with the version of WordPress.
 | `KKCE_Exportable_Post_Types_Integration_Test.php` | The post types a feed can export: public ones only, `attachment` excluded, sorted by label |
 | `KKCE_Feed_Editor_Integration_Test.php` | Saving a feed and its mapping: nonce, capability, validation, refused mapping kept as a draft, activation rules, warning for an enabled feed that is not published |
 | `KKCE_Feed_Modified_Date_Integration_Test.php` | Which changes of an item make it appear again with `modified_after`: a save of the post does, a change of only meta, terms or featured image by code does not (known limit) |
-| `KKCE_Feed_Query_Cost_Integration_Test.php` | A page of a feed costs the same database queries with 1 and with 5 items (distinct authors, meta, terms, featured images, permalinks with the category) |
-| `KKCE_Feed_Routes_Integration_Test.php` | The endpoint of a feed: switch of the settings, 404 for feeds that cannot be served, Application Password and capability for feeds that need authentication (401, 403, same data as a public feed), published public data only, computed as a visitor, pages and their parameters, order by GMT modified date across daylight saving time and time zones, date filters (half-open interval, time zones, switches of the settings), isolation between feeds |
+| `KKCE_Feed_Query_Cost_Integration_Test.php` | A page of a feed costs the same database queries with 1 and with 5 items (distinct authors, meta, categories and tags also as taxonomy sources, featured images, permalinks with the category) |
+| `KKCE_Feed_Routes_Integration_Test.php` | The endpoint of a feed: switch of the settings, 404 for feeds that cannot be served, Application Password and capability for feeds that need authentication (401, 403, same data as a public feed), published public data only, computed as a visitor, pages and their parameters, order by GMT modified date across daylight saving time and time zones, date filters (half-open interval, time zones, switches of the settings), `lang` refused without Polylang, isolation between feeds |
 | `KKCE_Feed_List_Integration_Test.php` | Columns of the list of the feeds, escaped, with the mark of the feeds that export sensitive fields and of the enabled feeds that are not published |
 | `KKCE_Feed_Meta_Integration_Test.php` | Configuration meta: registered, hidden from REST, sanitized, editable by administrators only |
 | `KKCE_Feed_Post_Type_Integration_Test.php` | The post type `kkce_feed`: private, without REST routes, title only, administrators only |
 | `KKCE_Feed_Url_Integration_Test.php` | The REST address of a feed, and no address for a slug that cannot serve a feed |
 | `KKCE_Item_Exporter_Integration_Test.php` | An item is exported with the values a visitor would see; the current user is restored |
+| `KKCE_Language_Provider_Integration_Test.php` | Without Polylang only the site language is offered (W3C form of the setting, `en-US` by default); the item language sources give null |
 | `KKCE_Mapping_Box_Integration_Test.php` | The Mapping box: short introduction and guide that can be opened, initial data, refused mapping shown again, script and style on the feed screens only |
 | `KKCE_Post_Type_Filter_Integration_Test.php` | The filter of the post types appears only when the list is long |
 | `KKCE_Settings_Page_Integration_Test.php` | The settings page: administrators only, sanitized values, the group of the date filters, diagnostics |
+| `KKCE_Taxonomy_Provider_Integration_Test.php` | Taxonomy sources: public taxonomies of each post type only, names of the assigned terms in alphabetical order (commas, entities, a child without its parent), first term, `[]` and null without terms, a lookup table on the first term in a feed |
 | `KKCE_Uninstaller_Integration_Test.php` | Nothing is removed unless the administrator chose it; then feeds, settings and capability go |
+| `polylang/KKCE_Polylang_Feed_Integration_Test.php` | A feed on a site with Polylang: every language without `lang`, one language with it (items of post types that are not translated kept), totals and pages of that language, combined with the date filters, 400 for an unknown language |
+| `polylang/KKCE_Polylang_Language_Integration_Test.php` | Language sources with Polylang: offered for translated post types only (the internal taxonomies of Polylang never as taxonomy sources), rows `lang` and `translation_group` proposed by the editor catalog, code, locale and W3C code, translation group shared by the translations, null without a language, no query per item |
+
+### Optional plugins
+
+**Polylang** 3.9.2 is downloaded from WordPress.org by wp-env (`mappings` of `.wp-env.inttest.json`, a fixed
+version) into the plugins folder of the container, not activated. Only the `polylang` suite loads it
+(`KKCE_TEST_POLYLANG=1`, `tests/bootstrap-integration.php`), as an active plugin and in its REST context
+(`PLL_REST_Request`), as for the endpoint and the preview. Its tests extend `polylang/KKCE_Polylang_Test_Case.php`,
+which creates the languages `it` (default) and `en` once per class. Polylang needs WordPress 6.8 or later:
+on the older version of the CI (6.4) it does not start and its tests are skipped with a message. To update
+it, change the version in the URL and run the whole suite.
+
+The download of plugins from WordPress.org is allowed only in this environment (operator authorization of
+2026-11-09).
 
 ### Authentication response headers
 
@@ -104,6 +127,7 @@ empty-page counts, unrelated queries and user/filter restoration after failures 
 
 1. Create `tests/integration/KKCE_<Area>_Integration_Test.php` with a class of the same name extending
    `WP_UnitTestCase`; use `self::factory()` to create posts, users and terms.
-2. Optional plugins (ACF, CMB2, Polylang) are not loaded yet: when the plan needs them, add them to the
-   wp-env configuration and document it here.
+2. A test that needs Polylang goes in `polylang/` and extends `KKCE_Polylang_Test_Case`. Other optional
+   plugins (ACF, CMB2) are not loaded yet: when the plan needs them, add them the same way and document them
+   in *Optional plugins*.
 3. Update the table above, and run the suite before proposing the change.

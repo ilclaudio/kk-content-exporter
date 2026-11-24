@@ -15,6 +15,7 @@ use KKCE\Output\Item_Exporter;
 use KKCE\Plugin;
 use KKCE\Settings;
 use KKCE\Sources\Exportable_Post_Types;
+use KKCE\Sources\Language_Provider;
 use WP_Error;
 use WP_HTTP_Response;
 use WP_Post;
@@ -42,6 +43,11 @@ defined( 'ABSPATH' ) || exit;
  * Pages: `page` (from 1; a page after the last one is empty, with the real total) and `per_page` (the value of
  * the feed by default; above the global maximum the request is refused). The order is stable across pages and
  * post types: modified date in GMT, then ID, set by a `posts_orderby` filter that only the query of a feed uses.
+ *
+ * Language: the optional `lang` (a Polylang language) keeps the items of that language and every item of the post
+ * types Polylang does not translate, through a `posts_where` filter that only the query of a feed uses; totals and
+ * pages count those items only. Without `lang`, every language. `lang` without Polylang, or an unknown language,
+ * gives 400.
  */
 final class Feed_Routes {
 
@@ -69,6 +75,16 @@ final class Feed_Routes {
 	 * Query variable that marks the queries of the feeds, for the order filter.
 	 */
 	private const ORDER_FLAG = 'kkce_feed_order';
+
+	/**
+	 * Name of the parameter that keeps the items of one language.
+	 */
+	private const LANG = 'lang';
+
+	/**
+	 * Query variable that carries the language filter of a feed query (`Language_Provider::language_filter()`).
+	 */
+	private const LANGUAGE_FLAG = 'kkce_feed_language';
 
 	/**
 	 * Registers the route when the endpoints are switched on. Hooked on `rest_api_init`.
@@ -110,6 +126,11 @@ final class Feed_Routes {
 					'modified_after'  => self::date_filter_arg( __( 'Items modified at or after this moment (included), for example 2026-11-01T10:00:00Z.', 'kk-content-exporter' ) ),
 					'modified_before' => self::date_filter_arg( __( 'Items modified before this moment (excluded), for example 2026-11-01T10:00:00Z.', 'kk-content-exporter' ) ),
 					'published_after' => self::date_filter_arg( __( 'Items published at or after this moment (included), for example 2026-11-01T10:00:00Z.', 'kk-content-exporter' ) ),
+					self::LANG        => array(
+						'description'       => __( 'Only the items in this language (Polylang language code, for example en); items of post types that Polylang does not translate are kept. Without it, every language.', 'kk-content-exporter' ),
+						'type'              => 'string',
+						'validate_callback' => array( self::class, 'validate_lang' ),
+					),
 				),
 			)
 		);
@@ -291,6 +312,66 @@ final class Feed_Routes {
 	}
 
 	/**
+	 * Checks the language of `lang`: Polylang must be active and the value one of its languages.
+	 *
+	 * @param mixed           $value   Value of the parameter.
+	 * @param WP_REST_Request $request Request.
+	 * @param string          $param   Name of the parameter.
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 * @return true|WP_Error
+	 */
+	public static function validate_lang( $value, WP_REST_Request $request, string $param ) {
+		$valid = rest_validate_request_arg( $value, $request, $param );
+		if ( true !== $valid ) {
+			return $valid;
+		}
+
+		$languages = Language_Provider::languages();
+		if ( null === $languages ) {
+			/* translators: %s: name of a parameter of the feed endpoint. */
+			$message = sprintf( __( '%s needs Polylang, which is not active on this site.', 'kk-content-exporter' ), $param );
+		} elseif ( ! in_array( $value, $languages, true ) ) {
+			/* translators: 1: name of a parameter of the feed endpoint, 2: language codes separated by commas. */
+			$message = sprintf( __( '%1$s must be one of: %2$s.', 'kk-content-exporter' ), $param, implode( ', ', $languages ) );
+		} else {
+			return true;
+		}
+
+		return new WP_Error( 'rest_invalid_param', $message, array( 'status' => 400 ) );
+	}
+
+	/**
+	 * Keeps only the items of one language in the queries of the feeds that carry a language filter: the items with
+	 * the term of the language, and every item of the post types Polylang does not translate. Hooked only around the
+	 * query of a feed.
+	 *
+	 * @param mixed $where WHERE clause.
+	 * @param mixed $query The query.
+	 * @return mixed
+	 */
+	public static function filter_by_language( $where, $query ) {
+		$filter = $query instanceof WP_Query ? $query->get( self::LANGUAGE_FLAG ) : null;
+		if ( ! is_string( $where ) || ! is_array( $filter ) ) {
+			return $where;
+		}
+
+		global $wpdb;
+
+		// The SQL is built from an integer and from post type names escaped one by one: no value of the request.
+		$in_language  = $wpdb->prepare( "{$wpdb->posts}.ID IN ( SELECT object_id FROM {$wpdb->term_relationships} WHERE term_taxonomy_id = %d )", (int) $filter['term_taxonomy_id'] );
+		$untranslated = array();
+		foreach ( (array) $filter['untranslated'] as $post_type ) {
+			$untranslated[] = $wpdb->prepare( '%s', (string) $post_type );
+		}
+		$condition = array() === $untranslated
+			? $in_language
+			: "( {$in_language} OR {$wpdb->posts}.post_type IN ( " . implode( ', ', $untranslated ) . ' ) )';
+
+		return $where . ' AND ' . $condition;
+	}
+
+	/**
 	 * Order of the queries of the feeds: modified date in GMT, then ID.
 	 *
 	 * WordPress can order by the local modified date only, which repeats or goes back when daylight saving
@@ -360,7 +441,9 @@ final class Feed_Routes {
 		$total = 0;
 		if ( array() !== $post_types ) {
 			$date_query = Date_Filters::date_query( $dates );
-			$query      = self::query( $post_types, $page, $per_page, $date_query );
+			$language   = $request->get_param( self::LANG );
+			$language   = is_string( $language ) ? Language_Provider::language_filter( $language, $post_types ) : null;
+			$query      = self::query( $post_types, $page, $per_page, $date_query, false, $language );
 			$posts      = array_values( array_filter( $query->posts, static fn( $post ): bool => $post instanceof WP_Post ) );
 
 			// The query loads meta and terms for the whole page; the authors and the featured images (attachments
@@ -375,7 +458,7 @@ final class Feed_Routes {
 
 			// WordPress does not count the items when the page is empty: count them for a page after the last one.
 			if ( array() === $items && $page > 1 ) {
-				$total = (int) self::query( $post_types, 1, 1, $date_query, true )->found_posts;
+				$total = (int) self::query( $post_types, 1, 1, $date_query, true, $language )->found_posts;
 			}
 		}
 
@@ -391,11 +474,12 @@ final class Feed_Routes {
 	 * @param int                      $per_page   Items per page.
 	 * @param array<int|string, mixed> $date_query Clauses of the date filters (`Date_Filters::date_query()`), or empty.
 	 * @param bool                     $ids_only   Whether to load the IDs only (to count the items).
+	 * @param array<string, mixed>     $language   Language filter (`Language_Provider::language_filter()`), or null.
 	 * @return WP_Query
 	 *
 	 * @phpstan-param list<string> $post_types
 	 */
-	private static function query( array $post_types, int $page, int $per_page, array $date_query = array(), bool $ids_only = false ): WP_Query {
+	private static function query( array $post_types, int $page, int $per_page, array $date_query = array(), bool $ids_only = false, ?array $language = null ): WP_Query {
 		$args = array(
 			'post_type'           => $post_types,
 			'post_status'         => 'publish',
@@ -416,16 +500,22 @@ final class Feed_Routes {
 		if ( $ids_only ) {
 			$args['fields'] = 'ids';
 		}
+		if ( null !== $language ) {
+			$args[ self::LANGUAGE_FLAG ] = $language;
+		}
 
 		$previous_user = get_current_user_id();
 		$order         = array( self::class, 'order_by_modified_gmt' );
+		$in_language   = array( self::class, 'filter_by_language' );
 		add_filter( 'posts_orderby', $order, 10, 2 );
+		add_filter( 'posts_where', $in_language, 10, 2 );
 		try {
 			wp_set_current_user( 0 );
 
 			return new WP_Query( $args );
 		} finally {
 			remove_filter( 'posts_orderby', $order, 10 );
+			remove_filter( 'posts_where', $in_language, 10 );
 			wp_set_current_user( $previous_user );
 		}
 	}
