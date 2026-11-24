@@ -73,7 +73,7 @@ downloads, timeouts, import logs and scheduling.
   master switch of the endpoints, listing of the feed endpoint in the REST API index (on by default; it hides
   nothing from a request), authentication required for every feed, maximum items per page (100 by
   default, no ceiling; a feed cannot exceed it), removal of data on uninstall (off by default). Log retention
-  is added later, together with the log. The page also reports what could keep the feeds from working
+  is added in 1.1.0, together with the log. The page also reports what could keep the feeds from working
   (REST API blocked for anonymous requests, Application Passwords unavailable); it changes nothing by itself.
 - Uninstall: nothing is removed unless the setting is on; then feeds with their meta, the settings and the
   capability `kkce_read_export` (roles and users) are deleted.
@@ -82,7 +82,8 @@ downloads, timeouts, import logs and scheduling.
 
 Planned for 1.1.0 (scope of 1.0 reduced on 2026-11-24 to publish earlier): conversion of meta dates (format and
 time zone of the source), ACF and CMB2 fields with their labels and formats, duplication and configuration
-export/import of feeds, the `ids` parameter, the map of the translations of an item.
+export/import of feeds, the `ids` parameter, the map of the translations of an item, the diagnostics of the mapping
+(aggregated log of the export errors, reasons of empty values in the preview).
 
 Out of V1 (after the 1.0.0 release): taxonomy/meta filters, cache with ETag/Last-Modified, WPML, an
 endpoint outside `/wp-json/`, cursors, network activation, and an Expression rule kind (a real expression
@@ -91,8 +92,8 @@ language), which is added only for a concrete case that the other rule kinds can
 Done: foundations, the rule mapping with its editor and preview, core and post meta sources, the feed
 endpoint (pages, public and authenticated access, date filters, constant query cost per page), a test with the
 real importer, the featured image, the redesigned mapping editor, the language (sources, `lang` parameter, proposed
-rows) and the taxonomies. Next, in this order: the protection of feed slugs, the IDs-only mode and the log,
-documentation, release 1.0.0.
+rows) and the taxonomies. Next, in this order: the protection of feed slugs, the IDs-only mode, documentation,
+release 1.0.0.
 
 
 ## REST API interoperability requirement

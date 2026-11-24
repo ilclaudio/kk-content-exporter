@@ -19,7 +19,7 @@ the plugin's operation, REST API and development workflow.
 In development. Feed configuration, the mapping editor with preview and save, WordPress core fields
 and selected post meta are available, along with public and authenticated feeds with pagination and
 date filters, the URL of the featured image, the terms of the taxonomies and the language (of the site, and of
-each item with Polylang). The IDs-only mode and the log of the endpoint are still being developed.
+each item with Polylang). The IDs-only mode of the endpoint is still being developed.
 
 ## Requirements
 
