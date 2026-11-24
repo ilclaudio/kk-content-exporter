@@ -31,4 +31,29 @@ test( 'rows keep the order chosen with the move and remove buttons', async ( { p
 	await expect( box.getByRole( 'group', { name: /^Row \d+/ } ) ).toHaveCount( 2 );
 	await expect( box.getByRole( 'group', { name: 'Row 1: third' } ) ).toBeVisible();
 	await expect( box.getByRole( 'group', { name: 'Row 2: second' } ) ).toBeVisible();
+
+	// Saved rows start closed: the header sums them up, the closed controls are hidden.
+	const third = box.getByRole( 'group', { name: 'Row 1: third' } );
+	const toggle = third.getByRole( 'button', { name: /^third ← "third"/ } );
+	await expect( toggle ).toHaveAttribute( 'aria-expanded', 'false' );
+	await expect( third.getByLabel( 'Value (For all post types)' ) ).toBeHidden();
+
+	// Opening and closing a row, or all of them, changes nothing of the feed: leaving does not warn.
+	const dialogs = [];
+	page.on( 'dialog', async ( dialog ) => {
+		dialogs.push( dialog.type() );
+		await dialog.accept();
+	} );
+	await toggle.click();
+	await expect( toggle ).toHaveAttribute( 'aria-expanded', 'true' );
+	await expect( third.getByLabel( 'Value (For all post types)' ) ).toHaveValue( 'third' );
+	await toggle.click();
+	await expect( third.getByLabel( 'Value (For all post types)' ) ).toBeHidden();
+	await box.getByRole( 'button', { name: 'Expand all' } ).click();
+	await expect( box.getByLabel( 'Value (For all post types)' ) ).toHaveCount( 2 );
+	await expect( box.getByLabel( 'Value (For all post types)' ).last() ).toBeVisible();
+	await box.getByRole( 'button', { name: 'Collapse all' } ).click();
+	await expect( box.getByLabel( 'Value (For all post types)' ).first() ).toBeHidden();
+	await page.goto( '/wp-admin/edit.php?post_type=kkce_feed' );
+	expect( dialogs ).toEqual( [] );
 } );

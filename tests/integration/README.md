@@ -78,7 +78,7 @@ number of assertions changes with the version of WordPress.
 | `KKCE_Feed_Post_Type_Integration_Test.php` | The post type `kkce_feed`: private, without REST routes, title only, administrators only |
 | `KKCE_Feed_Url_Integration_Test.php` | The REST address of a feed, and no address for a slug that cannot serve a feed |
 | `KKCE_Item_Exporter_Integration_Test.php` | An item is exported with the values a visitor would see; the current user is restored |
-| `KKCE_Mapping_Box_Integration_Test.php` | The Mapping box: initial data, refused mapping shown again, script and style on the feed screens only |
+| `KKCE_Mapping_Box_Integration_Test.php` | The Mapping box: short introduction and guide that can be opened, initial data, refused mapping shown again, script and style on the feed screens only |
 | `KKCE_Post_Type_Filter_Integration_Test.php` | The filter of the post types appears only when the list is long |
 | `KKCE_Settings_Page_Integration_Test.php` | The settings page: administrators only, sanitized values, the group of the date filters, diagnostics |
 | `KKCE_Uninstaller_Integration_Test.php` | Nothing is removed unless the administrator chose it; then feeds, settings and capability go |

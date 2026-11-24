@@ -7,7 +7,7 @@
 
 const { test, expect } = require( '@playwright/test' );
 const { createFixtures, cleanupFixtures } = require( '../support/wp' );
-const { openFeed, addRow, preview, saveFeed } = require( '../support/editor' );
+const { openFeed, addRow, openRows, preview, saveFeed } = require( '../support/editor' );
 
 test.afterEach( () => {
 	cleanupFixtures();
@@ -34,6 +34,8 @@ test( 'an optional part is written only when its field has a value', async ( { p
 
 	await saveFeed( page );
 	await page.reload();
+	// Saved rows start closed.
+	await openRows( box );
 	await expect( box.getByRole( 'group', { name: /: label$/ } ).getByLabel( 'Template (For all post types)', { exact: true } ) ).toHaveValue( '{core.title}[ – {core.excerpt}] ({core.excerpt|"n.d."})' );
 
 	// A preview-only selection must not warn on leaving; editing the mapping still must.
@@ -48,6 +50,7 @@ test( 'an optional part is written only when its field has a value', async ( { p
 	expect( dialogs ).toEqual( [] );
 
 	const reopened = await openFeed( page, data.feed );
+	await openRows( reopened );
 	await reopened.getByLabel( 'Template (For all post types)', { exact: true } ).fill( '{core.title} changed' );
 	await page.goto( '/wp-admin/edit.php?post_type=kkce_feed' );
 	expect( dialogs ).toEqual( [ 'beforeunload' ] );
@@ -81,7 +84,12 @@ test( 'the text length limit is serialized only for text and kept on save', asyn
 	const row = await addRow( box, 'Field', 'short' );
 	await row.getByLabel( 'Field', { exact: true } ).selectOption( 'core.title' );
 	await row.getByLabel( 'Output type' ).selectOption( { label: 'Text' } );
+	// The limit is an advanced option: its section starts closed and its title sums up what is set.
+	const advanced = row.locator( 'details.kkce-mapping-advanced' );
+	await expect( row.getByLabel( 'Maximum length' ) ).toBeHidden();
+	await advanced.locator( 'summary' ).click();
 	await row.getByLabel( 'Maximum length' ).fill( '20' );
+	await expect( advanced.locator( 'summary' ) ).toHaveText( 'Advanced options (maximum length 20)' );
 	// Check the browser's submitted mapping; the truncation algorithm is covered by PHP tests.
 	const serializedRow = async () => JSON.parse( await box.locator( 'input[name="kkce_feed[mapping]"]' ).inputValue() ).rows.find( ( item ) => 'short' === item.key );
 	expect( await serializedRow() ).toHaveProperty( 'max_length', 20 );
@@ -94,5 +102,9 @@ test( 'the text length limit is serialized only for text and kept on save', asyn
 	await expect( row.getByLabel( 'Maximum length' ) ).toHaveValue( '20' );
 	expect( await serializedRow() ).toHaveProperty( 'max_length', 20 );
 	await saveFeed( page );
-	await expect( box.getByRole( 'group', { name: /: short$/ } ).getByLabel( 'Maximum length' ) ).toHaveValue( '20' );
+	const saved = box.getByRole( 'group', { name: /: short$/ } );
+	// After the reload the section is closed again, and its title still says what is set.
+	await expect( saved.locator( 'details.kkce-mapping-advanced' ) ).not.toHaveAttribute( 'open', '' );
+	await expect( saved.locator( 'details.kkce-mapping-advanced summary' ) ).toHaveText( 'Advanced options (maximum length 20)' );
+	await expect( saved.getByLabel( 'Maximum length' ) ).toHaveValue( '20' );
 } );

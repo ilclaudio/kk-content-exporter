@@ -21,6 +21,7 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 ### Changed
 - A page of a feed costs the same database queries whatever the number of its items.
 - Mapping editor and validators restructured, without changes of behavior.
+- Mapping editor redesigned: clearer rows that close to a summary, exceptions and advanced options on request, compact preview with "Copy JSON", other meta keys from the list of fields.
 ### Fixed
 - Choosing an item in the preview no longer triggers an unsaved-changes warning.
 - 401 responses of the plugin's REST routes include a Basic authentication challenge when Application Passwords are available.

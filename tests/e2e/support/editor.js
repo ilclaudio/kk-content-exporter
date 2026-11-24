@@ -46,6 +46,24 @@ async function addRow( box, rule, key ) {
 }
 
 /**
+ * Opens the rows of the box: saved rows start closed. "Expand all" when there are two rows or more, otherwise
+ * the header of the closed row.
+ *
+ * @param {import('@playwright/test').Locator} box Mapping box.
+ */
+async function openRows( box ) {
+	const all = box.getByRole( 'button', { name: 'Expand all' } );
+	if ( await all.isVisible() ) {
+		await all.click();
+		return;
+	}
+	const closed = box.locator( '.kkce-mapping-toggle[aria-expanded="false"]' );
+	for ( let left = await closed.count(); left > 0; left-- ) {
+		await closed.first().click();
+	}
+}
+
+/**
  * The preview of the box, once it shows the JSON of the items.
  *
  * @param {import('@playwright/test').Locator} box Mapping box.
@@ -65,4 +83,4 @@ async function saveFeed( page ) {
 	await expect( page.locator( '#message' ) ).toContainText( 'updated' );
 }
 
-module.exports = { openFeed, addRow, preview, saveFeed };
+module.exports = { openFeed, addRow, openRows, preview, saveFeed };

@@ -35,7 +35,7 @@
 		return;
 	}
 
-	const { __, _n, sprintf } = wp.i18n;
+	const { __, _n, _x, sprintf } = wp.i18n;
 
 	/**
 	 * Labels used by several controls.
@@ -117,6 +117,11 @@
 	 * Delay before computing the preview again after a change, so that typing makes one request.
 	 */
 	const PREVIEW_DELAY = 600;
+
+	/**
+	 * Value of the last option of a list of fields: it opens the form of a post meta key that is not listed.
+	 */
+	const OTHER_META = '__kkce_other_meta';
 
 
 	/**
@@ -452,6 +457,35 @@
 	}
 
 	/**
+	 * Labelled control of a scope of a row. The accessible name always says the scope ("Value (For all post
+	 * types)"); the visible label says it only when the row has exceptions, so a simple row shows just "Value". The
+	 * name then comes from `aria-label` and starts with the visible text (WCAG 2.5.3, label in name).
+	 *
+	 * @param {string}      short     Visible label without the scope.
+	 * @param {string}      full      Label with the scope.
+	 * @param {boolean}     showScope Whether the scope is shown.
+	 * @param {HTMLElement} control   Control.
+	 * @return {HTMLElement} Wrapper.
+	 */
+	function labelledScope( short, full, showScope, control ) {
+		if ( showScope ) {
+			return labelled( full, control );
+		}
+		control.setAttribute( 'aria-label', full );
+		return labelled( short, control );
+	}
+
+	/**
+	 * Whether an editable row has exceptions for single post types besides the general scope `*`.
+	 *
+	 * @param {Object} row Row of the mapping.
+	 * @return {boolean} Whether it has exceptions.
+	 */
+	function hasExceptions( row ) {
+		return scopesOf( scopeMap( row ) ).length > 1;
+	}
+
+	/**
 	 * The preview panel: the exported object of one item per checked post type, computed by the server with
 	 * the mapping of the box (saved or not), as a visitor would get it.
 	 *
@@ -483,6 +517,10 @@
 		const selected = {};
 		const recent = {};
 		const shown = {};
+		// State of the panels, kept across redraws; none of it is a change of the feed: closed panels and
+		// expanded JSON, per post type.
+		const closedTypes = {};
+		const expanded = {};
 		let previewTimer = null;
 		let previewRequest = 0;
 
@@ -543,7 +581,20 @@
 			results.textContent = '';
 
 			deps.catalog().post_types.forEach( function ( postType ) {
-				const block = el( 'div', { className: 'kkce-preview-type' } );
+				const result = shown[ postType ];
+				// A panel per post type, open at first; its title names the type and the item, also when it is closed.
+				const block = el( 'details', { className: 'kkce-preview-type', open: ! closedTypes[ postType ] } );
+				let item = '';
+				if ( result && 'empty' !== result ) {
+					const title = '' === result.post.title ? __( '(no title)', 'kk-content-exporter' ) : result.post.title;
+					/* translators: 1: title of the previewed item, 2: its ID. */
+					item = sprintf( __( '%1$s (ID %2$d)', 'kk-content-exporter' ), title, result.post.id );
+				}
+				/* translators: 1: label of a post type, 2: title and ID of the item of the preview. */
+				block.appendChild( el( 'summary', {}, '' === item ? typeLabel( postType ) : sprintf( __( '%1$s — %2$s', 'kk-content-exporter' ), typeLabel( postType ), item ) ) );
+				block.addEventListener( 'toggle', function () {
+					closedTypes[ postType ] = ! block.open;
+				} );
 				const options = [ [ '', __( 'Latest modified item', 'kk-content-exporter' ) ] ];
 				( recent[ postType ] || [] ).forEach( function ( item ) {
 					const date = new Date( item.modified ).toLocaleDateString();
@@ -555,18 +606,43 @@
 				/* translators: %s: label of a post type. */
 				block.appendChild( labelled( sprintf( __( 'Item of %s', 'kk-content-exporter' ), typeLabel( postType ) ), picker ) );
 
-				const result = shown[ postType ];
 				if ( 'empty' === result ) {
 					/* translators: %s: label of a post type. */
 					block.appendChild( el( 'p', {}, sprintf( __( 'No published item of %s.', 'kk-content-exporter' ), typeLabel( postType ) ) ) );
 				} else if ( result ) {
-					const title = '' === result.post.title ? __( '(no title)', 'kk-content-exporter' ) : result.post.title;
-					/* translators: 1: title of the previewed item, 2: its ID. */
-					block.appendChild( el( 'p', { className: 'kkce-preview-source' }, sprintf( __( '%1$s (ID %2$d)', 'kk-content-exporter' ), title, result.post.id ) ) );
-					// Focusable, so the JSON can be scrolled with the keyboard when it is longer than the panel.
-					const pre = el( 'pre', { className: 'kkce-preview-json', tabIndex: 0 } );
+					// Focusable, so the JSON can be scrolled with the keyboard. Its height is limited until it is
+					// expanded; the text is always the whole JSON.
+					const pre = el( 'pre', { id: 'kkce-preview-json-' + postType, className: 'kkce-preview-json' + ( expanded[ postType ] ? ' is-expanded' : '' ), tabIndex: 0 } );
 					pre.appendChild( el( 'code', {}, JSON.stringify( result.data, null, 2 ) ) );
 					block.appendChild( pre );
+					const tools = el( 'div', { className: 'kkce-preview-tools' } );
+					const label = typeLabel( postType );
+					/* translators: %s: label of a post type. */
+					const collapseName = sprintf( __( 'Collapse (%s)', 'kk-content-exporter' ), label );
+					/* translators: %s: label of a post type. */
+					const expandName = sprintf( __( 'Expand (%s)', 'kk-content-exporter' ), label );
+					/* translators: %s: label of a post type. */
+					const copyName = sprintf( __( 'Copy JSON (%s)', 'kk-content-exporter' ), label );
+					tools.appendChild( el( 'button', {
+						type: 'button',
+						id: 'kkce-preview-expand-' + postType,
+						className: 'button',
+						ariaExpanded: expanded[ postType ] ? 'true' : 'false',
+						ariaControls: pre.id,
+						ariaLabel: expanded[ postType ] ? collapseName : expandName,
+						'data-preview-action': 'expand',
+						'data-type': postType,
+					}, expanded[ postType ] ? __( 'Collapse', 'kk-content-exporter' ) : __( 'Expand', 'kk-content-exporter' ) ) );
+					tools.appendChild( el( 'button', {
+						type: 'button',
+						id: 'kkce-preview-copy-' + postType,
+						className: 'button',
+						ariaLabel: copyName,
+						'data-preview-action': 'copy',
+						'data-type': postType,
+					}, __( 'Copy JSON', 'kk-content-exporter' ) ) );
+					block.appendChild( tools );
+					block.appendChild( el( 'p', { className: 'kkce-preview-copied', role: 'status' } ) );
 				}
 				results.appendChild( block );
 			} );
@@ -703,6 +779,58 @@
 		}
 
 		refresh.addEventListener( 'click', run );
+		/**
+		 * Selects the whole JSON of a panel, so that it can be copied with the keyboard.
+		 *
+		 * @param {HTMLElement} pre Element of the JSON.
+		 */
+		function selectJson( pre ) {
+			const range = document.createRange();
+			range.selectNodeContents( pre );
+			const selection = window.getSelection();
+			selection.removeAllRanges();
+			selection.addRange( range );
+			pre.focus();
+		}
+
+		// Expanding and copying change nothing of the feed: no unsaved change.
+		results.addEventListener( 'click', function ( event ) {
+			const control = event.target.closest( 'button[data-preview-action]' );
+			if ( ! control ) {
+				return;
+			}
+			const postType = control.getAttribute( 'data-type' );
+			const block = control.closest( '.kkce-preview-type' );
+			const pre = block && block.querySelector( '.kkce-preview-json' );
+			const status = block && block.querySelector( '.kkce-preview-copied' );
+			if ( ! pre || ! status ) {
+				return;
+			}
+			if ( 'expand' === control.getAttribute( 'data-preview-action' ) ) {
+				expanded[ postType ] = ! expanded[ postType ];
+				draw();
+				return;
+			}
+			// The clipboard of the browser needs a secure connection (HTTPS or localhost): without it, or when
+			// copying fails, the JSON is selected and the message says how to copy it.
+			const fallback = function ( message ) {
+				selectJson( pre );
+				status.textContent = message;
+			};
+			const manual = __( 'The JSON is selected: press Ctrl+C (Cmd+C on a Mac).', 'kk-content-exporter' );
+			if ( ! window.isSecureContext || ! navigator.clipboard ) {
+				/* translators: %s: how to copy the selected JSON with the keyboard. */
+				fallback( sprintf( __( 'Copying is not available on this connection (it needs HTTPS). %s', 'kk-content-exporter' ), manual ) );
+				return;
+			}
+			navigator.clipboard.writeText( pre.textContent ).then( function () {
+				status.textContent = __( 'JSON copied.', 'kk-content-exporter' );
+			}, function () {
+				/* translators: %s: how to copy the selected JSON with the keyboard. */
+				fallback( sprintf( __( 'Copying failed. %s', 'kk-content-exporter' ), manual ) );
+			} );
+		} );
+
 		results.addEventListener( 'input', function ( event ) {
 			if ( event.target.classList.contains( 'kkce-preview-item' ) ) {
 				// The picker emits input before change; neither changes the feed configuration.
@@ -759,22 +887,29 @@
 		// Post meta keys typed by the administrator or used by the saved mapping, listed with the others (the server judges them).
 		let metaKeys = [];
 		let pendingMetaKey = '';
+		// The list of fields where a post meta key is being typed (id, class, row, scope, position), and its message.
+		let metaTarget = null;
+		let metaMessage = '';
+		let metaTyped = '';
 		let request = 0;
 		let timer = null;
 		// A saved mapping is never replaced by the proposed rows; an empty one is, until it is touched.
 		let touched = mapping.rows.length > 0;
+		// Saved rows start closed. A refused draft is work the administrator is correcting: its rows stay open.
+		const draftShown = !! ( data.draft && data.draft.readable && mapping !== data.mapping );
 		let rows = mapping.rows.map( function ( row ) {
-			return { uid: nextId++, data: withGeneralScope( row ), autoKey: null };
+			return { uid: nextId++, data: withGeneralScope( row ), autoKey: null, collapsed: ! draftShown };
 		} );
 
 		const list = el( 'ol', { className: 'kkce-mapping-rows' } );
+		const bulk = el( 'div', { className: 'kkce-mapping-bulk', hidden: true } );
+		const expandAll = el( 'button', { type: 'button', className: 'button', id: 'kkce-mapping-expand-all' }, __( 'Expand all', 'kk-content-exporter' ) );
+		const collapseAll = el( 'button', { type: 'button', className: 'button', id: 'kkce-mapping-collapse-all' }, __( 'Collapse all', 'kk-content-exporter' ) );
+		bulk.appendChild( expandAll );
+		bulk.appendChild( collapseAll );
 		const empty = el( 'p', { className: 'kkce-mapping-empty' }, __( 'No rows yet. Add a row to choose what the feed exports.', 'kk-content-exporter' ) );
 		const addButton = el( 'button', { type: 'button', className: 'button' }, __( 'Add row', 'kk-content-exporter' ) );
 		const limit = el( 'p', { className: 'description', hidden: true } );
-		const metaInput = el( 'input', { type: 'text', id: 'kkce-meta-key', className: 'regular-text', autocomplete: 'off', spellcheck: false, maxLength: data.metaKeyMaxLength || 191 } );
-		const metaButton = el( 'button', { type: 'button', className: 'button' }, __( 'Add field', 'kk-content-exporter' ) );
-		const metaMessage = el( 'p', { className: 'description kkce-mapping-meta-message', id: 'kkce-meta-message', role: 'status' } );
-		const metaForm = el( 'div', { className: 'kkce-mapping-meta' } );
 		const status = el( 'p', { className: 'screen-reader-text', ariaLive: 'polite' } );
 		const field = el( 'input', { type: 'hidden', name: data.field } );
 
@@ -803,12 +938,7 @@
 		if ( refused ) {
 			editor.appendChild( refused );
 		}
-		metaForm.appendChild( el( 'label', { htmlFor: 'kkce-meta-key' }, __( 'Use another post meta key', 'kk-content-exporter' ) ) );
-		metaForm.appendChild( metaInput );
-		metaForm.appendChild( metaButton );
-		metaForm.appendChild( el( 'p', { className: 'description', id: 'kkce-meta-key-help' }, __( 'For a custom field that is not in the lists. After adding it, choose it in the list of fields of a row. If the item has no such field, the value is null.', 'kk-content-exporter' ) ) );
-		metaInput.setAttribute( 'aria-describedby', 'kkce-meta-key-help kkce-meta-message' );
-		[ empty, list, addButton, limit, metaForm, metaMessage ].forEach( function ( node ) {
+		[ empty, bulk, list, addButton, limit ].forEach( function ( node ) {
 			editor.appendChild( node );
 		} );
 		layout.appendChild( editor );
@@ -1149,6 +1279,10 @@
 				node.appendChild( optgroup );
 			} );
 
+			if ( attrs[ 'data-uid' ] && catalog.post_types.length ) {
+				node.appendChild( el( 'option', { value: OTHER_META }, __( 'Other post meta key…', 'kk-content-exporter' ) ) );
+			}
+
 			return node;
 		}
 
@@ -1194,7 +1328,8 @@
 			const chain = row.data.sources[ scope ];
 			const group = el( 'fieldset', { className: 'kkce-mapping-scope' } );
 			const label = scopeLabel( scope );
-			group.appendChild( el( 'legend', {}, label ) );
+			// The name of the group is always there for assistive technologies; it is shown only with exceptions.
+			group.appendChild( el( 'legend', { className: hasExceptions( row.data ) ? '' : 'screen-reader-text' }, label ) );
 
 			const items = el( 'ol', { className: 'kkce-mapping-chain' } );
 			// An empty chain still shows one select, so a field can be chosen at once.
@@ -1255,7 +1390,8 @@
 				'data-scope': scope,
 			} );
 			/* translators: %s: name of the scope, for example "For all post types". */
-			group.appendChild( labelled( sprintf( __( 'Value (%s)', 'kk-content-exporter' ), label ), input ) );
+			const full = sprintf( __( 'Value (%s)', 'kk-content-exporter' ), label );
+			group.appendChild( labelledScope( __( 'Value', 'kk-content-exporter' ), full, hasExceptions( row.data ), input ) );
 			if ( '*' !== scope ) {
 				/* translators: %s: post types the exception applies to, for example "For Posts". */
 				group.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
@@ -1286,7 +1422,8 @@
 				'data-scope': scope,
 			} );
 			/* translators: %s: name of the scope, for example "For all post types". */
-			group.appendChild( labelled( sprintf( __( 'Template (%s)', 'kk-content-exporter' ), label ), area ) );
+			const full = sprintf( __( 'Template (%s)', 'kk-content-exporter' ), label );
+			group.appendChild( labelledScope( __( 'Template', 'kk-content-exporter' ), full, hasExceptions( row.data ), area ) );
 
 			const insert = el( 'div', { className: 'kkce-mapping-insert' } );
 			// No data-uid: choosing the field to insert changes nothing until the button is pressed.
@@ -1328,7 +1465,8 @@
 				return 'list' !== source.type;
 			} );
 			/* translators: %s: name of the scope, for example "For all post types". */
-			group.appendChild( labelled( sprintf( __( 'Field to read (%s)', 'kk-content-exporter' ), label ), control ) );
+			const full = sprintf( __( 'Field to read (%s)', 'kk-content-exporter' ), label );
+			group.appendChild( labelledScope( LABEL_FIELD_TO_READ, full, hasExceptions( row.data ), control ) );
 			if ( '*' !== scope ) {
 				/* translators: %s: post types the exception applies to, for example "For Posts". */
 				group.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
@@ -1518,34 +1656,86 @@
 			}
 			const prefix = 'kkce-mapping-' + row.uid;
 			const wrapper = el( 'div', { className: 'kkce-mapping-exception' } );
+			// Exceptions on request: a button first; the picker appears only when the administrator asks for it.
+			if ( ! row.pickerOpen ) {
+				wrapper.appendChild( button( row, 'scope-open', __( 'Add exception for a post type', 'kk-content-exporter' ), { id: prefix + '-exception-open' } ) );
+				return wrapper;
+			}
 			const picker = select( { id: prefix + '-exception' }, free.map( function ( postType ) {
 				return [ postType, ( catalog.labels || {} )[ postType ] || postType ];
 			} ), free[ 0 ] );
 			wrapper.appendChild( labelled( __( 'Different for', 'kk-content-exporter' ), picker ) );
 			wrapper.appendChild( button( row, 'scope-add', __( 'Add exception', 'kk-content-exporter' ), { id: prefix + '-exception-add' } ) );
+			wrapper.appendChild( button( row, 'scope-cancel', __( 'Cancel', 'kk-content-exporter' ), { id: prefix + '-exception-cancel', className: 'button-link' } ) );
 			return wrapper;
 		}
 
 		/**
-		 * Options of the fields of a `field` row, with their warnings, shown only when a field accepts them.
+		 * Short list of the advanced options set in a row, for the title of their section.
 		 *
-		 * @param {Object} row Row.
-		 * @return {HTMLElement|null} The options.
+		 * @param {Object}  row        Row.
+		 * @param {boolean} textOutput Whether the row gives a plain text (the maximum length applies).
+		 * @return {string} Title of the section.
 		 */
-		function renderOptions( row ) {
-			// Only field rows have options; the warnings below are for field and template rows.
+		function advancedTitle( row, textOutput ) {
+			const options = row.data.options || {};
+			const active = [];
+			if ( textOutput && undefined !== row.data.max_length && '' !== String( row.data.max_length ) ) {
+				/* translators: %s: maximum number of characters of a text. */
+				active.push( sprintf( __( 'maximum length %s', 'kk-content-exporter' ), String( row.data.max_length ) ) );
+			}
+			if ( true === options.raw ) {
+				active.push( __( 'raw content', 'kk-content-exporter' ) );
+			} else if ( true === options.shortcodes ) {
+				active.push( __( 'shortcodes run', 'kk-content-exporter' ) );
+			}
+			if ( ! active.length ) {
+				return __( 'Advanced options', 'kk-content-exporter' );
+			}
+			/* translators: %s: advanced options set in a row, separated by commas, for example "maximum length 200, raw content". */
+			return sprintf( __( 'Advanced options (%s)', 'kk-content-exporter' ), active.join( _x( ', ', 'separator of a list', 'kk-content-exporter' ) ) );
+		}
+
+		/**
+		 * Advanced options of a row in a section that can be opened (closed at first, its title sums up what is set):
+		 * the maximum length of a plain text, and the options of the fields that accept them (raw content, shortcodes),
+		 * with their warnings. Opening or closing it is not a change of the feed.
+		 *
+		 * @param {Object}  row        Row.
+		 * @param {boolean} textOutput Whether the row gives a plain text (the maximum length applies).
+		 * @return {HTMLElement|null} The section, or null when the row has no advanced option.
+		 */
+		function renderAdvanced( row, textOutput ) {
+			// Only field rows have options of their fields.
 			const accepted = 'field' === row.data.kind ? acceptedOptions( row.data ) : [];
 			const options = row.data.options || {};
 			const prefix = 'kkce-mapping-' + row.uid;
-			const wrapper = el( 'div', { className: 'kkce-mapping-options' } );
+			const body = el( 'div', { className: 'kkce-mapping-options' } );
+
+			if ( textOutput ) {
+				const hint = el( 'span', { id: prefix + '-max-length-help', className: 'description' }, __( 'Characters; empty: no limit.', 'kk-content-exporter' ) );
+				const field = labelled( LABEL_MAX_LENGTH, el( 'input', {
+					type: 'number',
+					id: prefix + '-max-length',
+					className: 'small-text kkce-mapping-max-length',
+					min: 1,
+					max: data.maxLengthLimit,
+					step: 1,
+					value: undefined === row.data.max_length ? '' : String( row.data.max_length ),
+					ariaDescribedby: hint.id,
+					'data-uid': String( row.uid ),
+				} ) );
+				field.appendChild( hint );
+				body.appendChild( field );
+			}
 
 			if ( -1 !== accepted.indexOf( 'raw' ) ) {
 				const raw = el( 'input', { type: 'checkbox', id: prefix + '-raw', checked: true === options.raw, 'data-uid': String( row.uid ), 'data-option': 'raw', ariaDescribedby: prefix + '-raw-help' } );
 				const label = el( 'label', { htmlFor: raw.id } );
 				label.appendChild( raw );
 				label.appendChild( document.createTextNode( ' ' + __( 'Raw content', 'kk-content-exporter' ) ) );
-				wrapper.appendChild( label );
-				wrapper.appendChild( el( 'p', { id: prefix + '-raw-help', className: 'description' }, __( 'The text as stored in the database: blocks are not turned into HTML and links stay as they are.', 'kk-content-exporter' ) ) );
+				body.appendChild( label );
+				body.appendChild( el( 'p', { id: prefix + '-raw-help', className: 'description' }, __( 'The text as stored in the database: blocks are not turned into HTML and links stay as they are.', 'kk-content-exporter' ) ) );
 			}
 
 			if ( -1 !== accepted.indexOf( 'shortcodes' ) ) {
@@ -1553,11 +1743,35 @@
 				const label = el( 'label', { htmlFor: shortcodes.id } );
 				label.appendChild( shortcodes );
 				label.appendChild( document.createTextNode( ' ' + __( 'Run the shortcodes', 'kk-content-exporter' ) ) );
-				wrapper.appendChild( label );
-				wrapper.appendChild( el( 'p', { id: prefix + '-shortcodes-help', className: 'description kkce-mapping-warning' }, true === options.raw
+				body.appendChild( label );
+				body.appendChild( el( 'p', { id: prefix + '-shortcodes-help', className: 'description kkce-mapping-warning' }, true === options.raw
 					? __( 'Not used with the raw content.', 'kk-content-exporter' )
 					: __( 'Off: shortcodes are removed. On: the shortcodes of other plugins run while the feed is read, as for a visitor; they can add content you do not expect or slow the feed down. Turn it on only for shortcodes you know.', 'kk-content-exporter' ) ) );
 			}
+
+			if ( ! body.childNodes.length ) {
+				return null;
+			}
+			const section = el( 'details', { className: 'kkce-mapping-advanced', open: true === row.advancedOpen } );
+			section.appendChild( el( 'summary', {}, advancedTitle( row, textOutput ) ) );
+			section.appendChild( body );
+			// The toggle event does not bubble: the state is kept here, so a redraw leaves the section as it was.
+			section.addEventListener( 'toggle', function () {
+				row.advancedOpen = section.open;
+			} );
+			return section;
+		}
+
+		/**
+		 * Confirmations of the sensitive fields of a row, with their warnings: always visible, outside the advanced
+		 * options.
+		 *
+		 * @param {Object} row Row.
+		 * @return {HTMLElement|null} The confirmations.
+		 */
+		function renderConfirmations( row ) {
+			const prefix = 'kkce-mapping-' + row.uid;
+			const wrapper = el( 'div', { className: 'kkce-mapping-options' } );
 
 			const confirmed = Array.isArray( row.data.confirmed ) ? row.data.confirmed : [];
 			rowSources( row.data ).forEach( function ( id, index ) {
@@ -1591,7 +1805,7 @@
 		 */
 		function fillWarnings( slot, row ) {
 			slot.textContent = '';
-			const warnings = renderOptions( row );
+			const warnings = renderConfirmations( row );
 			if ( warnings ) {
 				slot.appendChild( warnings );
 			}
@@ -1611,6 +1825,100 @@
 				fieldset.appendChild( renderScope( row, scope ) );
 			} );
 			appendIfAny( fieldset, renderExceptionPicker( row ) );
+		}
+
+		/**
+		 * Button of a row with an icon only; its name is given by `ariaLabel`.
+		 *
+		 * @param {Object} row    Row.
+		 * @param {string} action Action.
+		 * @param {string} icon   Dashicons class.
+		 * @param {Object} extra  Other properties (id, ariaLabel, disabled, className).
+		 * @return {HTMLButtonElement} The button.
+		 */
+		function iconButton( row, action, icon, extra ) {
+			const node = button( row, action, '', Object.assign( { className: 'button kkce-mapping-icon' }, extra ) );
+			node.appendChild( el( 'span', { className: 'dashicons ' + icon, ariaHidden: 'true' } ) );
+			return node;
+		}
+
+		/**
+		 * Label of a source for the summary of a row.
+		 *
+		 * @param {string} id Source identifier.
+		 * @return {string} Label, or the identifier when the catalog does not offer it.
+		 */
+		function sourceLabel( id ) {
+			const source = findSource( id );
+			return source ? source.label : id;
+		}
+
+		/**
+		 * One-line summary of a row, shown in its header: key, what it writes, output type, and a mark of the
+		 * exceptions and of the advanced options set, for example "title ← Title · Automatic".
+		 *
+		 * @param {Object} row Row.
+		 * @return {string} Summary.
+		 */
+		function rowSummary( row ) {
+			const item = row.data;
+			const key = String( item.key || '' ) || __( '(no key)', 'kk-content-exporter' );
+			let what = '—';
+			if ( ! isEditable( item ) ) {
+				what = __( 'kept unchanged', 'kk-content-exporter' );
+			} else if ( 'field' === item.kind ) {
+				const chain = ( item.sources[ '*' ] || [] ).filter( Boolean ).map( sourceLabel );
+				what = chain.length ? chain.join( _x( ', ', 'separator of a list', 'kk-content-exporter' ) ) : '—';
+			} else if ( 'fixed' === item.kind ) {
+				const value = item.values[ '*' ];
+				/* translators: %s: fixed value written by a row, between quotes. */
+				what = undefined === value || '' === value ? '—' : sprintf( __( '"%s"', 'kk-content-exporter' ), String( value ) );
+			} else if ( 'template' === item.kind ) {
+				const text = String( item.templates[ '*' ] || '' );
+				what = '' === text ? '—' : ( text.length > 40 ? text.slice( 0, 39 ) + '…' : text );
+			} else if ( 'lookup' === item.kind || 'condition' === item.kind ) {
+				const input = item.inputs[ '*' ] ? sourceLabel( item.inputs[ '*' ] ) : '—';
+				what = 'lookup' === item.kind
+					/* translators: %s: field read by a lookup table. */
+					? sprintf( __( 'Lookup table (%s)', 'kk-content-exporter' ), input )
+					/* translators: %s: field checked by a condition. */
+					: sprintf( __( 'Condition (%s)', 'kk-content-exporter' ), input );
+			}
+			const isTemplate = 'template' === item.kind;
+			const type = isTemplate ? ( 'html' === item.type ? 'html' : 'string' ) : ( item.type || 'auto' );
+			const typeLabel = ( TYPES.find( function ( entry ) {
+				return entry[ 0 ] === type;
+			} ) || [ type, type ] )[ 1 ];
+			/* translators: 1: output key of a row, 2: what the row writes, for example a field. */
+			const parts = [ sprintf( __( '%1$s ← %2$s', 'kk-content-exporter' ), key, what ), typeLabel ];
+			if ( isEditable( item ) && hasExceptions( item ) ) {
+				const count = scopesOf( scopeMap( item ) ).length - 1;
+				/* translators: %d: number of exceptions for single post types of a row. */
+				parts.push( sprintf( _n( '%d exception', '%d exceptions', count, 'kk-content-exporter' ), count ) );
+			}
+			const options = item.options || {};
+			if ( undefined !== item.max_length || true === options.raw || true === options.shortcodes ) {
+				parts.push( __( 'advanced options', 'kk-content-exporter' ) );
+			}
+			return parts.join( _x( ' · ', 'separator of the parts of a summary', 'kk-content-exporter' ) );
+		}
+
+		/**
+		 * Shows the open or closed state of a row in the page without drawing it again.
+		 *
+		 * @param {Object} row Row.
+		 */
+		function showExpanded( row ) {
+			const body = document.getElementById( 'kkce-mapping-' + row.uid + '-body' );
+			const toggle = document.getElementById( 'kkce-mapping-' + row.uid + '-toggle' );
+			if ( ! body || ! toggle ) {
+				return;
+			}
+			body.hidden = !! row.collapsed;
+			toggle.setAttribute( 'aria-expanded', row.collapsed ? 'false' : 'true' );
+			const icon = toggle.querySelector( '.dashicons' );
+			icon.classList.toggle( 'dashicons-arrow-right-alt2', !! row.collapsed );
+			icon.classList.toggle( 'dashicons-arrow-down-alt2', ! row.collapsed );
 		}
 
 		/**
@@ -1640,69 +1948,81 @@
 			const editable = isEditable( row.data );
 
 			fieldset.appendChild( el( 'legend', {}, legendText( index, row ) ) );
+
+			// Header: the summary opens and closes the row (interface state, not a change of the feed), then the
+			// actions on the whole row, as icons with an accessible name.
+			const header = el( 'div', { className: 'kkce-mapping-header' } );
+			const toggle = el( 'button', {
+				type: 'button',
+				id: prefix + '-toggle',
+				className: 'button-link kkce-mapping-toggle',
+				ariaExpanded: row.collapsed ? 'false' : 'true',
+				ariaControls: prefix + '-body',
+				'data-uid': String( row.uid ),
+				'data-action': 'toggle',
+			} );
+			toggle.appendChild( el( 'span', { className: 'dashicons ' + ( row.collapsed ? 'dashicons-arrow-right-alt2' : 'dashicons-arrow-down-alt2' ), ariaHidden: 'true' } ) );
+			toggle.appendChild( el( 'span', { className: 'kkce-mapping-summary' }, rowSummary( row ) ) );
+			header.appendChild( toggle );
+			const actions = el( 'div', { className: 'kkce-mapping-actions' } );
+			/* translators: %d: position of the row. */
+			actions.appendChild( iconButton( row, 'up', 'dashicons-arrow-up-alt', { id: prefix + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move up: row %d', 'kk-content-exporter' ), index + 1 ) } ) );
+			/* translators: %d: position of the row. */
+			actions.appendChild( iconButton( row, 'down', 'dashicons-arrow-down-alt', { id: prefix + '-down', disabled: index === rows.length - 1, ariaLabel: sprintf( __( 'Move down: row %d', 'kk-content-exporter' ), index + 1 ) } ) );
+			/* translators: %d: position of the row. */
+			actions.appendChild( iconButton( row, 'remove', 'dashicons-trash', { id: prefix + '-remove', className: 'button button-link-delete kkce-mapping-icon', ariaLabel: sprintf( __( 'Remove row %d', 'kk-content-exporter' ), index + 1 ) } ) );
+			header.appendChild( actions );
+			fieldset.appendChild( header );
+
+			// Closed controls are hidden, so they cannot take the focus.
+			const body = el( 'div', { className: 'kkce-mapping-body', id: prefix + '-body', hidden: !! row.collapsed } );
+			fieldset.appendChild( body );
 			fields.appendChild( labelled( __( 'JSON key', 'kk-content-exporter' ), key ) );
 			if ( editable ) {
 				fields.appendChild( labelled( __( 'Rule', 'kk-content-exporter' ), select( { id: prefix + '-kind', className: 'kkce-mapping-kind', 'data-uid': String( row.uid ) }, KINDS, row.data.kind ) ) );
 			}
+			body.appendChild( fields );
+			body.appendChild( error );
+
+			// The output type closes the row, after the configuration of the rule: key → rule → configuration → output.
+			const output = el( 'div', { className: 'kkce-mapping-fields kkce-mapping-output' } );
 			// A template always gives a text: plain or HTML.
 			const isTemplate = 'template' === row.data.kind;
 			const types = isTemplate ? TYPES.filter( function ( type ) {
 				return 'string' === type[ 0 ] || 'html' === type[ 0 ];
 			} ) : TYPES;
 			const type = isTemplate ? ( 'html' === row.data.type ? 'html' : 'string' ) : ( row.data.type || 'auto' );
-			fields.appendChild( labelled( __( 'Output type', 'kk-content-exporter' ), select( { id: prefix + '-type', className: 'kkce-mapping-type', 'data-uid': String( row.uid ) }, types, type ) ) );
-			if ( editable && hasTextOutput( Object.assign( {}, row.data, { type: type } ) ) ) {
-				const hint = el( 'span', { id: prefix + '-max-length-help', className: 'description' }, __( 'Characters; empty: no limit.', 'kk-content-exporter' ) );
-				const field = labelled( LABEL_MAX_LENGTH, el( 'input', {
-					type: 'number',
-					id: prefix + '-max-length',
-					className: 'small-text kkce-mapping-max-length',
-					min: 1,
-					max: data.maxLengthLimit,
-					step: 1,
-					value: undefined === row.data.max_length ? '' : String( row.data.max_length ),
-					ariaDescribedby: hint.id,
-					'data-uid': String( row.uid ),
-				} ) );
-				field.appendChild( hint );
-				fields.appendChild( field );
-			}
-			fieldset.appendChild( fields );
-			fieldset.appendChild( error );
+			output.appendChild( labelled( __( 'Output type', 'kk-content-exporter' ), select( { id: prefix + '-type', className: 'kkce-mapping-type', 'data-uid': String( row.uid ) }, types, type ) ) );
+			const textOutput = editable && hasTextOutput( Object.assign( {}, row.data, { type: type } ) );
 
 			if ( ! editable ) {
-				fieldset.appendChild( el( 'p', { className: 'kkce-mapping-kept' }, __( 'This rule cannot be edited here yet and is kept unchanged.', 'kk-content-exporter' ) ) );
+				body.appendChild( el( 'p', { className: 'kkce-mapping-kept' }, __( 'This rule cannot be edited here yet and is kept unchanged.', 'kk-content-exporter' ) ) );
 			} else if ( 'field' === row.data.kind ) {
-				appendScopes( fieldset, row, renderChain );
-				appendIfAny( fieldset, renderOptions( row ) );
+				appendScopes( body, row, renderChain );
 			} else if ( 'template' === row.data.kind ) {
-				fieldset.appendChild( el( 'p', { id: prefix + '-template-help', className: 'description' }, __( 'Write the text and put the fields between braces, for example {core.title}. {a|b|"text"} uses the first one with a value; a part between square brackets, such as {meta.city}[, {meta.address}], is written only when all its fields have a value; write {{, }}, [[ and ]] for a brace or a bracket. "Insert field" writes a field where the cursor is.', 'kk-content-exporter' ) ) );
-				appendScopes( fieldset, row, renderTemplate );
-				// Redrawn alone while the template is typed (see the input handler), so the caret stays.
-				const slot = el( 'div', { className: 'kkce-mapping-warnings-slot' } );
-				fillWarnings( slot, row );
-				fieldset.appendChild( slot );
+				body.appendChild( el( 'p', { id: prefix + '-template-help', className: 'description' }, __( 'Write the text and put the fields between braces, for example {core.title}. {a|b|"text"} uses the first one with a value; a part between square brackets, such as {meta.city}[, {meta.address}], is written only when all its fields have a value; write {{, }}, [[ and ]] for a brace or a bracket. "Insert field" writes a field where the cursor is.', 'kk-content-exporter' ) ) );
+				appendScopes( body, row, renderTemplate );
 			} else if ( 'lookup' === row.data.kind || 'condition' === row.data.kind ) {
 				// Same inputs for both rules; only the description and the table or the check differ.
 				const isLookup = 'lookup' === row.data.kind;
-				fieldset.appendChild( el( 'p', { className: 'description' }, isLookup
+				body.appendChild( el( 'p', { className: 'description' }, isLookup
 					? __( 'The value of the field is compared with the lines of the table, exactly (capital letters included, spaces at the ends ignored); the first line that matches gives the output. Lists cannot be read.', 'kk-content-exporter' )
 					: __( 'One check on one field: when it is true the first output is written, otherwise the second. Values are compared exactly (capital letters included, spaces at the ends ignored); "contains" looks for a text inside the value, or for one element of a list, such as the categories; lists can be checked only with "is empty", "is not empty" and "contains".', 'kk-content-exporter' ) ) );
-				appendScopes( fieldset, row, renderInput );
-				fieldset.appendChild( isLookup ? renderCases( row ) : renderCheck( row ) );
-				appendIfAny( fieldset, renderOptions( row ) );
+				appendScopes( body, row, renderInput );
+				body.appendChild( isLookup ? renderCases( row ) : renderCheck( row ) );
 			} else {
-				appendScopes( fieldset, row, renderValue );
+				appendScopes( body, row, renderValue );
 			}
 
-			const actions = el( 'div', { className: 'kkce-mapping-actions' } );
-			/* translators: %d: position of the row. */
-			actions.appendChild( button( row, 'up', LABEL_UP, { id: prefix + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move up: row %d', 'kk-content-exporter' ), index + 1 ) } ) );
-			/* translators: %d: position of the row. */
-			actions.appendChild( button( row, 'down', LABEL_DOWN, { id: prefix + '-down', disabled: index === rows.length - 1, ariaLabel: sprintf( __( 'Move down: row %d', 'kk-content-exporter' ), index + 1 ) } ) );
-			/* translators: %d: position of the row. */
-			actions.appendChild( button( row, 'remove', LABEL_REMOVE, { id: prefix + '-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove row %d', 'kk-content-exporter' ), index + 1 ) } ) );
-			fieldset.appendChild( actions );
+			body.appendChild( output );
+			if ( editable ) {
+				appendIfAny( body, renderAdvanced( row, textOutput ) );
+				// Redrawn alone while a template is typed (see the input handler), so the caret stays.
+				const slot = el( 'div', { className: 'kkce-mapping-warnings-slot' } );
+				fillWarnings( slot, row );
+				body.appendChild( slot );
+			}
+
 			item.appendChild( fieldset );
 
 			return item;
@@ -1726,6 +2046,10 @@
 				}
 				error.textContent = message;
 				error.hidden = '' === message;
+				if ( '' !== message && row.collapsed ) {
+					row.collapsed = false;
+					showExpanded( row );
+				}
 				if ( '' === message ) {
 					input.removeAttribute( 'aria-invalid' );
 				} else {
@@ -1745,12 +2069,22 @@
 				list.appendChild( renderRow( row, index ) );
 			} );
 			empty.hidden = rows.length > 0;
+			bulk.hidden = rows.length < 2;
 			addButton.disabled = rows.length >= data.maxRows;
 			/* translators: %d: maximum number of rows of a mapping. */
 			limit.textContent = sprintf( __( 'A mapping can have at most %d rows.', 'kk-content-exporter' ), data.maxRows );
 			limit.hidden = rows.length < data.maxRows;
 			preview.setVisible( rows.length > 0 );
 			checkKeys();
+			if ( metaTarget ) {
+				const target = document.getElementById( metaTarget.id );
+				if ( target ) {
+					target.closest( '.kkce-mapping-field' ).after( renderMetaForm() );
+				} else {
+					// Its field is gone (row removed, rule changed): the form goes too.
+					metaTarget = null;
+				}
+			}
 
 			if ( focusId ) {
 				const target = document.getElementById( focusId );
@@ -1795,15 +2129,25 @@
 				return;
 			}
 			rows = ( catalog.suggested_rows || [] ).map( function ( row ) {
-				return { uid: nextId++, data: withGeneralScope( JSON.parse( JSON.stringify( row ) ) ), autoKey: row.key };
+				return { uid: nextId++, data: withGeneralScope( JSON.parse( JSON.stringify( row ) ) ), autoKey: row.key, collapsed: false };
 			} );
 		}
+
+		[ [ expandAll, false ], [ collapseAll, true ] ].forEach( function ( pair ) {
+			// Opening or closing the rows is not a change of the feed: no commit.
+			pair[ 0 ].addEventListener( 'click', function () {
+				rows.forEach( function ( row ) {
+					row.collapsed = pair[ 1 ];
+				} );
+				render( pair[ 0 ].id );
+			} );
+		} );
 
 		addButton.addEventListener( 'click', function () {
 			if ( rows.length >= data.maxRows ) {
 				return;
 			}
-			const row = { uid: nextId++, data: { key: '', kind: 'field', type: 'auto', sources: { '*': [] } }, autoKey: '' };
+			const row = { uid: nextId++, data: { key: '', kind: 'field', type: 'auto', sources: { '*': [] } }, autoKey: '', collapsed: false };
 			rows.push( row );
 			commit( true );
 			render( 'kkce-mapping-' + row.uid + '-key' );
@@ -1824,7 +2168,8 @@
 				rows.splice( index, 1 );
 				commit( true );
 				const next = rows[ index ] || rows[ index - 1 ];
-				render( next ? 'kkce-mapping-' + next.uid + '-key' : '' );
+				// The next row may be closed: its header takes the focus.
+				render( next ? 'kkce-mapping-' + next.uid + '-toggle' : '' );
 				if ( ! next ) {
 					addButton.focus();
 				}
@@ -1935,6 +2280,13 @@
 				return;
 			}
 
+			// Opening or closing the picker changes nothing of the feed: no commit, so no unsaved change.
+			if ( 'scope-open' === action || 'scope-cancel' === action ) {
+				row.pickerOpen = 'scope-open' === action;
+				render( prefix + ( row.pickerOpen ? '-exception' : '-exception-open' ) );
+				return;
+			}
+
 			if ( 'scope-add' === action ) {
 				const picker = document.getElementById( prefix + '-exception' );
 				const postType = picker ? picker.value : '';
@@ -1942,6 +2294,7 @@
 					return;
 				}
 				map[ postType ] = isField ? [] : '';
+				row.pickerOpen = false;
 				commit( true );
 				const focus = { field: '-0-source', template: '-template', lookup: '-input', condition: '-input' }[ row.data.kind ] || '-value';
 				render( prefix + '-' + scopeId( postType ) + focus );
@@ -1955,8 +2308,8 @@
 				delete map[ scope ];
 				commit( true );
 				render( '' );
-				// The post type is free again, so the "Different for" picker exists: it takes the focus.
-				const target = document.getElementById( prefix + '-exception' ) || document.getElementById( prefix + '-key' );
+				// The post type is free again, so the control that adds an exception exists: it takes the focus.
+				const target = document.getElementById( prefix + '-exception-open' ) || document.getElementById( prefix + '-exception' ) || document.getElementById( prefix + '-key' );
 				if ( target ) {
 					target.focus();
 				}
@@ -2011,6 +2364,12 @@
 				return;
 			}
 			const action = control.getAttribute( 'data-action' );
+			if ( 'toggle' === action ) {
+				// Interface state only: no commit, so no unsaved change.
+				rows[ index ].collapsed = ! rows[ index ].collapsed;
+				showExpanded( rows[ index ] );
+				return;
+			}
 			if ( 'up' === action || 'down' === action || 'remove' === action ) {
 				rowAction( action, index );
 				return;
@@ -2020,6 +2379,11 @@
 
 		list.addEventListener( 'input', function ( event ) {
 			const input = event.target;
+			if ( OTHER_META === input.value ) {
+				// Not a change of the feed: the page must not warn about it.
+				event.stopPropagation();
+				return;
+			}
 			const index = indexOf( input.getAttribute( 'data-uid' ) || '' );
 			if ( -1 === index ) {
 				return;
@@ -2032,6 +2396,7 @@
 				commit( true );
 				// Update the legend and the errors without drawing the row again, so the caret stays where it is.
 				input.closest( 'li' ).querySelector( 'legend' ).textContent = legendText( index, row );
+				input.closest( 'li' ).querySelector( '.kkce-mapping-summary' ).textContent = rowSummary( row );
 				checkKeys();
 				return;
 			}
@@ -2049,6 +2414,11 @@
 					row.data.max_length = /^[0-9]+$/.test( input.value.trim() ) ? parseInt( input.value.trim(), 10 ) : input.value;
 				}
 				commit( true );
+				// The row is not drawn again (the caret stays): only the title of the advanced options follows.
+				const title = input.closest( 'details' ) && input.closest( 'details' ).querySelector( 'summary' );
+				if ( title ) {
+					title.textContent = advancedTitle( row, true );
+				}
 			}
 
 			if ( input.classList.contains( 'kkce-mapping-template' ) ) {
@@ -2081,6 +2451,12 @@
 				}
 				commit( true );
 			}
+
+			// The summary in the header follows what is typed (fixed value, template, maximum length).
+			const summary = input.closest( 'li' ).querySelector( '.kkce-mapping-summary' );
+			if ( summary ) {
+				summary.textContent = rowSummary( row );
+			}
 		} );
 
 		/**
@@ -2106,6 +2482,26 @@
 				return;
 			}
 			const row = rows[ index ];
+
+			if ( OTHER_META === control.value ) {
+				// Opens the form under this list; the list keeps its value and the focus (arrow keys choose at once on
+				// some systems, so the focus is not moved). Not a change of the feed.
+				event.stopPropagation();
+				metaTarget = {
+					id: control.id,
+					uid: row.uid,
+					kind: [ 'kkce-mapping-source', 'kkce-mapping-input', 'kkce-mapping-output-source' ].find( function ( name ) {
+						return control.classList.contains( name );
+					} ),
+					scope: control.getAttribute( 'data-scope' ) || '',
+					index: control.getAttribute( 'data-index' ) || '0',
+				};
+				metaMessage = '';
+				metaTyped = '';
+				render( control.id );
+				announce( __( 'Type the post meta key below the field.', 'kk-content-exporter' ) );
+				return;
+			}
 
 			if ( control.classList.contains( 'kkce-mapping-key' ) ) {
 				// Announced when the field is left, not at every key: the message is also linked to the field.
@@ -2206,20 +2602,68 @@
 		} );
 
 		/**
-		 * Shows a message about the typed meta keys. The element has `role="status"`, so screen readers announce
-		 * it by themselves (a second announcement through `announce()` would be read twice).
+		 * Form of a post meta key that is not in the lists, under the list of fields that opened it. Typing in it is
+		 * not a change of the feed; using the key chooses it in that list.
+		 *
+		 * @return {HTMLElement} The form.
+		 */
+		function renderMetaForm() {
+			const form = el( 'div', { className: 'kkce-mapping-meta' } );
+			const input = el( 'input', { type: 'text', id: 'kkce-meta-key', className: 'regular-text kkce-mapping-meta-key', autocomplete: 'off', spellcheck: false, maxLength: data.metaKeyMaxLength || 191, value: metaTyped, ariaDescribedby: 'kkce-meta-key-help kkce-meta-message' } );
+			const use = el( 'button', { type: 'button', className: 'button', id: 'kkce-meta-use' }, __( 'Use this key', 'kk-content-exporter' ) );
+			const cancel = el( 'button', { type: 'button', className: 'button-link', id: 'kkce-meta-cancel' }, __( 'Cancel', 'kk-content-exporter' ) );
+			form.appendChild( el( 'label', { htmlFor: input.id }, __( 'Post meta key', 'kk-content-exporter' ) ) );
+			form.appendChild( input );
+			form.appendChild( use );
+			form.appendChild( cancel );
+			form.appendChild( el( 'p', { className: 'description', id: 'kkce-meta-key-help' }, __( 'For a custom field that is not in the lists. If the item has no such field, the value is null.', 'kk-content-exporter' ) ) );
+			form.appendChild( el( 'p', { className: 'description kkce-mapping-meta-message', id: 'kkce-meta-message', role: 'status' }, metaMessage ) );
+			// The key typed is not a change of the feed until it is used: the page must not warn about it.
+			[ 'input', 'change' ].forEach( function ( type ) {
+				input.addEventListener( type, function ( event ) {
+					event.stopPropagation();
+					metaTyped = input.value;
+				} );
+			} );
+			input.addEventListener( 'keydown', function ( event ) {
+				if ( 'Enter' === event.key ) {
+					// Enter must not save the feed.
+					event.preventDefault();
+					addMetaKey( input.value );
+				}
+			} );
+			use.addEventListener( 'click', function () {
+				addMetaKey( input.value );
+			} );
+			cancel.addEventListener( 'click', function () {
+				const back = metaTarget.id;
+				metaTarget = null;
+				render( back );
+			} );
+			return form;
+		}
+
+		/**
+		 * Shows a message in the form of a post meta key. The element has `role="status"`, so screen readers
+		 * announce it by themselves.
 		 *
 		 * @param {string} message Message.
 		 */
 		function showMetaMessage( message ) {
-			metaMessage.textContent = message;
+			metaMessage = message;
+			const node = document.getElementById( 'kkce-meta-message' );
+			if ( node ) {
+				node.textContent = message;
+			}
 		}
 
 		/**
 		 * Reports the result of a typed meta key once the catalog has answered: the server refuses the keys that
-		 * cannot be a source (internal keys, keys with spaces or other special characters).
+		 * cannot be a source (internal keys, keys with spaces or other special characters). An accepted key is
+		 * chosen in the list of fields that opened the form.
 		 *
 		 * @param {string[]} refused Keys the server did not list.
+		 * @return {string} Id of the element that takes the focus, or an empty string.
 		 */
 		function reportMetaKeys( refused ) {
 			metaKeys = metaKeys.filter( function ( key ) {
@@ -2229,19 +2673,44 @@
 				/* translators: %s: meta keys that cannot be used, separated by commas. */
 				showMetaMessage( sprintf( __( 'This key cannot be used: %s. Keys of WordPress and of this plugin, and keys with spaces or special characters, are not allowed.', 'kk-content-exporter' ), refused.join( ', ' ) ) );
 				pendingMetaKey = '';
-			} else if ( '' !== pendingMetaKey ) {
-				/* translators: %s: meta key. */
-				showMetaMessage( sprintf( __( 'Field added: %s. Choose it in the list of fields of a row.', 'kk-content-exporter' ), pendingMetaKey ) );
-				metaInput.value = '';
-				pendingMetaKey = '';
+				return metaTarget ? 'kkce-meta-key' : '';
 			}
+			if ( '' === pendingMetaKey || ! metaTarget ) {
+				return '';
+			}
+			const id = 'meta.' + pendingMetaKey;
+			const row = rows[ indexOf( String( metaTarget.uid ) ) ];
+			const focus = metaTarget.id;
+			if ( row && 'kkce-mapping-source' === metaTarget.kind ) {
+				row.data.sources[ metaTarget.scope ][ parseInt( metaTarget.index, 10 ) ] = id;
+				if ( '0' === metaTarget.index ) {
+					proposeKey( row, id );
+				}
+			} else if ( row && 'kkce-mapping-input' === metaTarget.kind ) {
+				row.data.inputs[ metaTarget.scope ] = id;
+				if ( '*' === metaTarget.scope ) {
+					proposeKey( row, id );
+				}
+			} else if ( row && 'kkce-mapping-output-source' === metaTarget.kind ) {
+				setOutput( row, metaTarget.index, { source: id } );
+			}
+			/* translators: %s: meta key. */
+			announce( sprintf( __( 'Field added: %s.', 'kk-content-exporter' ), pendingMetaKey ) );
+			metaTarget = null;
+			metaMessage = '';
+			metaTyped = '';
+			pendingMetaKey = '';
+			commit( true );
+			return focus;
 		}
 
 		/**
-		 * Adds the key typed by the administrator to the lists of fields.
+		 * Adds a key typed by the administrator to the lists of fields: the catalog is asked again with it.
+		 *
+		 * @param {string} value Typed key.
 		 */
-		function addMetaKey() {
-			const key = metaInput.value.trim();
+		function addMetaKey( value ) {
+			const key = String( value ).trim();
 			if ( '' === key ) {
 				showMetaMessage( __( 'Type the post meta key first.', 'kk-content-exporter' ) );
 				return;
@@ -2274,15 +2743,6 @@
 			} );
 			return found;
 		}
-
-		metaButton.addEventListener( 'click', addMetaKey );
-		metaInput.addEventListener( 'keydown', function ( event ) {
-			if ( 'Enter' === event.key ) {
-				// Enter must not save the feed.
-				event.preventDefault();
-				addMetaKey();
-			}
-		} );
 
 		/**
 		 * Asks the catalog of the checked post types.
@@ -2319,10 +2779,10 @@
 					return;
 				}
 				catalog = response;
-				reportMetaKeys( response.refused_meta_keys || [] );
+				const focus = reportMetaKeys( response.refused_meta_keys || [] );
 				proposeRows();
 				commit( false );
-				render( document.activeElement && container.contains( document.activeElement ) ? document.activeElement.id : '' );
+				render( focus || ( document.activeElement && container.contains( document.activeElement ) ? document.activeElement.id : '' ) );
 				preview.typesChanged();
 			} ).catch( function () {
 				if ( current === request ) {

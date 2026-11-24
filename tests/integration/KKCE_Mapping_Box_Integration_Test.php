@@ -326,13 +326,16 @@ class KKCE_Mapping_Box_Integration_Test extends WP_UnitTestCase {
 
 
 	/**
-	 * The mapping box explains what the mapping is, and how the rows work in a section that can be opened.
+	 * The mapping box opens with a short introduction that points to the preview; the details (keys always
+	 * present, in the order of the rows, null without a value) and how the rows work are in a section that can be
+	 * opened.
 	 */
 	public function test_the_box_explains_the_mapping() {
 		$html = $this->box( $this->feed() );
 
-		$this->assertMatchesRegularExpression( '#<p class="description kkce-box-intro">[^<]+</p>#', $html );
-		$this->assertMatchesRegularExpression( '#<details class="kkce-mapping-help">\s*<summary>[^<]+</summary>\s*<ul>(\s*<li>.+?</li>){9}\s*</ul>\s*</details>#s', $html );
+		$this->assertMatchesRegularExpression( '#<p class="description kkce-box-intro">[^<]{1,140}preview[^<]*</p>#', $html, 'A short introduction that points to the preview.' );
+		$this->assertMatchesRegularExpression( '#<details class="kkce-mapping-help">\s*<summary>[^<]+</summary>\s*<ul>(\s*<li>.+?</li>){10}\s*</ul>\s*</details>#s', $html );
+		$this->assertMatchesRegularExpression( '#<ul>\s*<li>[^<]*order of the rows[^<]*null[^<]*</li>#', $html, 'The first point of the guide explains the keys.' );
 		$this->assertLessThan( strpos( $html, 'id="kkce-feed-mapping"' ), strpos( $html, 'kkce-mapping-help' ), 'The explanation comes before the rows.' );
 	}
 }

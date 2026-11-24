@@ -103,10 +103,11 @@ final class Mapping_Box {
 			}
 		}
 		?>
-		<p class="description kkce-box-intro"><?php esc_html_e( 'The mapping decides what each item of the feed contains: every row adds one key to the JSON of every item, with the value it reads from the content or a fixed value. Every item has all the keys, in the order of the rows; a key without a value is written with null, so the program that reads the feed always finds the same keys.', 'kk-content-exporter' ); ?></p>
+		<p class="description kkce-box-intro"><?php esc_html_e( 'Each row defines one key of the JSON of every item. Use the preview to check the result before saving.', 'kk-content-exporter' ); ?></p>
 		<details class="kkce-mapping-help">
 			<summary><?php esc_html_e( 'How the rows work', 'kk-content-exporter' ); ?></summary>
 			<ul>
+				<li><?php esc_html_e( 'Keys: every item has all the keys, in the order of the rows; a key without a value is written as null, so the program that reads the feed always finds the same keys.', 'kk-content-exporter' ); ?></li>
 				<li><?php esc_html_e( 'JSON key: the name of the key in every item, for example "title". It is proposed from the field you choose, and you can change it.', 'kk-content-exporter' ); ?></li>
 				<li><?php esc_html_e( 'Rule "Field": the value is read from a field of the content. With "Add fallback" another field is used when the first one is empty; with "Different for" a post type can read other fields.', 'kk-content-exporter' ); ?></li>
 				<li><?php esc_html_e( 'Rule "Fixed value": every item gets the same text, for example the name of the site; with "Different for" a post type can get another one.', 'kk-content-exporter' ); ?></li>

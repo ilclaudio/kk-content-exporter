@@ -40,9 +40,18 @@
 	margin-bottom: 0.25em;
 }
 
+/* One width for the selects and the text fields of a row, so the controls line up. */
 .kkce-mapping-field select,
 .kkce-mapping-field input[type="text"] {
+	width: 18em;
 	max-width: 100%;
+}
+
+/* The output type closes the row, after the configuration of the rule. */
+.kkce-mapping-output {
+	border-top: 1px solid #dcdcde;
+	margin-top: 1em;
+	padding-top: 0.75em;
 }
 
 .kkce-mapping-kept {
@@ -59,28 +68,61 @@
 	border-color: #d63638;
 }
 
-.kkce-mapping-actions {
+/* Header of a row: the summary that opens and closes it, then the actions as icons. */
+.kkce-mapping-header {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.5em 1em;
 	align-items: center;
+	justify-content: space-between;
+}
+
+.kkce-mapping-toggle {
+	display: inline-flex;
+	gap: 0.25em;
+	align-items: center;
+	min-width: 0;
+	text-align: left;
+	text-decoration: none;
+	color: inherit;
+	overflow-wrap: anywhere;
+}
+
+.kkce-mapping-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25em;
+	align-items: center;
+}
+
+.kkce-mapping-icon .dashicons {
+	vertical-align: middle;
+}
+
+.kkce-mapping-body {
 	margin-top: 0.75em;
+}
+
+.kkce-mapping-bulk {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5em;
+	margin: 0 0 0.75em;
 }
 
 .kkce-post-type-filter {
 	margin-top: 0;
 }
 
-.kkce-mapping-scope {
+/* One container per row: a scope is not a box of its own, its name (shown with exceptions) is a plain heading. */
+.kkce-mapping-row .kkce-mapping-scope {
 	border: 0;
-	border-left: 3px solid #dcdcde;
 	margin: 0.75em 0 0;
-	padding: 0 0 0 0.75em;
+	padding: 0;
 }
 
-.kkce-mapping-scope legend {
-	font-weight: 400;
-	font-style: italic;
+.kkce-mapping-row .kkce-mapping-scope legend {
+	font-weight: 600;
 	padding: 0;
 }
 
@@ -135,6 +177,24 @@
 	margin-right: 1.5em;
 }
 
+/* Advanced options of a row: closed at first, the title sums up what is set. */
+.kkce-mapping-advanced {
+	margin-top: 0.75em;
+}
+
+.kkce-mapping-advanced summary {
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.kkce-mapping-advanced .kkce-mapping-options {
+	margin-top: 0.5em;
+}
+
+.kkce-mapping-advanced .kkce-mapping-field label {
+	display: block;
+}
+
 .kkce-mapping-warning {
 	border-left: 3px solid #dba617;
 	padding-left: 0.5em;
@@ -148,6 +208,30 @@
 .kkce-mapping-layout {
 	display: grid;
 	gap: 1.5em;
+}
+
+/* The column of the rows is a container too: beside the preview it is narrower than the box. */
+.kkce-mapping-editor {
+	container-type: inline-size;
+}
+
+/* Narrow column of the rows: one control per line, no horizontal scroll. */
+@container (max-width: 600px) {
+	.kkce-mapping-fields,
+	.kkce-mapping-chain li,
+	.kkce-mapping-value,
+	.kkce-mapping-default,
+	.kkce-mapping-insert,
+	.kkce-mapping-exception {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.kkce-mapping-field select,
+	.kkce-mapping-field input[type="text"],
+	.kkce-mapping-case input[type="text"] {
+		width: 100%;
+	}
 }
 
 @container (min-width: 900px) {
@@ -192,24 +276,47 @@
 	margin-top: 1em;
 }
 
-.kkce-preview-type select {
-	max-width: 100%;
+/* A panel per post type: the title names the type and the item, also when the panel is closed. */
+.kkce-preview-type summary {
+	cursor: pointer;
+	font-weight: 600;
+	overflow-wrap: anywhere;
 }
 
-.kkce-preview-source {
-	margin: 0.5em 0 0.25em;
-	font-weight: 600;
+.kkce-preview-type[open] summary {
+	margin-bottom: 0.5em;
+}
+
+.kkce-preview-tools {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5em;
+	margin-top: 0.5em;
+}
+
+/* Always in the page, also when empty, so that screen readers announce the message of a copy. */
+.kkce-preview-copied {
+	margin: 0.5em 0 0;
+}
+
+.kkce-preview-type select {
+	max-width: 100%;
 }
 
 .kkce-preview-json {
 	background: #f6f7f7;
 	border: 1px solid #dcdcde;
 	margin: 0;
-	max-height: 32em;
+	/* Compact until it is expanded: the whole JSON is always there, it scrolls. */
+	max-height: 14em;
 	overflow: auto;
 	padding: 0.75em;
 	white-space: pre-wrap;
 	word-break: break-word;
+}
+
+.kkce-preview-json.is-expanded {
+	max-height: none;
 }
 
 .kkce-mapping-template-scope textarea {
