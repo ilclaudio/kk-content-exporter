@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-25T21:58:14+01:00\n"
+"POT-Creation-Date: 2026-11-25T22:20:38+01:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: kk-content-exporter\n"
@@ -878,51 +878,51 @@ msgstr ""
 msgid "Configurations of the JSON feeds."
 msgstr ""
 
-#: includes/class-feed-post-type.php:189
+#: includes/class-feed-post-type.php:190
 msgid "Feeds"
 msgstr ""
 
-#: includes/class-feed-post-type.php:190
+#: includes/class-feed-post-type.php:191
 msgid "Feed"
 msgstr ""
 
-#: includes/class-feed-post-type.php:191
+#: includes/class-feed-post-type.php:192
 msgid "Content Exporter"
 msgstr ""
 
-#: includes/class-feed-post-type.php:192
+#: includes/class-feed-post-type.php:193
 msgid "Add New"
 msgstr ""
 
-#: includes/class-feed-post-type.php:193
+#: includes/class-feed-post-type.php:194
 msgid "Add New Feed"
 msgstr ""
 
-#: includes/class-feed-post-type.php:194
+#: includes/class-feed-post-type.php:195
 msgid "Edit Feed"
 msgstr ""
 
-#: includes/class-feed-post-type.php:195
+#: includes/class-feed-post-type.php:196
 msgid "New Feed"
 msgstr ""
 
-#: includes/class-feed-post-type.php:196
+#: includes/class-feed-post-type.php:197
 msgid "View Feed"
 msgstr ""
 
-#: includes/class-feed-post-type.php:197
+#: includes/class-feed-post-type.php:198
 msgid "Search Feeds"
 msgstr ""
 
-#: includes/class-feed-post-type.php:198
+#: includes/class-feed-post-type.php:199
 msgid "No feeds found."
 msgstr ""
 
-#: includes/class-feed-post-type.php:199
+#: includes/class-feed-post-type.php:200
 msgid "No feeds found in Trash."
 msgstr ""
 
-#: includes/class-feed-post-type.php:200
+#: includes/class-feed-post-type.php:201
 msgid "All Feeds"
 msgstr ""
 

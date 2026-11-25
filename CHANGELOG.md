@@ -9,7 +9,7 @@ follows [Semantic Versioning](https://semver.org/). The version of the first ent
 Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 
-## [0.0.4] - Unreleased
+## [0.0.4] - 2026-11-25
 ### Added
 - Feed endpoint `GET /wp-json/kkce/v1/<slug>` with pages, stable order, public or Application Password access.
 - Date filters `modified_after`, `modified_before`, `published_after`; optional `lang` with Polylang.
