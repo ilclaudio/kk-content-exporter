@@ -352,7 +352,7 @@ final class Feed_Editor {
 		$result  = Feed_Form::process(
 			$input,
 			array(
-				'slug_is_taken'      => static fn( string $slug ): bool => self::slug_is_taken( $slug, $post_id ),
+				'slug_is_taken'      => static fn( string $slug ): bool => Feed_Post_Type::slug_is_taken( $slug, $post_id ),
 				'allowed_post_types' => array_keys( self::source_choices( $current['post_types'] ) ),
 				'max_per_page'       => Settings::get()['max_per_page'],
 				'current'            => $current,
@@ -403,6 +403,10 @@ final class Feed_Editor {
 		update_post_meta( $post_id, Feed_Meta::META_ACCESS, $values['access'] );
 		update_post_meta( $post_id, Feed_Meta::META_ACTIVE, $values['active'] );
 		update_post_meta( $post_id, Feed_Meta::META_PER_PAGE, $values['per_page'] );
+		if ( '' !== $values['slug'] ) {
+			// The feed has an address again: the warning of the slug lost on restore is no longer true.
+			delete_post_meta( $post_id, Feed_Meta::META_TAKEN_SLUG );
+		}
 
 		$mapping = self::$pending_mapping;
 		if ( null !== $mapping && array() === $mapping['errors'] ) {
@@ -452,6 +456,20 @@ final class Feed_Editor {
 			printf(
 				'<div class="notice notice-warning kkce-not-published"><p>%s</p></div>',
 				esc_html__( 'This feed is enabled but not published: its address answers with a "not found" error until the feed is published.', 'kk-content-exporter' )
+			);
+		}
+
+		$taken = get_post_meta( $post->ID, Feed_Meta::META_TAKEN_SLUG, true );
+		if ( '' === $post->post_name && is_string( $taken ) && '' !== $taken ) {
+			printf(
+				'<div class="notice notice-warning kkce-taken-slug"><p>%s</p></div>',
+				esc_html(
+					sprintf(
+						/* translators: %s: slug of the feed before it was moved to the trash. */
+						__( 'This feed was restored from the trash without its address: another feed now uses the slug "%s". Choose another slug to enable it.', 'kk-content-exporter' ),
+						$taken
+					)
+				)
 			);
 		}
 
@@ -529,30 +547,6 @@ final class Feed_Editor {
 	 */
 	private static function print_required_marker(): void {
 		echo '<span class="kkce-required">' . esc_html__( '(required)', 'kk-content-exporter' ) . '</span>';
-	}
-
-	/**
-	 * Whether another feed already uses a slug. Feeds in the trash are not counted: WordPress renames
-	 * their slug.
-	 *
-	 * @param string $slug    Slug to look for.
-	 * @param int    $post_id ID of the feed being saved, excluded from the search.
-	 * @return bool
-	 */
-	private static function slug_is_taken( string $slug, int $post_id ): bool {
-		$found = get_posts(
-			array(
-				'post_type'     => Feed_Post_Type::POST_TYPE,
-				'name'          => $slug,
-				'post_status'   => 'any',
-				'post__not_in'  => array( $post_id ),
-				'numberposts'   => 1,
-				'fields'        => 'ids',
-				'no_found_rows' => true,
-			)
-		);
-
-		return array() !== $found;
 	}
 
 	/**

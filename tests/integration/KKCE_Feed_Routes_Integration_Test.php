@@ -517,6 +517,74 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Cookie failures go through core authentication before the admin permission callback.
+	 * Missing nonces are anonymous (401); invalid or stale nonces are forbidden (403).
+	 *
+	 * @dataProvider admin_cookie_authentication_cases
+	 * @param bool   $logged_in       Whether the cookie still identifies the administrator.
+	 * @param string $nonce_kind      Valid, invalid or missing REST nonce.
+	 * @param int    $expected_status Served HTTP status.
+	 */
+	public function test_served_admin_cookie_authentication_headers( bool $logged_in, string $nonce_kind, int $expected_status ) {
+		$previous_cookie  = $_COOKIE;
+		$previous_request = $_REQUEST;
+		$previous_server  = $_SERVER;
+		$had_cookie_auth  = array_key_exists( 'wp_rest_auth_cookie', $GLOBALS );
+		$cookie_auth      = $GLOBALS['wp_rest_auth_cookie'] ?? null;
+		$previous_user    = get_current_user_id();
+		add_filter( 'wp_is_application_passwords_available', '__return_true' );
+		try {
+			wp_set_current_user( self::$admin );
+			$_COOKIE[ LOGGED_IN_COOKIE ] = wp_generate_auth_cookie( self::$admin, time() + HOUR_IN_SECONDS, 'logged_in' );
+			$nonce = wp_create_nonce( 'wp_rest' );
+			$_REQUEST = array();
+			unset( $_SERVER['HTTP_X_WP_NONCE'] );
+			if ( 'missing' !== $nonce_kind ) {
+				$_SERVER['HTTP_X_WP_NONCE'] = 'invalid' === $nonce_kind ? 'deliberately-invalid' : $nonce;
+			}
+			$GLOBALS['wp_rest_auth_cookie'] = $logged_in;
+			if ( ! $logged_in ) {
+				unset( $_COOKIE[ LOGGED_IN_COOKIE ] );
+				wp_set_current_user( 0 );
+			}
+
+			$response = $this->served_get( 'items', array( 'post_type' => 'post' ), 'kkce-admin/v1' );
+			$this->assertSame( $expected_status, $response['status'] );
+			if ( 401 === $expected_status ) {
+				$this->assertStringStartsWith( 'Basic ', $response['headers']['www-authenticate'] );
+			} else {
+				$this->assertArrayNotHasKey( 'www-authenticate', $response['headers'] );
+			}
+		} finally {
+			remove_filter( 'wp_is_application_passwords_available', '__return_true' );
+			$_COOKIE  = $previous_cookie;
+			$_REQUEST = $previous_request;
+			$_SERVER  = $previous_server;
+			if ( $had_cookie_auth ) {
+				$GLOBALS['wp_rest_auth_cookie'] = $cookie_auth;
+			} else {
+				unset( $GLOBALS['wp_rest_auth_cookie'] );
+			}
+			wp_set_current_user( $previous_user );
+		}
+	}
+
+	/**
+	 * Cookie and nonce cases, including an editor nonce left over after its session ends.
+	 *
+	 * @return array<string, array{bool, string, int}> User state, nonce kind and status.
+	 */
+	public function admin_cookie_authentication_cases(): array {
+		return array(
+			'valid session and nonce'        => array( true, 'valid', 200 ),
+			'invalid nonce'                  => array( true, 'invalid', 403 ),
+			'missing nonce with a cookie'    => array( true, 'missing', 401 ),
+			'stale nonce after session loss' => array( false, 'valid', 403 ),
+			'no session or nonce'            => array( false, 'missing', 401 ),
+		);
+	}
+
+	/**
 	 * Invalid credentials fail before public-feed dispatch, but still require a challenge.
 	 */
 	public function test_remaining_401_challenges_for_invalid_public_feed_credentials() {

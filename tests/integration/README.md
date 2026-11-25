@@ -87,6 +87,7 @@ number of assertions changes with the version of WordPress.
 | `KKCE_Language_Provider_Integration_Test.php` | Without Polylang only the site language is offered (W3C form of the setting, `en-US` by default); the item language sources give null |
 | `KKCE_Mapping_Box_Integration_Test.php` | The Mapping box: short introduction and guide that can be opened, initial data, refused mapping shown again, script and style on the feed screens only |
 | `KKCE_Post_Type_Filter_Integration_Test.php` | The filter of the post types appears only when the list is long |
+| `KKCE_Feed_Slug_Integration_Test.php` | The slug of a feed outside its editor: a crafted Quick Edit request and any other write keep it; trash and restore keep working; a feed restored while another feed uses its slug gets none, keeps the taken slug for the editor and stays disabled |
 | `KKCE_Guide_Page_Integration_Test.php` | The guide page: after the settings in the menu, administrators only, the address of a tab, every tab a link with the current one marked and its content, an unknown tab shows the overview |
 | `KKCE_Settings_Page_Integration_Test.php` | The settings page: administrators only, sanitized values, the group of the date filters, diagnostics |
 | `KKCE_Taxonomy_Provider_Integration_Test.php` | Taxonomy sources: public taxonomies of each post type only, names of the assigned terms in alphabetical order (commas, entities, a child without its parent), first term, `[]` and null without terms, a lookup table on the first term in a feed |

@@ -32,6 +32,8 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 - Mapping rows laid out as a form: labels on the left, controls lined up, three parts (what, from where, how); the lookup table is a real table.
 - The status of a feed is an on/off switch.
 ### Fixed
+- Only the feed editor changes the slug of a feed: other writes, such as a crafted Quick Edit request, keep it.
+- A feed restored from the trash while another feed uses its slug comes back without a slug, instead of sharing the address.
 - The preview no longer reports "not known" for a field that only another post type of the feed offers.
 - Choosing an item in the preview no longer triggers an unsaved-changes warning.
 - 401 responses of the plugin's REST routes include a Basic authentication challenge when Application Passwords are available.

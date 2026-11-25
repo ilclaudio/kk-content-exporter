@@ -109,6 +109,8 @@ Yes, with Polylang. A feed returns every language unless the application adds `l
 
 A feed answers only when it is published, enabled and has at least one mapping row, and while **Serve the feeds** is on in **Content Exporter > Settings**. A draft, pending or scheduled feed answers "not found" even when it is enabled: the editor and the list of the feeds show a warning. Check also that the slug in the address is written exactly as in the feed, in lowercase.
 
+A feed restored from the trash starts disabled. If another feed took its slug meanwhile, it comes back without a slug: choose a new one in the editor, which says which slug is taken.
+
 Other errors: a wrong parameter (for example a page size above the maximum, a date without a time zone or an unknown language) gives "bad request" with an explanation; an authenticated feed read without an Application Password gives "unauthorized", and one read by a user without access gives "forbidden".
 
 = Does the plugin change my content or WordPress's REST API? =

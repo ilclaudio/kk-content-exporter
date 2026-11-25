@@ -137,6 +137,42 @@ final class Feed_Form {
 	}
 
 	/**
+	 * Mark that WordPress adds to the slug of a post in the trash, and removes on restore.
+	 */
+	private const TRASHED_SUFFIX = '__trashed';
+
+	/**
+	 * The slug a feed keeps when it is written outside its editor (Quick Edit, code, another plugin), where only
+	 * the editor may change the public address of a feed (decision of 2026-11-09).
+	 *
+	 * - Moving to the trash: what WordPress proposes (the slug moved aside with `__trashed`).
+	 * - Restoring from the trash: the slug before the trash, never a renamed one (`news-2`); none when another
+	 *   feed uses it meanwhile, so two feeds never share an address (decision of 2026-11-25). WordPress itself
+	 *   does not check drafts for duplicates.
+	 * - Any other write: the saved slug, also when it is empty (never one from the title).
+	 *
+	 * @param string                 $stored          Slug saved before this write.
+	 * @param string                 $proposed        Slug that WordPress is about to save.
+	 * @param string                 $previous_status Status before this write.
+	 * @param string                 $new_status      Status after this write.
+	 * @param callable(string): bool $slug_is_taken   Whether another feed uses a slug.
+	 * @return string The slug to save.
+	 */
+	public static function kept_slug( string $stored, string $proposed, string $previous_status, string $new_status, callable $slug_is_taken ): string {
+		if ( 'trash' === $new_status ) {
+			return 'trash' === $previous_status ? $stored : $proposed;
+		}
+
+		if ( 'trash' !== $previous_status ) {
+			return $stored;
+		}
+
+		$restored = str_ends_with( $stored, self::TRASHED_SUFFIX ) ? substr( $stored, 0, -strlen( self::TRASHED_SUFFIX ) ) : $stored;
+
+		return '' !== $restored && $slug_is_taken( $restored ) ? '' : $restored;
+	}
+
+	/**
 	 * Whether a stored slug can still serve an active feed: well formed, not reserved and not used by
 	 * another feed.
 	 *

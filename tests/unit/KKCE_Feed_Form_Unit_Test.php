@@ -416,4 +416,38 @@ class KKCE_Feed_Form_Unit_Test extends KKCE_Unit_Test_Case {
 		$incomplete = Feed_Form::process( $this->input( array( 'slug' => '' ) ), $this->context( array( 'current' => array( 'slug' => '', 'post_types' => array(), 'access' => 'public', 'active' => false, 'per_page' => 50 ) ) ) );
 		$this->assertSame( 'incomplete', Feed_Form::require_rows( $incomplete, false )['errors']['active'] );
 	}
+
+	/**
+	 * Outside the editor the saved slug stays, whatever a write proposes (Quick Edit, code, another plugin).
+	 */
+	public function test_outside_the_editor_the_saved_slug_stays() {
+		$never = static fn( string $slug ): bool => false;
+
+		$this->assertSame( 'news', Feed_Form::kept_slug( 'news', 'other', 'publish', 'publish', $never ) );
+		$this->assertSame( 'news', Feed_Form::kept_slug( 'news', '', 'draft', 'publish', $never ), 'Not taken from the title on publish.' );
+		$this->assertSame( '', Feed_Form::kept_slug( '', 'summer-concert', 'draft', 'publish', $never ), 'A feed without a slug keeps none.' );
+	}
+
+	/**
+	 * Moving a feed to the trash keeps what WordPress proposes (the slug moved aside with `__trashed`).
+	 */
+	public function test_the_trash_keeps_what_wordpress_proposes() {
+		$never = static fn( string $slug ): bool => false;
+
+		$this->assertSame( 'news__trashed', Feed_Form::kept_slug( 'news__trashed', 'news__trashed', 'publish', 'trash', $never ) );
+	}
+
+	/**
+	 * A feed restored from the trash gets its slug back, without the `__trashed` mark and never a renamed one
+	 * (`news-2`); when another feed uses it, the restored feed gets no slug.
+	 */
+	public function test_a_restored_feed_gets_its_slug_back_only_when_free() {
+		$never = static fn( string $slug ): bool => false;
+		$taken = static fn( string $slug ): bool => 'news' === $slug;
+
+		$this->assertSame( 'news', Feed_Form::kept_slug( 'news__trashed', 'news', 'trash', 'draft', $never ) );
+		$this->assertSame( 'news', Feed_Form::kept_slug( 'news__trashed', 'news-2', 'trash', 'publish', $never ), 'Never renamed.' );
+		$this->assertSame( 'news', Feed_Form::kept_slug( 'news', 'news', 'trash', 'draft', $never ), 'A slug without the mark.' );
+		$this->assertSame( '', Feed_Form::kept_slug( 'news__trashed', 'news', 'trash', 'draft', $taken ), 'Used by another feed.' );
+	}
 }

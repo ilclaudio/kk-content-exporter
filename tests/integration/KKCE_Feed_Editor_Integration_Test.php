@@ -353,7 +353,8 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 
 	/**
 	 * A feed restored from the trash starts disabled, and it cannot be enabled again while another feed
-	 * uses its slug. WordPress gives the old slug back on restore and does not check drafts for duplicates.
+	 * uses its slug. WordPress would give the old slug back on restore (it does not check drafts for duplicates):
+	 * the plugin leaves the restored feed without a slug instead, and the taken slug is refused in the editor.
 	 */
 	public function test_a_feed_restored_from_the_trash_cannot_be_active_on_a_used_slug() {
 		$first = $this->feed( 'First' );
@@ -366,7 +367,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$_POST = array();
 		wp_untrash_post( $first );
 
-		$this->assertSame( 'news', get_post_field( 'post_name', $first ), 'WordPress gives the old slug back.' );
+		$this->assertSame( '', get_post_field( 'post_name', $first ), 'Two feeds never share an address.' );
 		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $first, '_kkce_active', true ) ), 'A restored feed starts disabled.' );
 
 		$this->submit( $first, $this->fields( array( 'per_page' => '7' ) ) );
@@ -374,6 +375,10 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->assertFalse( Feed_Meta::sanitize_active( get_post_meta( $first, '_kkce_active', true ) ) );
 		$this->assertTrue( Feed_Meta::sanitize_active( get_post_meta( $second, '_kkce_active', true ) ) );
 		$this->assertSame( 7, Feed_Meta::sanitize_per_page( get_post_meta( $first, '_kkce_per_page', true ) ), 'The other fields are still saved.' );
+		// WordPress may generate a slug from the title of a published post without one (known, see
+		// test_a_slug_generated_by_wordpress_cannot_enable_the_feed): never the taken one.
+		$this->assertNotSame( 'news', get_post_field( 'post_name', $first ), 'The taken slug is refused.' );
+		$this->assertSame( 'news', get_post_field( 'post_name', $second ) );
 	}
 
 	/**
@@ -553,6 +558,36 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		do_action( 'admin_notices' );
 
 		$this->assertStringNotContainsString( 'notice-error', (string) ob_get_clean() );
+	}
+
+	/**
+	 * A feed restored from the trash while another feed uses its slug comes back without a slug: the editor says
+	 * which slug is taken, until the feed gets a slug in the editor.
+	 */
+	public function test_a_feed_restored_without_its_slug_says_which_slug_is_taken() {
+		set_current_screen( 'kkce_feed' );
+		$restored = self::factory()->post->create( array( 'post_type' => 'kkce_feed', 'post_status' => 'publish', 'post_name' => 'news' ) );
+		wp_trash_post( $restored );
+		self::factory()->post->create( array( 'post_type' => 'kkce_feed', 'post_status' => 'publish', 'post_name' => 'news' ) );
+		wp_untrash_post( $restored );
+
+		$notices = function () use ( $restored ): string {
+			clean_post_cache( $restored );
+			$GLOBALS['post'] = get_post( $restored );
+			ob_start();
+			do_action( 'admin_notices' );
+
+			return (string) ob_get_clean();
+		};
+
+		$this->assertSame( '', get_post( $restored )->post_name );
+		$this->assertMatchesRegularExpression( '#<div class="notice notice-warning kkce-taken-slug"><p>[^<]*&quot;news&quot;[^<]*</p></div>#', $notices() );
+
+		$this->submit( $restored, $this->fields( array( 'slug' => 'news-archive' ) ) );
+
+		$this->assertSame( 'news-archive', get_post( $restored )->post_name, 'The editor still sets the slug.' );
+		$this->assertSame( '', get_post_meta( $restored, '_kkce_taken_slug', true ) );
+		$this->assertStringNotContainsString( 'kkce-taken-slug', $notices() );
 	}
 
 	/**

@@ -62,11 +62,75 @@ final class Feed_Post_Type {
 	}
 
 	/**
+	 * Keeps the slug of a feed, its public address, when the feed is written outside its editor (a crafted
+	 * Quick Edit request, code, another plugin). Hooked on `wp_insert_post_data` before the editor
+	 * (`Feed_Editor::filter_post_data()`), which sets the slug again for an authorized save.
+	 *
+	 * Moving to the trash and restoring keep working (rule in `Feed_Form::kept_slug()`); a feed restored when
+	 * another feed uses its slug gets no slug, and the slug it could not get back is kept for the editor
+	 * (`Feed_Meta::META_TAKEN_SLUG`). Other post types and new posts are returned unchanged.
+	 *
+	 * @param mixed $data    Post data about to be saved.
+	 * @param mixed $postarr Data given to `wp_insert_post()`.
+	 * @return mixed The data, with the slug to keep.
+	 */
+	public static function protect_slug( $data, $postarr ) {
+		if ( ! is_array( $data ) || ! is_array( $postarr ) || self::POST_TYPE !== ( $data['post_type'] ?? null ) ) {
+			return $data;
+		}
+
+		$post_id  = isset( $postarr['ID'] ) ? (int) $postarr['ID'] : 0;
+		$previous = $post_id > 0 ? get_post_status( $post_id ) : false;
+		if ( false === $previous ) {
+			return $data;
+		}
+
+		$field    = get_post_field( 'post_name', $post_id, 'raw' );
+		$stored   = is_string( $field ) ? $field : '';
+		$proposed = (string) ( $data['post_name'] ?? '' );
+		$status   = (string) ( $data['post_status'] ?? $previous );
+		$taken    = static fn( string $slug ): bool => self::slug_is_taken( $slug, $post_id );
+		$kept     = Feed_Form::kept_slug( $stored, $proposed, $previous, $status, $taken );
+
+		// The slug it would get back if no other feed used it.
+		$wanted = Feed_Form::kept_slug( $stored, $proposed, $previous, $status, '__return_false' );
+		if ( '' === $kept && '' !== $wanted ) {
+			update_post_meta( $post_id, Feed_Meta::META_TAKEN_SLUG, $wanted );
+		}
+
+		$data['post_name'] = $kept;
+
+		return $data;
+	}
+
+	/**
+	 * Whether another feed (in any status but the trash) uses a slug.
+	 *
+	 * @param string $slug    Slug.
+	 * @param int    $post_id Feed to leave out.
+	 * @return bool
+	 */
+	public static function slug_is_taken( string $slug, int $post_id ): bool {
+		$found = get_posts(
+			array(
+				'post_type'     => self::POST_TYPE,
+				'name'          => $slug,
+				'post_status'   => 'any',
+				'post__not_in'  => array( $post_id ),
+				'numberposts'   => 1,
+				'fields'        => 'ids',
+				'no_found_rows' => true,
+			)
+		);
+
+		return array() !== $found;
+	}
+
+	/**
 	 * Disables a feed restored from the trash. Hooked on `untrashed_post` by `Plugin::boot()`.
 	 *
-	 * While a feed is in the trash another feed can take its slug, and WordPress gives the old slug back
-	 * on restore without checking drafts for duplicates. A restored feed therefore starts disabled; the
-	 * editor enables it again only with a slug that is still valid and free.
+	 * A restored feed starts disabled, also when it got its slug back (`protect_slug()`): the editor enables it
+	 * again only with a slug that is still valid and free.
 	 *
 	 * @param mixed $post_id ID of the restored post.
 	 * @return void

@@ -43,6 +43,13 @@ final class Feed_Meta {
 	public const META_PER_PAGE = '_kkce_per_page';
 
 	/**
+	 * Meta key: the slug that a feed restored from the trash could not get back, because another feed uses it.
+	 * The editor shows it until the feed gets a slug. Not registered: it is never edited, only written by
+	 * `Feed_Post_Type::protect_slug()` and removed by the editor.
+	 */
+	public const META_TAKEN_SLUG = '_kkce_taken_slug';
+
+	/**
 	 * Access value: anyone can read the feed.
 	 */
 	public const ACCESS_PUBLIC = 'public';

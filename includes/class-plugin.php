@@ -82,6 +82,8 @@ final class Plugin {
 		add_filter( 'post_row_actions', array( Admin\Feed_List::class, 'row_actions' ), 10, 2 );
 		add_action( 'add_meta_boxes_' . Feed_Post_Type::POST_TYPE, array( Admin\Feed_Editor::class, 'add_meta_box' ) );
 		add_action( 'add_meta_boxes_' . Feed_Post_Type::POST_TYPE, array( Admin\Mapping_Box::class, 'add_meta_box' ) );
+		// Before the editor: the slug of a feed stays unless the editor sets it (priority 10).
+		add_filter( 'wp_insert_post_data', array( Feed_Post_Type::class, 'protect_slug' ), 9, 2 );
 		add_filter( 'wp_insert_post_data', array( Admin\Feed_Editor::class, 'filter_post_data' ), 10, 2 );
 		add_action( 'save_post_' . Feed_Post_Type::POST_TYPE, array( Admin\Feed_Editor::class, 'save' ) );
 		add_action( 'admin_notices', array( Admin\Feed_Editor::class, 'render_notices' ) );
