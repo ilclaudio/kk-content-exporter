@@ -79,7 +79,7 @@
 
 .kkce-mapping-toggle {
 	display: inline-flex;
-	gap: 0.25em;
+	gap: 1em;
 	align-items: center;
 	min-width: 0;
 	text-align: left;
