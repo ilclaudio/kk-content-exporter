@@ -77,7 +77,8 @@ downloads, timeouts, import logs and scheduling.
   (REST API blocked for anonymous requests, Application Passwords unavailable); it changes nothing by itself.
 - Uninstall: nothing is removed unless the setting is on; then feeds with their meta, the settings and the
   capability `kkce_read_export` (roles and users) are deleted.
-- Admin interface: native WordPress markup and vanilla JavaScript, no build step.
+- Admin interface: native WordPress markup and vanilla JavaScript, no build step. A "Guide" page, after
+  "Settings", explains the rows of a mapping, one tab per rule, with examples.
 - Multisite: network activation is not supported in V1 (single-site operation).
 
 Planned for 1.1.0 (scope of 1.0 reduced on 2026-11-24 to publish earlier): conversion of meta dates (format and

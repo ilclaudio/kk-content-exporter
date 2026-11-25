@@ -585,6 +585,42 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Regression: the editor asks the preview of one post type at a time, but the mapping belongs to the whole
+	 * feed. A field that only another post type of the feed offers (here the categories of the posts, in a feed of
+	 * posts and pages) is checked against every post type of the feed, and the item of the asked type gets a
+	 * missing value instead of an error.
+	 */
+	public function test_preview_of_one_post_type_checks_the_mapping_against_the_whole_feed() {
+		wp_set_current_user( self::$admin );
+		$post = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$page = self::factory()->post->create( array( 'post_type' => 'page', 'post_status' => 'publish' ) );
+		$rows = array( array( 'key' => 'category', 'kind' => 'field', 'sources' => array( '*' => array( 'taxonomy.category.first' ) ) ) );
+
+		$response = $this->preview( array( 'mapping' => $this->mapping( $rows ), 'post_types' => array( 'post', 'page' ), 'post_type' => 'page' ) );
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status(), 'The categories are a field of the feed.' );
+		$this->assertSame( array( $page ), array_map( static fn( $item ) => $item['post']['id'], $data['items'] ), 'Only the item of the asked post type.' );
+		$this->assertSame( array( 'category' => null ), (array) $data['items'][0]['data'] );
+
+		$response = $this->preview( array( 'mapping' => $this->mapping( $rows ), 'post_types' => array( 'post', 'page' ), 'post_type' => 'post' ) );
+		$this->assertSame( array( $post ), array_map( static fn( $item ) => $item['post']['id'], $response->get_data()['items'] ) );
+		$this->assertSame( array( 'category' => 'Uncategorized' ), (array) $response->get_data()['items'][0]['data'] );
+	}
+
+	/**
+	 * The post type to preview must be one of the post types of the request.
+	 */
+	public function test_preview_of_a_post_type_outside_the_request_gives_400() {
+		wp_set_current_user( self::$admin );
+
+		$response = $this->preview( array( 'mapping' => $this->id_and_title(), 'post_types' => array( 'post' ), 'post_type' => 'page' ) );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'kkce_no_post_types', $response->get_data()['code'] );
+	}
+
+	/**
 	 * A mapping longer than the limit in bytes is refused as too large, also when it is shorter in characters.
 	 */
 	public function test_preview_of_a_mapping_too_large() {

@@ -1,6 +1,6 @@
 /**
  * Accessibility check (axe-core, WCAG 2.x A and AA) of the elements of the plugin: the feed editor with a
- * row of every rule, the list of the feeds, the settings page.
+ * row of every rule, the list of the feeds, the settings page, the guide.
  *
  * @package KKCE
  */
@@ -29,10 +29,14 @@ test( 'the feed editor with a row of every rule', async ( { page } ) => {
 	await expect( box.getByRole( 'group', { name: /^Row \d+/ } ) ).toHaveCount( ROWS.length );
 	await expect( box.getByRole( 'region', { name: 'Preview' } ) ).toContainText( '"section"' );
 
+	// Saved rows start closed: open them, so the check sees the controls of every rule and the lookup table.
+	await box.getByRole( 'button', { name: 'Expand all' } ).click();
+	await expect( box.getByRole( 'table' ) ).toBeVisible();
+
 	await expectAccessible( page, [ '#kkce_feed_settings', '#kkce_feed_mapping' ] );
 } );
 
-test( 'the list of the feeds and the settings page', async ( { page } ) => {
+test( 'the list of the feeds, the settings page and the guide', async ( { page } ) => {
 	createFixtures( 'axe-list', { post_types: [ 'post' ], rows: ROWS.slice( 0, 1 ) } );
 
 	await page.goto( '/wp-admin/edit.php?post_type=kkce_feed' );
@@ -41,5 +45,10 @@ test( 'the list of the feeds and the settings page', async ( { page } ) => {
 
 	await page.goto( '/wp-admin/edit.php?post_type=kkce_feed&page=kkce-settings' );
 	await expect( page.getByRole( 'heading', { name: 'Content Exporter settings' } ) ).toBeVisible();
+	await expectAccessible( page, [ '#wpbody-content .wrap' ] );
+
+	// The tab with the most elements: lists, two examples with their tables and JSON.
+	await page.goto( '/wp-admin/edit.php?post_type=kkce_feed&page=kkce-guide&tab=condition' );
+	await expect( page.getByRole( 'link', { name: 'Condition' } ) ).toHaveAttribute( 'aria-current', 'page' );
 	await expectAccessible( page, [ '#wpbody-content .wrap' ] );
 } );

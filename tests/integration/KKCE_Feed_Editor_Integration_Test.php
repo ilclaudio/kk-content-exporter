@@ -47,6 +47,8 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	public function tear_down() {
 		wp_dequeue_script( 'kkce-feed-editor' );
 		wp_deregister_script( 'kkce-feed-editor' );
+		wp_dequeue_style( 'kkce-feed-editor' );
+		wp_deregister_style( 'kkce-feed-editor' );
 		$_POST = array();
 		unset( $GLOBALS['post'] );
 		$GLOBALS['current_screen'] = null;
@@ -833,8 +835,19 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The script of the editor is loaded on the screens that edit or create a feed, in the footer, with
-	 * the version of the plugin.
+	 * The status is an on/off switch: a real checkbox (saved as before, usable without JavaScript) exposed as a
+	 * switch, named by its label and described by its help.
+	 */
+	public function test_the_status_is_a_switch() {
+		$html = $this->box( $this->feed() );
+
+		$this->assertMatchesRegularExpression( '#<input type="checkbox" id="kkce-feed-active" class="kkce-switch" role="switch" name="kkce_feed\[active\]" value="1"[^>]* aria-describedby="kkce-feed-active-help">#', $html );
+		$this->assertMatchesRegularExpression( '#<label for="kkce-feed-active" class="kkce-switch-label">\s*<input[^>]+>\s*Enable the feed\s*</label>#', $html );
+	}
+
+	/**
+	 * The script and the style of the editor are loaded on the screens that edit or create a feed (the script in
+	 * the footer), with the version of the plugin.
 	 *
 	 * @dataProvider feed_screen_provider
 	 *
@@ -852,6 +865,13 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( KKCE_VERSION, $script->ver );
 		$this->assertSame( 1, wp_scripts()->get_data( 'kkce-feed-editor', 'group' ), 'Loaded in the footer.' );
 		$this->assertFileExists( KKCE_PLUGIN_DIR . 'assets/js/feed-editor.js' );
+
+		$style = wp_styles()->registered['kkce-feed-editor'] ?? null;
+		$this->assertTrue( wp_style_is( 'kkce-feed-editor', 'enqueued' ) );
+		$this->assertNotNull( $style );
+		$this->assertSame( plugins_url( 'assets/css/feed-editor.css', KKCE_PLUGIN_FILE ), $style->src );
+		$this->assertSame( KKCE_VERSION, $style->ver );
+		$this->assertFileExists( KKCE_PLUGIN_DIR . 'assets/css/feed-editor.css' );
 	}
 
 	/**
@@ -881,6 +901,7 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		Feed_Editor::enqueue_assets( $hook_suffix );
 
 		$this->assertFalse( wp_script_is( 'kkce-feed-editor', 'enqueued' ) );
+		$this->assertFalse( wp_style_is( 'kkce-feed-editor', 'enqueued' ) );
 	}
 
 	/**

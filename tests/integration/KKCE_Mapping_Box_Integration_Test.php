@@ -6,6 +6,7 @@
  */
 
 use KKCE\Admin\Feed_Editor;
+use KKCE\Admin\Guide_Page;
 use KKCE\Admin\Mapping_Box;
 use KKCE\Feed_Meta;
 use KKCE\Rest\Admin_Routes;
@@ -160,6 +161,31 @@ class KKCE_Mapping_Box_Integration_Test extends WP_UnitTestCase {
 		foreach ( array( 'a b', 'è', 'a/b', '' ) as $key ) {
 			$this->assertSame( 0, preg_match( $pattern, $key ), $key );
 		}
+	}
+
+	/**
+	 * Every rule the editor offers comes with a short sentence and the address of its tab of the guide, both
+	 * from the server: the script writes no address.
+	 */
+	public function test_every_rule_has_its_help_and_its_tab_of_the_guide() {
+		$data = $this->data( $this->box( $this->feed() ) );
+
+		$this->assertSame( array( 'field', 'fixed', 'template', 'lookup', 'condition' ), array_keys( $data['rules'] ) );
+		foreach ( $data['rules'] as $kind => $rule ) {
+			$this->assertSame( array( 'help', 'guide' ), array_keys( $rule ), $kind );
+			$this->assertNotSame( '', trim( $rule['help'] ), $kind );
+			$this->assertLessThanOrEqual( 140, strlen( $rule['help'] ), $kind . ': one short sentence, the details are in the guide.' );
+			$this->assertSame( Guide_Page::url( $kind ), $rule['guide'], $kind );
+		}
+	}
+
+	/**
+	 * The notice about the language of the items links to the section of the guide that explains it.
+	 */
+	public function test_the_language_notice_links_to_the_guide() {
+		$data = $this->data( $this->box( $this->feed() ) );
+
+		$this->assertSame( Guide_Page::url( 'overview' ) . '#kkce-guide-multilingual', $data['languageGuide'] );
 	}
 
 	/**
@@ -326,16 +352,16 @@ class KKCE_Mapping_Box_Integration_Test extends WP_UnitTestCase {
 
 
 	/**
-	 * The mapping box opens with a short introduction that points to the preview; the details (keys always
-	 * present, in the order of the rows, null without a value) and how the rows work are in a section that can be
-	 * opened.
+	 * The mapping box opens with a short introduction that points to the preview, then to the guide page, which
+	 * explains how the rows work and opens in a new tab (the editor often has unsaved changes).
 	 */
 	public function test_the_box_explains_the_mapping() {
 		$html = $this->box( $this->feed() );
+		$link = '<a href="' . esc_url( Guide_Page::url( 'overview' ) ) . '" target="_blank">';
 
-		$this->assertMatchesRegularExpression( '#<p class="description kkce-box-intro">[^<]{1,140}preview[^<]*</p>#', $html, 'A short introduction that points to the preview.' );
-		$this->assertMatchesRegularExpression( '#<details class="kkce-mapping-help">\s*<summary>[^<]+</summary>\s*<ul>(\s*<li>.+?</li>){10}\s*</ul>\s*</details>#s', $html );
-		$this->assertMatchesRegularExpression( '#<ul>\s*<li>[^<]*order of the rows[^<]*null[^<]*</li>#', $html, 'The first point of the guide explains the keys.' );
-		$this->assertLessThan( strpos( $html, 'id="kkce-feed-mapping"' ), strpos( $html, 'kkce-mapping-help' ), 'The explanation comes before the rows.' );
+		$this->assertMatchesRegularExpression( '#<p class="description kkce-box-intro">[^<]{1,140}preview[^<]*' . preg_quote( $link, '#' ) . '#', $html, 'A short introduction that points to the preview, then to the guide.' );
+		$this->assertMatchesRegularExpression( '#' . preg_quote( $link, '#' ) . 'How the rows work<span class="screen-reader-text"> \(opens in a new tab\)</span><span aria-hidden="true" class="dashicons dashicons-external"></span></a>#', $html, 'The guide opens in a new tab, and says so.' );
+		$this->assertStringNotContainsString( 'kkce-mapping-help', $html, 'The explanation is in the guide, not in the box.' );
+		$this->assertLessThan( strpos( $html, 'id="kkce-feed-mapping"' ), strpos( $html, $link ), 'The link comes before the rows.' );
 	}
 }

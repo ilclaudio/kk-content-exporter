@@ -1,0 +1,75 @@
+/**
+ * Feed editor (kkce_feed): the "Feed settings" box.
+ *
+ * The status of a feed is a real checkbox drawn as an on/off switch: on in the color of the admin color scheme,
+ * off in grey, the knob on the right or on the left (the position says the state, not only the color). Keyboard,
+ * focus and saving are those of the checkbox.
+ *
+ * @package KKCE
+ */
+
+.kkce-switch-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.6em;
+}
+
+input[type="checkbox"].kkce-switch {
+	appearance: none;
+	background: #fff;
+	border: 1px solid #8c8f94;
+	border-radius: 11px;
+	cursor: pointer;
+	height: 22px;
+	margin: 0;
+	position: relative;
+	transition: background-color 0.1s ease, border-color 0.1s ease;
+	width: 40px;
+}
+
+/* The knob, in place of the check mark of the admin. */
+input[type="checkbox"].kkce-switch::before,
+input[type="checkbox"].kkce-switch:checked::before {
+	background: #8c8f94;
+	border-radius: 50%;
+	content: "";
+	height: 14px;
+	left: 3px;
+	margin: 0;
+	position: absolute;
+	top: 3px;
+	transition: left 0.1s ease;
+	width: 14px;
+}
+
+input[type="checkbox"].kkce-switch:checked {
+	background: var(--wp-admin-theme-color, #2271b1);
+	border-color: var(--wp-admin-theme-color, #2271b1);
+}
+
+input[type="checkbox"].kkce-switch:checked::before {
+	background: #fff;
+	left: 21px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	input[type="checkbox"].kkce-switch,
+	input[type="checkbox"].kkce-switch::before {
+		transition: none;
+	}
+}
+
+/* High contrast: system colors, so the knob stays visible. */
+@media (forced-colors: active) {
+	input[type="checkbox"].kkce-switch::before {
+		background: CanvasText;
+	}
+
+	input[type="checkbox"].kkce-switch:checked {
+		background: Highlight;
+	}
+
+	input[type="checkbox"].kkce-switch:checked::before {
+		background: Canvas;
+	}
+}

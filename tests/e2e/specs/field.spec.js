@@ -55,6 +55,16 @@ test( 'field fallbacks and fixed values keep post type exceptions after saving',
 	await expect( preview( box ) ).toContainText( '"summary": "E2E field post"' );
 	await expect( preview( box ) ).toContainText( '"summary": "kkce-e2e-field-page-0"' );
 
+	// Regression: a field that only the posts offer (their categories) is a field of the feed, so the preview of
+	// the pages shows the value as missing instead of an error of the mapping.
+	const category = await addRow( box, 'Field', 'category' );
+	await category.getByRole( 'group', { name: 'For all post types' } ).getByLabel( 'Field', { exact: true } ).selectOption( 'taxonomy.category.first' );
+	await category.getByLabel( 'JSON key' ).fill( 'category' );
+	await expect( preview( box ) ).toContainText( '"category": "Uncategorized"' );
+	await expect( preview( box ) ).toContainText( '"category": null' );
+	await expect( preview( box ).getByText( 'The preview is not up to date' ) ).toHaveCount( 0 );
+	await category.getByRole( 'button', { name: /^Remove row/ } ).click();
+
 	// Compact preview: a panel per post type, open, whose title names the type and the item; the JSON has a
 	// limited height until it is expanded, and can be copied (or selected, where the browser cannot copy).
 	const posts = preview( box ).locator( 'details.kkce-preview-type', { has: page.locator( 'summary', { hasText: /^Posts — E2E field post \(ID \d+\)$/ } ) } );

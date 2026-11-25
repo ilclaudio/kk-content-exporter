@@ -20,6 +20,11 @@ test( 'lookup lines and the default survive editing and saving', async ( { page 
 	const box = await openFeed( page, data.feed );
 
 	const row = await addRow( box, 'Lookup table', 'section' );
+	// The row started as a Field: its help and its link to the guide follow the rule chosen.
+	await expect( row.getByText( 'Translates the value of a field with a table' ) ).toBeVisible();
+	const guide = row.getByRole( 'link', { name: 'Read the guide (opens in a new tab)' } );
+	await expect( guide ).toHaveAttribute( 'href', /[?&]page=kkce-guide&tab=lookup$/ );
+	await expect( guide ).toHaveAttribute( 'target', '_blank' );
 	await row.getByLabel( 'Field to read (For all post types)' ).selectOption( 'core.type' );
 
 	const matches = row.getByLabel( 'If the value is' );

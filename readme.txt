@@ -24,6 +24,7 @@ Choose the content and fields to include, give the fields your own names, and co
 * On multilingual sites with Polylang, include the language of each item and the group of its translations, or read one language only.
 * Rename fields and build values using fixed text, templates, lookup tables and conditions.
 * Preview the JSON before saving your feed.
+* Learn every rule from the built-in guide, with examples, under **Content Exporter > Guide**.
 * Share public feeds or require an Application Password, with pagination and a configurable page limit.
 * Let applications read only what changed, with date filters.
 
@@ -49,7 +50,9 @@ This example creates a public feed of post titles and links. You need at least o
 3. Under **Access**, choose **Public: anyone can read the feed**. For this public example, **Require authentication for all feeds** must be off in **Content Exporter > Settings**.
 4. In **Mapping**, click **Add row**. Use **Rule** = **Field**, choose **Title**, and set **JSON key** to `title`.
 5. Add a second row with **Rule** = **Field**, **Permalink** as the field, and `url` as the **JSON key**.
-6. Check the preview, then check **Enable the feed** and click **Publish** (or **Update** for an existing feed). The feed must be both published and enabled.
+6. Check the preview, then turn on **Enable the feed** and click **Publish** (or **Update** for an existing feed). The feed must be both published and enabled.
+
+To use the other rules (fixed values, templates, lookup tables and conditions), open **Content Exporter > Guide**: it explains every rule with examples. The Mapping box links to it, and every row links to the tab of its rule.
 
 = Read the feed =
 
@@ -119,7 +122,7 @@ It works on a single site. Network activation is not supported in this version: 
 == Changelog ==
 
 = 0.0.4 =
-* In development: feed endpoint with pages, access control and date filters; featured image URL; terms of the taxonomies; language of the site and, with Polylang, of each item, with the `lang` parameter; warnings for enabled feeds that are not published.
+* In development: feed endpoint with pages, access control and date filters; featured image URL; terms of the taxonomies; language of the site and, with Polylang, of each item, with the `lang` parameter; warnings for enabled feeds that are not published; mapping rows laid out as a form; a guide to the rules.
 
 = 0.0.3 =
 * Post meta fields in the mapping: the keys in use, hidden keys listed apart, and any key typed by hand.

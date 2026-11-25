@@ -22,13 +22,17 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 - With Polylang, a new mapping proposes the rows `lang` and `translation_group`, and the editor warns when no row exports the language.
 - Warning for an enabled feed that is not published.
 - Preview warning when the author archive URL of an item shows the login name of the author.
+- Guide page under Content Exporter: how the rows of a mapping work, one tab per rule, with examples; the Mapping box links to it, and every rule links to its tab.
 - Development tooling: command-line runner of the Insomnia feed routes.
 - Development tooling: integration tests with Polylang, in a second run of the suite.
 ### Changed
 - A page of a feed costs the same database queries whatever the number of its items.
 - Mapping editor and validators restructured, without changes of behavior.
 - Mapping editor redesigned: clearer rows that close to a summary, exceptions and advanced options on request, compact preview with "Copy JSON", other meta keys from the list of fields.
+- Mapping rows laid out as a form: labels on the left, controls lined up, three parts (what, from where, how); the lookup table is a real table.
+- The status of a feed is an on/off switch.
 ### Fixed
+- The preview no longer reports "not known" for a field that only another post type of the feed offers.
 - Choosing an item in the preview no longer triggers an unsaved-changes warning.
 - 401 responses of the plugin's REST routes include a Basic authentication challenge when Application Passwords are available.
 

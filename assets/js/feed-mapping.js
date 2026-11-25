@@ -41,8 +41,6 @@
 	 * Labels used by several controls.
 	 */
 	const LABEL_FIELD = __( 'Field', 'kk-content-exporter' );
-	const LABEL_UP = __( 'Move up', 'kk-content-exporter' );
-	const LABEL_DOWN = __( 'Move down', 'kk-content-exporter' );
 	const LABEL_REMOVE = __( 'Remove', 'kk-content-exporter' );
 	const LABEL_REMOVE_EXCEPTION = __( 'Remove exception', 'kk-content-exporter' );
 	const LABEL_ADD_FALLBACK = __( 'Add fallback', 'kk-content-exporter' );
@@ -50,10 +48,13 @@
 	const LABEL_MAX_LENGTH = __( 'Maximum length', 'kk-content-exporter' );
 	const LABEL_FIELD_TO_READ = __( 'Field to read', 'kk-content-exporter' );
 	const LABEL_TABLE = __( 'Table', 'kk-content-exporter' );
+	const LABEL_MATCH = __( 'If the value is', 'kk-content-exporter' );
+	const LABEL_WRITE = __( 'Write', 'kk-content-exporter' );
 	const LABEL_DEFAULT = __( 'When no line matches', 'kk-content-exporter' );
 	const LABEL_CHECK = __( 'Check', 'kk-content-exporter' );
 	const LABEL_THEN = __( 'If true, write', 'kk-content-exporter' );
 	const LABEL_ELSE = __( 'Otherwise, write', 'kk-content-exporter' );
+	const LABEL_NEW_TAB = __( '(opens in a new tab)', 'kk-content-exporter' );
 
 	/**
 	 * Output types of a row, in the order shown, with their labels.
@@ -457,6 +458,31 @@
 	}
 
 	/**
+	 * Field whose label is read by assistive technologies only, because something next to it already says what it
+	 * is (a header of a table, the choice beside it).
+	 *
+	 * @param {string}      label   Label.
+	 * @param {HTMLElement} control Control.
+	 * @return {HTMLElement} Wrapper.
+	 */
+	function labelledHidden( label, control ) {
+		const wrapper = el( 'div', { className: 'kkce-mapping-field kkce-mapping-field-bare' } );
+		wrapper.appendChild( el( 'label', { htmlFor: control.id, className: 'screen-reader-text' }, label ) );
+		wrapper.appendChild( control );
+		return wrapper;
+	}
+
+	/**
+	 * Small title of a part of a row (what it writes, where the value comes from, how it is written).
+	 *
+	 * @param {string} text Title.
+	 * @return {HTMLElement} The title.
+	 */
+	function zone( text ) {
+		return el( 'p', { className: 'kkce-mapping-zone' }, text );
+	}
+
+	/**
 	 * Labelled control of a scope of a row. The accessible name always says the scope ("Value (For all post
 	 * types)"); the visible label says it only when the row has exceptions, so a simple row shows just "Value". The
 	 * name then comes from `aria-label` and starts with the visible text (WCAG 2.5.3, label in name).
@@ -603,8 +629,12 @@
 					options.push( [ String( item.id ), sprintf( __( '%1$s (%2$s, ID %3$d)', 'kk-content-exporter' ), title, date, item.id ) ] );
 				} );
 				const picker = select( { id: 'kkce-preview-item-' + postType, className: 'kkce-preview-item', 'data-type': postType }, options, String( selected[ postType ] || '' ) );
+				// The choice of the item and the tools of the JSON stay together above it, in view also with
+				// several post types.
+				const tools = el( 'div', { className: 'kkce-preview-tools' } );
 				/* translators: %s: label of a post type. */
-				block.appendChild( labelled( sprintf( __( 'Item of %s', 'kk-content-exporter' ), typeLabel( postType ) ), picker ) );
+				tools.appendChild( labelled( sprintf( __( 'Item of %s', 'kk-content-exporter' ), typeLabel( postType ) ), picker ) );
+				block.appendChild( tools );
 
 				if ( 'empty' === result ) {
 					/* translators: %s: label of a post type. */
@@ -618,8 +648,6 @@
 					// expanded; the text is always the whole JSON.
 					const pre = el( 'pre', { id: 'kkce-preview-json-' + postType, className: 'kkce-preview-json' + ( expanded[ postType ] ? ' is-expanded' : '' ), tabIndex: 0 } );
 					pre.appendChild( el( 'code', {}, JSON.stringify( result.data, null, 2 ) ) );
-					block.appendChild( pre );
-					const tools = el( 'div', { className: 'kkce-preview-tools' } );
 					const label = typeLabel( postType );
 					/* translators: %s: label of a post type. */
 					const collapseName = sprintf( __( 'Collapse (%s)', 'kk-content-exporter' ), label );
@@ -645,8 +673,8 @@
 						'data-preview-action': 'copy',
 						'data-type': postType,
 					}, __( 'Copy JSON', 'kk-content-exporter' ) ) );
-					block.appendChild( tools );
 					block.appendChild( el( 'p', { className: 'kkce-preview-copied', role: 'status' } ) );
+					block.appendChild( pre );
 				}
 				results.appendChild( block );
 			} );
@@ -693,9 +721,11 @@
 			spinner.classList.add( 'is-active' );
 			state.textContent = __( 'Updating…', 'kk-content-exporter' );
 
-			// One request per post type, so that every type can use its own chosen item.
+			// One request per post type, so that every type can use its own chosen item. Every request carries all
+			// the post types of the feed: the mapping is checked against all of them (a field of the posts is a field
+			// of the feed also when the pages are previewed), and `post_type` says which one to preview.
 			Promise.all( postTypes.map( function ( postType ) {
-				const body = { mapping: deps.mapping(), post_types: [ postType ] };
+				const body = { mapping: deps.mapping(), post_types: postTypes, post_type: postType };
 				if ( selected[ postType ] ) {
 					body.post_id = selected[ postType ];
 				}
@@ -907,8 +937,10 @@
 
 		const list = el( 'ol', { className: 'kkce-mapping-rows' } );
 		const bulk = el( 'div', { className: 'kkce-mapping-bulk', hidden: true } );
-		const expandAll = el( 'button', { type: 'button', className: 'button', id: 'kkce-mapping-expand-all' }, __( 'Expand all', 'kk-content-exporter' ) );
-		const collapseAll = el( 'button', { type: 'button', className: 'button', id: 'kkce-mapping-collapse-all' }, __( 'Collapse all', 'kk-content-exporter' ) );
+		const rowCount = el( 'span', { className: 'kkce-mapping-count' } );
+		const expandAll = el( 'button', { type: 'button', className: 'button-link', id: 'kkce-mapping-expand-all' }, __( 'Expand all', 'kk-content-exporter' ) );
+		const collapseAll = el( 'button', { type: 'button', className: 'button-link', id: 'kkce-mapping-collapse-all' }, __( 'Collapse all', 'kk-content-exporter' ) );
+		bulk.appendChild( rowCount );
 		bulk.appendChild( expandAll );
 		bulk.appendChild( collapseAll );
 		const empty = el( 'p', { className: 'kkce-mapping-empty' }, __( 'No rows yet. Add a row to choose what the feed exports.', 'kk-content-exporter' ) );
@@ -918,7 +950,15 @@
 		const field = el( 'input', { type: 'hidden', name: data.field } );
 		// Shown when Polylang translates the content of the feed and no row exports the language of the items.
 		const languageNotice = el( 'div', { className: 'notice notice-warning inline kkce-mapping-language', hidden: true } );
-		languageNotice.appendChild( el( 'p', {}, __( 'Polylang translates the content of this feed, but no row exports the language of the items: items in different languages cannot be told apart. Add a row with a language field (for example Language code), or let the application read one language at a time with the lang parameter.', 'kk-content-exporter' ) ) );
+		const languageText = el( 'p', {}, __( 'No row exports the language of the items: items in different languages cannot be told apart.', 'kk-content-exporter' ) + ' ' );
+		if ( data.languageGuide ) {
+			// What to do is in the guide (a row with the language, or the lang parameter); a new tab keeps the editor.
+			const languageLink = el( 'a', { href: data.languageGuide, target: '_blank' }, __( 'Read the guide', 'kk-content-exporter' ) );
+			languageLink.appendChild( el( 'span', { className: 'screen-reader-text' }, ' ' + LABEL_NEW_TAB ) );
+			languageLink.appendChild( el( 'span', { className: 'dashicons dashicons-external', ariaHidden: 'true' } ) );
+			languageText.appendChild( languageLink );
+		}
+		languageNotice.appendChild( languageText );
 
 		// Two columns when the box is wide (rules, then the preview that stays in view), one otherwise: see the CSS.
 		const editor = el( 'div', { className: 'kkce-mapping-editor' } );
@@ -1311,6 +1351,42 @@
 		}
 
 		/**
+		 * Help of the rule of a row: a short sentence and the link to its tab of the guide, both from the server.
+		 *
+		 * @param {Object} row Row.
+		 * @return {HTMLElement|null} The help, or null for a rule the server does not describe.
+		 */
+		function renderRuleHelp( row ) {
+			const rule = ( data.rules || {} )[ row.data.kind ];
+			if ( ! rule ) {
+				return null;
+			}
+			const help = el( 'p', { id: 'kkce-mapping-' + row.uid + '-rule-help', className: 'description kkce-mapping-indent kkce-mapping-rule-help' }, rule.help + ' ' );
+			// A new tab: the editor often has unsaved changes, and leaving it would ask to discard them.
+			const link = el( 'a', { href: rule.guide, target: '_blank' }, __( 'Read the guide', 'kk-content-exporter' ) );
+			link.appendChild( el( 'span', { className: 'screen-reader-text' }, ' ' + LABEL_NEW_TAB ) );
+			link.appendChild( el( 'span', { className: 'dashicons dashicons-external', ariaHidden: 'true' } ) );
+			help.appendChild( link );
+			return help;
+		}
+
+		/**
+		 * Light button of a row that adds something (a fallback, an exception, a line): a link with a plus sign.
+		 *
+		 * @param {Object} row    Row.
+		 * @param {string} action Action.
+		 * @param {string} text   Visible text.
+		 * @param {Object} extra  Other properties (id, ariaLabel, disabled, data-scope).
+		 * @return {HTMLButtonElement} The button.
+		 */
+		function addLink( row, action, text, extra ) {
+			const node = button( row, action, '', Object.assign( {}, extra, { className: 'button-link kkce-mapping-add' } ) );
+			node.appendChild( el( 'span', { className: 'dashicons dashicons-plus-alt2', ariaHidden: 'true' } ) );
+			node.appendChild( document.createTextNode( text ) );
+			return node;
+		}
+
+		/**
 		 * Text of the legend of a row.
 		 *
 		 * @param {number} index Position of the row.
@@ -1355,9 +1431,9 @@
 				if ( chain.length > 1 ) {
 					const actions = el( 'span', { className: 'kkce-mapping-chain-actions' } );
 					/* translators: 1: position of the field in its chain, 2: name of the chain, for example "For all post types". */
-					actions.appendChild( button( row, 'chain-up', LABEL_UP, { id: id + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move up: field %1$d (%2$s)', 'kk-content-exporter' ), index + 1, label ), 'data-scope': scope, 'data-index': String( index ) } ) );
+					actions.appendChild( iconButton( row, 'chain-up', 'dashicons-arrow-up-alt', { id: id + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move up: field %1$d (%2$s)', 'kk-content-exporter' ), index + 1, label ), 'data-scope': scope, 'data-index': String( index ) } ) );
 					/* translators: 1: position of the field in its chain, 2: name of the chain, for example "For all post types". */
-					actions.appendChild( button( row, 'chain-down', LABEL_DOWN, { id: id + '-down', disabled: index === chain.length - 1, ariaLabel: sprintf( __( 'Move down: field %1$d (%2$s)', 'kk-content-exporter' ), index + 1, label ), 'data-scope': scope, 'data-index': String( index ) } ) );
+					actions.appendChild( iconButton( row, 'chain-down', 'dashicons-arrow-down-alt', { id: id + '-down', disabled: index === chain.length - 1, ariaLabel: sprintf( __( 'Move down: field %1$d (%2$s)', 'kk-content-exporter' ), index + 1, label ), 'data-scope': scope, 'data-index': String( index ) } ) );
 					/* translators: 1: position of the field in its chain, 2: name of the chain, for example "For all post types". */
 					actions.appendChild( button( row, 'chain-remove', LABEL_REMOVE, { id: id + '-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove field %1$d (%2$s)', 'kk-content-exporter' ), index + 1, label ), 'data-scope': scope, 'data-index': String( index ) } ) );
 					item.appendChild( actions );
@@ -1366,10 +1442,10 @@
 			} );
 			group.appendChild( items );
 
-			const tools = el( 'div', { className: 'kkce-mapping-scope-actions' } );
+			const tools = el( 'div', { className: 'kkce-mapping-scope-actions kkce-mapping-indent' } );
 			// A fallback can be added once the last field of the chain is chosen.
 			/* translators: %s: name of the chain, for example "For all post types". */
-			tools.appendChild( button( row, 'chain-add', LABEL_ADD_FALLBACK, { id: prefix + '-add', disabled: chain.length >= data.maxChain || ! chain.length || '' === chain[ chain.length - 1 ], ariaLabel: sprintf( __( 'Add fallback (%s)', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
+			tools.appendChild( addLink( row, 'chain-add', LABEL_ADD_FALLBACK, { id: prefix + '-add', disabled: chain.length >= data.maxChain || ! chain.length || '' === chain[ chain.length - 1 ], ariaLabel: sprintf( __( 'Add fallback (%s)', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
 			if ( '*' !== scope ) {
 				/* translators: %s: post types the exception applies to, for example "For Posts". */
 				tools.appendChild( button( row, 'scope-remove', LABEL_REMOVE_EXCEPTION, { id: prefix + '-scope-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove exception: %s', 'kk-content-exporter' ), label ), 'data-scope': scope } ) );
@@ -1497,13 +1573,15 @@
 		 */
 		function outputControl( row, output, id, label, index ) {
 			const kind = outputKind( output );
+			// The choice beside it ("Fixed text", "Field") already says what it is: the label is for assistive
+			// technologies only.
 			if ( 'source' === kind ) {
-				return labelled( label, sourceSelect( String( output.source || '' ), { id: id, className: 'kkce-mapping-output-source', 'data-uid': String( row.uid ), 'data-index': index } ) );
+				return labelledHidden( label, sourceSelect( String( output.source || '' ), { id: id, className: 'kkce-mapping-output-source', 'data-uid': String( row.uid ), 'data-index': index } ) );
 			}
 			if ( 'fixed' !== kind ) {
 				return null;
 			}
-			return labelled( label, el( 'input', {
+			return labelledHidden( label, el( 'input', {
 				type: 'text',
 				id: id,
 				className: 'regular-text kkce-mapping-output-fixed',
@@ -1526,12 +1604,26 @@
 			const group = el( 'fieldset', { className: 'kkce-mapping-scope kkce-mapping-cases' } );
 			group.appendChild( el( 'legend', {}, LABEL_TABLE ) );
 
-			const items = el( 'ol', { className: 'kkce-mapping-chain' } );
+			// A real table: the headers name the columns, every control keeps its own label for assistive technologies.
+			const table = el( 'table', { className: 'kkce-mapping-cases-table' } );
+			const head = el( 'tr' );
+			head.appendChild( el( 'th', { scope: 'col' }, LABEL_MATCH ) );
+			head.appendChild( el( 'th', { scope: 'col' }, LABEL_WRITE ) );
+			head.appendChild( el( 'td' ) );
+			table.appendChild( el( 'thead' ) ).appendChild( head );
+			const items = el( 'tbody' );
 			cases.forEach( function ( item, index ) {
 				const id = prefix + '-case-' + index;
-				const line = el( 'li', { className: 'kkce-mapping-case' } );
+				const line = el( 'tr', { className: 'kkce-mapping-case' } );
 				const position = String( index );
-				line.appendChild( labelled( __( 'If the value is', 'kk-content-exporter' ), el( 'input', {
+				const matchCell = el( 'td' );
+				// A table cell cannot be a flex container: the output and its choice sit in a box inside the cell.
+				const outputCell = el( 'div', { className: 'kkce-mapping-case-output' } );
+				const actionsCell = el( 'td', { className: 'kkce-mapping-case-actions' } );
+				line.appendChild( matchCell );
+				line.appendChild( el( 'td' ) ).appendChild( outputCell );
+				line.appendChild( actionsCell );
+				matchCell.appendChild( labelledHidden( LABEL_MATCH, el( 'input', {
 					type: 'text',
 					id: id + '-match',
 					className: 'kkce-mapping-match',
@@ -1541,26 +1633,27 @@
 					'data-uid': String( row.uid ),
 					'data-index': position,
 				} ) ) );
-				line.appendChild( labelled( __( 'Write', 'kk-content-exporter' ), select( { id: id + '-kind', className: 'kkce-mapping-output-kind', 'data-uid': String( row.uid ), 'data-index': position }, OUTPUTS, outputKind( item.output ) ) ) );
+				outputCell.appendChild( labelledHidden( LABEL_WRITE, select( { id: id + '-kind', className: 'kkce-mapping-output-kind', 'data-uid': String( row.uid ), 'data-index': position }, OUTPUTS, outputKind( item.output ) ) ) );
 				const control = outputControl( row, item.output, id + '-output', 'source' === outputKind( item.output ) ? LABEL_FIELD : LABEL_FIXED_TEXT, position );
 				if ( control ) {
-					line.appendChild( control );
+					outputCell.appendChild( control );
 				}
 
 				const actions = el( 'span', { className: 'kkce-mapping-chain-actions' } );
 				/* translators: %d: position of a line in the table of a lookup rule. */
-				actions.appendChild( button( row, 'case-up', LABEL_UP, { id: id + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move up: line %d', 'kk-content-exporter' ), index + 1 ), 'data-index': position } ) );
+				actions.appendChild( iconButton( row, 'case-up', 'dashicons-arrow-up-alt', { id: id + '-up', disabled: 0 === index, ariaLabel: sprintf( __( 'Move up: line %d', 'kk-content-exporter' ), index + 1 ), 'data-index': position } ) );
 				/* translators: %d: position of a line in the table of a lookup rule. */
-				actions.appendChild( button( row, 'case-down', LABEL_DOWN, { id: id + '-down', disabled: index === cases.length - 1, ariaLabel: sprintf( __( 'Move down: line %d', 'kk-content-exporter' ), index + 1 ), 'data-index': position } ) );
+				actions.appendChild( iconButton( row, 'case-down', 'dashicons-arrow-down-alt', { id: id + '-down', disabled: index === cases.length - 1, ariaLabel: sprintf( __( 'Move down: line %d', 'kk-content-exporter' ), index + 1 ), 'data-index': position } ) );
 				/* translators: %d: position of a line in the table of a lookup rule. */
 				actions.appendChild( button( row, 'case-remove', LABEL_REMOVE, { id: id + '-remove', className: 'button-link button-link-delete', ariaLabel: sprintf( __( 'Remove line %d', 'kk-content-exporter' ), index + 1 ), 'data-index': position } ) );
-				line.appendChild( actions );
+				actionsCell.appendChild( actions );
 				items.appendChild( line );
 			} );
-			group.appendChild( items );
+			table.appendChild( items );
+			group.appendChild( table );
 
-			const tools = el( 'div', { className: 'kkce-mapping-scope-actions' } );
-			tools.appendChild( button( row, 'case-add', __( 'Add line', 'kk-content-exporter' ), { id: prefix + '-case-add', disabled: cases.length >= data.maxCases } ) );
+			const tools = el( 'div', { className: 'kkce-mapping-scope-actions kkce-mapping-cases-tools' } );
+			tools.appendChild( addLink( row, 'case-add', __( 'Add line', 'kk-content-exporter' ), { id: prefix + '-case-add', disabled: cases.length >= data.maxCases } ) );
 			group.appendChild( tools );
 
 			group.appendChild( renderOutput( row, 'default', LABEL_DEFAULT ) );
@@ -1613,9 +1706,11 @@
 		function renderCheck( row ) {
 			const prefix = 'kkce-mapping-' + row.uid;
 			const group = el( 'fieldset', { className: 'kkce-mapping-scope kkce-mapping-check' } );
-			group.appendChild( el( 'legend', {}, LABEL_CHECK ) );
+			// The controls of the check have their own labels in the column of the labels: the name of the group is
+			// for assistive technologies.
+			group.appendChild( el( 'legend', { className: 'screen-reader-text' }, LABEL_CHECK ) );
 
-			const line = el( 'div', { className: 'kkce-mapping-value' } );
+			const line = el( 'div', { className: 'kkce-mapping-check-line' } );
 			line.appendChild( labelled( __( 'The field', 'kk-content-exporter' ), select( { id: prefix + '-operator', className: 'kkce-mapping-operator', 'data-uid': String( row.uid ) }, OPERATORS, row.data.operator ) ) );
 			const texts = row.data.matches || [];
 			if ( 'one_of' === row.data.operator ) {
@@ -1669,7 +1764,8 @@
 			const wrapper = el( 'div', { className: 'kkce-mapping-exception' } );
 			// Exceptions on request: a button first; the picker appears only when the administrator asks for it.
 			if ( ! row.pickerOpen ) {
-				wrapper.appendChild( button( row, 'scope-open', __( 'Add exception for a post type', 'kk-content-exporter' ), { id: prefix + '-exception-open' } ) );
+				wrapper.classList.add( 'kkce-mapping-indent' );
+				wrapper.appendChild( addLink( row, 'scope-open', __( 'Add exception for a post type', 'kk-content-exporter' ), { id: prefix + '-exception-open' } ) );
 				return wrapper;
 			}
 			const picker = select( { id: prefix + '-exception' }, free.map( function ( postType ) {
@@ -1865,13 +1961,13 @@
 		}
 
 		/**
-		 * One-line summary of a row, shown in its header: key, what it writes, output type, and a mark of the
-		 * exceptions and of the advanced options set, for example "title ← Title · Automatic".
+		 * Parts of the one-line summary of a row, shown in its header: key, what it writes, then output type and a
+		 * mark of the exceptions and of the advanced options set, for example "title ← Title · Automatic".
 		 *
 		 * @param {Object} row Row.
-		 * @return {string} Summary.
+		 * @return {Object} `key`, `what`, and `details` (list of texts).
 		 */
-		function rowSummary( row ) {
+		function summaryParts( row ) {
 			const item = row.data;
 			const key = String( item.key || '' ) || __( '(no key)', 'kk-content-exporter' );
 			let what = '—';
@@ -1900,18 +1996,43 @@
 			const typeLabel = ( TYPES.find( function ( entry ) {
 				return entry[ 0 ] === type;
 			} ) || [ type, type ] )[ 1 ];
-			/* translators: 1: output key of a row, 2: what the row writes, for example a field. */
-			const parts = [ sprintf( __( '%1$s ← %2$s', 'kk-content-exporter' ), key, what ), typeLabel ];
+			const details = [ typeLabel ];
 			if ( isEditable( item ) && hasExceptions( item ) ) {
 				const count = scopesOf( scopeMap( item ) ).length - 1;
 				/* translators: %d: number of exceptions for single post types of a row. */
-				parts.push( sprintf( _n( '%d exception', '%d exceptions', count, 'kk-content-exporter' ), count ) );
+				details.push( sprintf( _n( '%d exception', '%d exceptions', count, 'kk-content-exporter' ), count ) );
 			}
 			const options = item.options || {};
 			if ( undefined !== item.max_length || true === options.raw || true === options.shortcodes ) {
-				parts.push( __( 'advanced options', 'kk-content-exporter' ) );
+				details.push( __( 'advanced options', 'kk-content-exporter' ) );
 			}
-			return parts.join( _x( ' · ', 'separator of the parts of a summary', 'kk-content-exporter' ) );
+			return { key: key, what: what, details: details };
+		}
+
+		/**
+		 * Writes the summary of a row in its header: the key stands out, the details are quieter. The text is the
+		 * same as before the styling, for example "title ← Title · Text", so the accessible name does not change.
+		 *
+		 * @param {HTMLElement} node Element of the summary.
+		 * @param {Object}      row  Row.
+		 */
+		function fillSummary( node, row ) {
+			const parts = summaryParts( row );
+			const separator = _x( ' · ', 'separator of the parts of a summary', 'kk-content-exporter' );
+			/* translators: 1: output key of a row, 2: what the row writes, for example a field. */
+			const format = __( '%1$s ← %2$s', 'kk-content-exporter' );
+			// Split the format first, so a placeholder typed in a value (a template) is never read as the key.
+			const pieces = format.split( '%1$s' ).map( function ( piece ) {
+				return piece.replace( '%2$s', parts.what );
+			} );
+			node.textContent = '';
+			pieces.forEach( function ( piece, index ) {
+				if ( index > 0 ) {
+					node.appendChild( el( 'span', { className: 'kkce-mapping-summary-key' }, parts.key ) );
+				}
+				node.appendChild( document.createTextNode( piece ) );
+			} );
+			node.appendChild( el( 'span', { className: 'kkce-mapping-summary-details' }, separator + parts.details.join( separator ) ) );
 		}
 
 		/**
@@ -1958,10 +2079,11 @@
 			} );
 			const editable = isEditable( row.data );
 
-			fieldset.appendChild( el( 'legend', {}, legendText( index, row ) ) );
+			// The legend names the group for assistive technologies; the summary in the header is the visible title.
+			fieldset.appendChild( el( 'legend', { className: 'screen-reader-text' }, legendText( index, row ) ) );
 
 			// Header: the summary opens and closes the row (interface state, not a change of the feed), then the
-			// actions on the whole row, as icons with an accessible name.
+			// actions on the whole row: moves as icons with an accessible name, the removal as a red link apart.
 			const header = el( 'div', { className: 'kkce-mapping-header' } );
 			const toggle = el( 'button', {
 				type: 'button',
@@ -1973,7 +2095,9 @@
 				'data-action': 'toggle',
 			} );
 			toggle.appendChild( el( 'span', { className: 'dashicons ' + ( row.collapsed ? 'dashicons-arrow-right-alt2' : 'dashicons-arrow-down-alt2' ), ariaHidden: 'true' } ) );
-			toggle.appendChild( el( 'span', { className: 'kkce-mapping-summary' }, rowSummary( row ) ) );
+			const summary = el( 'span', { className: 'kkce-mapping-summary' } );
+			fillSummary( summary, row );
+			toggle.appendChild( summary );
 			header.appendChild( toggle );
 			const actions = el( 'div', { className: 'kkce-mapping-actions' } );
 			/* translators: %d: position of the row. */
@@ -1981,22 +2105,36 @@
 			/* translators: %d: position of the row. */
 			actions.appendChild( iconButton( row, 'down', 'dashicons-arrow-down-alt', { id: prefix + '-down', disabled: index === rows.length - 1, ariaLabel: sprintf( __( 'Move down: row %d', 'kk-content-exporter' ), index + 1 ) } ) );
 			/* translators: %d: position of the row. */
-			actions.appendChild( iconButton( row, 'remove', 'dashicons-trash', { id: prefix + '-remove', className: 'button button-link-delete kkce-mapping-icon', ariaLabel: sprintf( __( 'Remove row %d', 'kk-content-exporter' ), index + 1 ) } ) );
+			actions.appendChild( button( row, 'remove', LABEL_REMOVE, { id: prefix + '-remove', className: 'button-link button-link-delete kkce-mapping-remove', ariaLabel: sprintf( __( 'Remove row %d', 'kk-content-exporter' ), index + 1 ) } ) );
 			header.appendChild( actions );
 			fieldset.appendChild( header );
 
 			// Closed controls are hidden, so they cannot take the focus.
+			// Three parts in the same order for every rule: what (key and rule), from where (the configuration of the
+			// rule), how (output type and advanced options). Labels on the left, controls lined up on the right.
 			const body = el( 'div', { className: 'kkce-mapping-body', id: prefix + '-body', hidden: !! row.collapsed } );
 			fieldset.appendChild( body );
+			fields.appendChild( zone( _x( 'What', 'part of a mapping row: the key and the rule', 'kk-content-exporter' ) ) );
 			fields.appendChild( labelled( __( 'JSON key', 'kk-content-exporter' ), key ) );
+			error.classList.add( 'kkce-mapping-indent' );
+			fields.appendChild( error );
 			if ( editable ) {
-				fields.appendChild( labelled( __( 'Rule', 'kk-content-exporter' ), select( { id: prefix + '-kind', className: 'kkce-mapping-kind', 'data-uid': String( row.uid ) }, KINDS, row.data.kind ) ) );
+				const help = renderRuleHelp( row );
+				const kind = select( { id: prefix + '-kind', className: 'kkce-mapping-kind', 'data-uid': String( row.uid ) }, KINDS, row.data.kind );
+				if ( help ) {
+					kind.setAttribute( 'aria-describedby', help.id );
+				}
+				fields.appendChild( labelled( __( 'Rule', 'kk-content-exporter' ), kind ) );
+				appendIfAny( fields, help );
 			}
 			body.appendChild( fields );
-			body.appendChild( error );
+			if ( editable ) {
+				body.appendChild( zone( _x( 'From where', 'part of a mapping row: where the value comes from', 'kk-content-exporter' ) ) );
+			}
 
 			// The output type closes the row, after the configuration of the rule: key → rule → configuration → output.
 			const output = el( 'div', { className: 'kkce-mapping-fields kkce-mapping-output' } );
+			output.appendChild( zone( _x( 'How', 'part of a mapping row: how the value is written', 'kk-content-exporter' ) ) );
 			// A template always gives a text: plain or HTML.
 			const isTemplate = 'template' === row.data.kind;
 			const types = isTemplate ? TYPES.filter( function ( type ) {
@@ -2011,14 +2149,11 @@
 			} else if ( 'field' === row.data.kind ) {
 				appendScopes( body, row, renderChain );
 			} else if ( 'template' === row.data.kind ) {
-				body.appendChild( el( 'p', { id: prefix + '-template-help', className: 'description' }, __( 'Write the text and put the fields between braces, for example {core.title}. {a|b|"text"} uses the first one with a value; a part between square brackets, such as {meta.city}[, {meta.address}], is written only when all its fields have a value; write {{, }}, [[ and ]] for a brace or a bracket. "Insert field" writes a field where the cursor is.', 'kk-content-exporter' ) ) );
+				body.appendChild( el( 'p', { id: prefix + '-template-help', className: 'description kkce-mapping-indent' }, __( 'Write the text and put the fields between braces, for example {core.title}. {a|b|"text"} uses the first one with a value; a part between square brackets, such as {meta.city}[, {meta.address}], is written only when all its fields have a value; write {{, }}, [[ and ]] for a brace or a bracket. "Insert field" writes a field where the cursor is.', 'kk-content-exporter' ) ) );
 				appendScopes( body, row, renderTemplate );
 			} else if ( 'lookup' === row.data.kind || 'condition' === row.data.kind ) {
-				// Same inputs for both rules; only the description and the table or the check differ.
+				// Same inputs for both rules; only the table or the check differ. The details are in the guide.
 				const isLookup = 'lookup' === row.data.kind;
-				body.appendChild( el( 'p', { className: 'description' }, isLookup
-					? __( 'The value of the field is compared with the lines of the table, exactly (capital letters included, spaces at the ends ignored); the first line that matches gives the output. Lists cannot be read.', 'kk-content-exporter' )
-					: __( 'One check on one field: when it is true the first output is written, otherwise the second. Values are compared exactly (capital letters included, spaces at the ends ignored); "contains" looks for a text inside the value, or for one element of a list, such as the categories; lists can be checked only with "is empty", "is not empty" and "contains".', 'kk-content-exporter' ) ) );
 				appendScopes( body, row, renderInput );
 				body.appendChild( isLookup ? renderCases( row ) : renderCheck( row ) );
 			} else {
@@ -2097,6 +2232,8 @@
 			} );
 			empty.hidden = rows.length > 0;
 			bulk.hidden = rows.length < 2;
+			/* translators: %d: number of rows of the mapping. */
+			rowCount.textContent = sprintf( _n( '%d row', '%d rows', rows.length, 'kk-content-exporter' ), rows.length );
 			addButton.disabled = rows.length >= data.maxRows;
 			/* translators: %d: maximum number of rows of a mapping. */
 			limit.textContent = sprintf( __( 'A mapping can have at most %d rows.', 'kk-content-exporter' ), data.maxRows );
@@ -2424,7 +2561,7 @@
 				commit( true );
 				// Update the legend and the errors without drawing the row again, so the caret stays where it is.
 				input.closest( 'li' ).querySelector( 'legend' ).textContent = legendText( index, row );
-				input.closest( 'li' ).querySelector( '.kkce-mapping-summary' ).textContent = rowSummary( row );
+				fillSummary( input.closest( 'li' ).querySelector( '.kkce-mapping-summary' ), row );
 				checkKeys();
 				return;
 			}
@@ -2483,7 +2620,7 @@
 			// The summary in the header follows what is typed (fixed value, template, maximum length).
 			const summary = input.closest( 'li' ).querySelector( '.kkce-mapping-summary' );
 			if ( summary ) {
-				summary.textContent = rowSummary( row );
+				fillSummary( summary, row );
 			}
 		} );
 

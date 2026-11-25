@@ -112,6 +112,11 @@ final class Admin_Routes {
 						'required'    => true,
 					),
 					'post_types' => self::post_types_arg(),
+					'post_type'  => array(
+						'description' => __( 'Post type to preview, one of the post types of the feed; without it, every post type. The mapping is always checked against every post type of the feed.', 'kk-content-exporter' ),
+						'type'        => 'string',
+						'pattern'     => self::POST_TYPE_PATTERN,
+					),
 					'post_id'    => array(
 						'description' => __( 'Item to preview; without it, the latest published item of every post type.', 'kk-content-exporter' ),
 						'type'        => 'integer',
@@ -232,7 +237,9 @@ final class Admin_Routes {
 	}
 
 	/**
-	 * Preview of a mapping on one item, or on the latest published item of every post type.
+	 * Preview of a mapping on one item, or on the latest published item of every post type (or of `post_type`
+	 * only). The mapping belongs to the whole feed, so it is always checked against the catalog of every post type
+	 * of the request, also when the editor asks one post type at a time.
 	 *
 	 * @param WP_REST_Request $request Request.
 	 *
@@ -246,6 +253,16 @@ final class Admin_Routes {
 			return new WP_Error(
 				'kkce_no_post_types',
 				__( 'None of the requested post types can be exported.', 'kk-content-exporter' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// The post type to preview, when asked, must be one of the feed: the others would not be checked.
+		$only = $request->get_param( 'post_type' );
+		if ( null !== $only && ! in_array( $only, $post_types, true ) ) {
+			return new WP_Error(
+				'kkce_no_post_types',
+				__( 'The post type to preview is not one of the post types of the feed.', 'kk-content-exporter' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -284,7 +301,7 @@ final class Admin_Routes {
 
 		$items       = array();
 		$empty_types = array();
-		foreach ( $post_types as $post_type ) {
+		foreach ( null === $only ? $post_types : array( $only ) as $post_type ) {
 			$post = self::latest_item( $post_type );
 			if ( null === $post ) {
 				$empty_types[] = $post_type;

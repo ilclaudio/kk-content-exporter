@@ -13,31 +13,115 @@
 }
 
 .kkce-mapping-row {
-	margin: 0 0 1em;
+	/* Width of the column of the labels, and the space before the controls. */
+	--kkce-label: 10em;
+	--kkce-gap: 1em;
+	margin: 0 0 0.75em;
 }
 
-.kkce-mapping-row fieldset {
+.kkce-mapping-row > fieldset {
+	background: #fff;
 	border: 1px solid #c3c4c7;
 	border-radius: 2px;
 	margin: 0;
-	padding: 0.5em 1em 1em;
+	min-width: 0;
+	padding: 0;
 }
 
-.kkce-mapping-row legend {
+.kkce-mapping-row fieldset .kkce-mapping-scope legend {
 	font-weight: 600;
-	padding: 0 0.25em;
+	padding: 0;
 }
 
-.kkce-mapping-fields {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.75em 1.5em;
-	align-items: flex-end;
+/* The parts of a row are stacked: one control per line, its label on the left. */
+.kkce-mapping-fields > * + * {
+	margin-top: 0.6em;
 }
 
 .kkce-mapping-field label {
 	display: block;
 	margin-bottom: 0.25em;
+}
+
+.kkce-mapping-row .kkce-mapping-field {
+	display: grid;
+	grid-template-columns: var(--kkce-label) auto;
+	column-gap: var(--kkce-gap);
+	align-items: center;
+	justify-content: start;
+}
+
+/* A template uses the whole width. */
+.kkce-mapping-row .kkce-mapping-template-scope > .kkce-mapping-field {
+	grid-template-columns: var(--kkce-label) minmax(0, 1fr);
+	justify-content: stretch;
+}
+
+.kkce-mapping-row .kkce-mapping-field > label {
+	margin: 0;
+	font-weight: 500;
+}
+
+/* What a field adds after its control (a hint, an error) goes under the control. */
+.kkce-mapping-row .kkce-mapping-field > :nth-child(n+3) {
+	grid-column: 2;
+}
+
+.kkce-mapping-row .kkce-mapping-field.kkce-mapping-field-bare {
+	display: block;
+}
+
+/* Text without a label of its own (help, links, errors) starts where the controls start. */
+.kkce-mapping-row .kkce-mapping-indent {
+	margin-left: calc(var(--kkce-label) + var(--kkce-gap));
+}
+
+/* Small title of each part of a row. */
+.kkce-mapping-zone {
+	color: #646970;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	margin: 1em 0 0.25em;
+	text-transform: uppercase;
+}
+
+.kkce-mapping-fields > .kkce-mapping-zone:first-child {
+	margin-top: 0;
+}
+
+/* Light buttons that add something: a link with a plus sign. */
+.kkce-mapping .kkce-mapping-add {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.15em;
+	text-decoration: none;
+}
+
+.kkce-mapping .kkce-mapping-add .dashicons {
+	font-size: 16px;
+	height: 16px;
+	width: 16px;
+}
+
+/* Links that act as buttons stay at least 24 px high, the minimum size of a target (WCAG 2.5.8). */
+.kkce-mapping .button-link {
+	min-height: 24px;
+}
+
+/* The links to the guide: the icon says that it opens in a new tab (the text says it to screen readers). */
+.kkce-box-intro .dashicons-external,
+.kkce-mapping-rule-help .dashicons-external,
+.kkce-mapping-language .dashicons-external {
+	font-size: 16px;
+	height: 16px;
+	width: 16px;
+	vertical-align: text-bottom;
+}
+
+.kkce-mapping .button-link:disabled {
+	color: #a7aaad;
+	cursor: default;
 }
 
 /* One width for the selects and the text fields of a row, so the controls line up. */
@@ -51,7 +135,7 @@
 .kkce-mapping-output {
 	border-top: 1px solid #dcdcde;
 	margin-top: 1em;
-	padding-top: 0.75em;
+	padding-top: 0.25em;
 }
 
 .kkce-mapping-kept {
@@ -75,17 +159,40 @@
 	gap: 0.5em 1em;
 	align-items: center;
 	justify-content: space-between;
+	padding: 0.4em 0.75em 0.4em 0.5em;
 }
 
-.kkce-mapping-toggle {
+.kkce-mapping-row > fieldset:has(> .kkce-mapping-body:not([hidden])) > .kkce-mapping-header {
+	border-bottom: 1px solid #f0f0f1;
+}
+
+/* The summary is the visible title of the row: plain text, not a link. */
+.kkce-mapping .kkce-mapping-toggle {
 	display: inline-flex;
+	flex: 1;
 	gap: 1em;
 	align-items: center;
 	min-width: 0;
+	padding: 0.25em;
 	text-align: left;
 	text-decoration: none;
 	color: inherit;
+	font-weight: 400;
 	overflow-wrap: anywhere;
+}
+
+.kkce-mapping .kkce-mapping-toggle:hover .kkce-mapping-summary-key {
+	color: #2271b1;
+}
+
+/* The key of the row stands out; the type and the marks are quieter. */
+.kkce-mapping-summary-key {
+	font-family: Consolas, Monaco, monospace;
+	font-weight: 600;
+}
+
+.kkce-mapping-summary-details {
+	color: #646970;
 }
 
 .kkce-mapping-actions {
@@ -95,19 +202,63 @@
 	align-items: center;
 }
 
-.kkce-mapping-icon .dashicons {
+.kkce-mapping .kkce-mapping-remove {
+	margin-left: 0.75em;
+}
+
+/* Icon buttons (move up, move down): compact squares. */
+.kkce-mapping .button.kkce-mapping-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	min-width: 30px;
+	height: 30px;
+	min-height: 30px;
+	padding: 0;
+	line-height: 1;
+}
+
+/* Centered in its square: the admin moves the icons of its buttons down, with a stronger selector. */
+.wp-core-ui .kkce-mapping .button.kkce-mapping-icon .dashicons {
+	font-size: 20px;
+	height: 20px;
+	line-height: 1;
+	margin: 0;
+	position: static;
+	top: auto;
 	vertical-align: middle;
+	width: 20px;
+}
+
+/* Text buttons of the box: the compact size of the admin (30 px), the colors of its scheme. */
+.kkce-mapping .button:not(.kkce-mapping-icon) {
+	min-height: 30px;
+	line-height: 2.15384615;
+	padding: 0 10px;
+	font-size: 13px;
 }
 
 .kkce-mapping-body {
-	margin-top: 0.75em;
+	padding: 0.75em 1em 1em;
 }
 
 .kkce-mapping-bulk {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.5em;
+	gap: 0.25em 1.25em;
+	align-items: center;
 	margin: 0 0 0.75em;
+}
+
+/* `display: flex` would show the bar with one row: the attribute wins. */
+.kkce-mapping-bulk[hidden] {
+	display: none;
+}
+
+.kkce-mapping-count {
+	color: #646970;
+	margin-right: auto;
 }
 
 .kkce-post-type-filter {
@@ -117,7 +268,8 @@
 /* One container per row: a scope is not a box of its own, its name (shown with exceptions) is a plain heading. */
 .kkce-mapping-row .kkce-mapping-scope {
 	border: 0;
-	margin: 0.75em 0 0;
+	margin: 0.6em 0 0;
+	min-width: 0;
 	padding: 0;
 }
 
@@ -136,7 +288,7 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.5em 1em;
-	align-items: flex-end;
+	align-items: center;
 	margin: 0 0 0.5em;
 }
 
@@ -145,12 +297,20 @@
 .kkce-mapping-exception {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.5em 1em;
-	align-items: flex-end;
+	gap: 0.5em 1.25em;
+	align-items: center;
+}
+
+.kkce-mapping-chain-actions {
+	gap: 0.25em;
+}
+
+.kkce-mapping-chain-actions .button-link-delete {
+	margin-left: 0.5em;
 }
 
 .kkce-mapping-exception {
-	margin-top: 0.75em;
+	margin-top: 0.6em;
 }
 
 .kkce-mapping-value,
@@ -158,18 +318,121 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.5em 1em;
-	align-items: flex-end;
+	align-items: center;
+}
+
+/* The choice of an output and its value stay on one line: the value takes what is left. */
+.kkce-mapping-default {
+	flex-wrap: nowrap;
+	gap: 0.5em;
+}
+
+.kkce-mapping-row .kkce-mapping-default > .kkce-mapping-field:first-child select {
+	width: 15em;
+}
+
+.kkce-mapping-default > .kkce-mapping-field-bare {
+	flex: 0 1 18em;
+	min-width: 0;
+}
+
+.kkce-mapping-row .kkce-mapping-default > .kkce-mapping-field-bare select,
+.kkce-mapping-row .kkce-mapping-default > .kkce-mapping-field-bare input[type="text"] {
+	width: 100%;
+}
+
+.kkce-mapping-check-line > * + * {
+	margin-top: 0.6em;
 }
 
 .kkce-mapping-options,
 .kkce-mapping-default {
-	margin-top: 0.75em;
+	margin-top: 0.6em;
 }
 
-/* Lines of a lookup table: the text to match and the output side by side, wrapping on narrow boxes. */
-.kkce-mapping-case input[type="text"] {
-	width: 14em;
-	max-width: 100%;
+/* Lookup table: its title in the column of the labels, a real table beside it. */
+.kkce-mapping-row .kkce-mapping-cases > legend {
+	float: left;
+	width: var(--kkce-label);
+	font-weight: 500;
+	padding-top: 0.2em;
+}
+
+.kkce-mapping-cases-table,
+.kkce-mapping-cases-tools {
+	margin-left: calc(var(--kkce-label) + var(--kkce-gap));
+}
+
+.kkce-mapping-cases-table {
+	border-collapse: collapse;
+	table-layout: fixed;
+	width: calc(100% - var(--kkce-label) - var(--kkce-gap));
+	max-width: 42em;
+}
+
+/* Fixed columns: the text to match, the output (what is left), the actions (two icons and "Remove"). */
+.kkce-mapping-cases-table thead th:first-child {
+	width: 28%;
+}
+
+.kkce-mapping-cases-table thead td:last-child {
+	width: 10em;
+}
+
+.kkce-mapping-cases-table th {
+	border-bottom: 1px solid #dcdcde;
+	color: #50575e;
+	font-weight: 500;
+	padding: 0 0.5em 0.25em 0;
+	text-align: left;
+	white-space: nowrap;
+}
+
+.kkce-mapping-cases-table td {
+	padding: 0.4em 0.5em 0 0;
+	vertical-align: middle;
+}
+
+.kkce-mapping-case input[type="text"],
+.kkce-mapping-case select {
+	width: 100%;
+}
+
+.kkce-mapping-case-output {
+	display: flex;
+	gap: 0.4em;
+}
+
+.kkce-mapping-case-output > .kkce-mapping-field:first-child {
+	flex: none;
+	width: 7.5em;
+}
+
+.kkce-mapping-case-output > .kkce-mapping-field + .kkce-mapping-field {
+	flex: 1;
+	min-width: 0;
+}
+
+.kkce-mapping-case-actions {
+	white-space: nowrap;
+	width: 1%;
+}
+
+.kkce-mapping-case-actions .kkce-mapping-chain-actions {
+	flex-wrap: nowrap;
+	gap: 0.25em;
+}
+
+.kkce-mapping-case-actions .button-link-delete {
+	margin-left: 0.5em;
+}
+
+.kkce-mapping-cases-tools {
+	margin-top: 0.5em;
+}
+
+.kkce-mapping-cases > .kkce-mapping-default {
+	clear: both;
 }
 
 .kkce-mapping-options label {
@@ -191,8 +454,9 @@
 	margin-top: 0.5em;
 }
 
-.kkce-mapping-advanced .kkce-mapping-field label {
-	display: block;
+.kkce-mapping-advanced .kkce-mapping-options > label,
+.kkce-mapping-advanced .kkce-mapping-options > p {
+	margin-left: calc(var(--kkce-label) + var(--kkce-gap));
 }
 
 .kkce-mapping-warning {
@@ -215,9 +479,48 @@
 	container-type: inline-size;
 }
 
-/* Narrow column of the rows: one control per line, no horizontal scroll. */
+/* Narrow column of the rows: labels above the controls, one control per line, no horizontal scroll. */
 @container (max-width: 600px) {
-	.kkce-mapping-fields,
+	.kkce-mapping-row .kkce-mapping-field,
+	.kkce-mapping-row .kkce-mapping-template-scope > .kkce-mapping-field {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	/* The rule of the insert line comes later in this file: it needs more weight to be stacked here. */
+	.kkce-mapping-row .kkce-mapping-insert {
+		align-items: stretch;
+	}
+
+	/* In a column the basis of a flex item is its height: the value of an output keeps its own. */
+	.kkce-mapping-default > .kkce-mapping-field-bare {
+		flex: none;
+	}
+
+	.kkce-mapping-row .kkce-mapping-field > label {
+		margin-bottom: 0.25em;
+	}
+
+	.kkce-mapping-row .kkce-mapping-field > :nth-child(n+3) {
+		grid-column: 1;
+	}
+
+	.kkce-mapping-row .kkce-mapping-indent,
+	.kkce-mapping-cases-table,
+	.kkce-mapping-cases-tools,
+	.kkce-mapping-advanced .kkce-mapping-options > label,
+	.kkce-mapping-advanced .kkce-mapping-options > p {
+		margin-left: 0;
+	}
+
+	.kkce-mapping-cases-table {
+		width: 100%;
+	}
+
+	.kkce-mapping-row .kkce-mapping-cases > legend {
+		float: none;
+		width: auto;
+	}
+
 	.kkce-mapping-chain li,
 	.kkce-mapping-value,
 	.kkce-mapping-default,
@@ -279,6 +582,7 @@
 /* A panel per post type: the title names the type and the item, also when the panel is closed. */
 .kkce-preview-type summary {
 	cursor: pointer;
+	font-size: 14px;
 	font-weight: 600;
 	overflow-wrap: anywhere;
 }
@@ -287,11 +591,22 @@
 	margin-bottom: 0.5em;
 }
 
+/* The choice of the item and the tools of the JSON, on one line above it. */
 .kkce-preview-tools {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.5em;
-	margin-top: 0.5em;
+	align-items: flex-end;
+	margin-bottom: 0.5em;
+}
+
+.kkce-preview-tools .kkce-mapping-field {
+	flex: 1 1 12em;
+	min-width: 0;
+}
+
+.kkce-preview-tools select {
+	width: 100%;
 }
 
 /* Always in the page, also when empty, so that screen readers announce the message of a copy. */
@@ -313,6 +628,12 @@
 	padding: 0.75em;
 	white-space: pre-wrap;
 	word-break: break-word;
+}
+
+/* The JSON is one block: no background per line from the style of `code` in the admin. */
+.kkce-preview-json code {
+	background: none;
+	padding: 0;
 }
 
 .kkce-preview-json.is-expanded {

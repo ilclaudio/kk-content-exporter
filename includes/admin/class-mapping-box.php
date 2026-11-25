@@ -62,6 +62,32 @@ final class Mapping_Box {
 	}
 
 	/**
+	 * Help of the rules the editor offers: one short sentence shown under the rule, and the address of the tab of
+	 * the guide that explains it (every rule has a tab of the same name).
+	 *
+	 * @return array<string, array{help: string, guide: string}> Kind of rule => help and address.
+	 */
+	private static function rules(): array {
+		$help = array(
+			'field'     => __( 'Reads a field of the content; a fallback is used when the first field is empty.', 'kk-content-exporter' ),
+			'fixed'     => __( 'Writes the same text in every item.', 'kk-content-exporter' ),
+			'template'  => __( 'Joins fields and words in one text.', 'kk-content-exporter' ),
+			'lookup'    => __( 'Translates the value of a field with a table, like a switch; the comparison is exact.', 'kk-content-exporter' ),
+			'condition' => __( 'Checks one field and writes one output when the check is true, another when it is false.', 'kk-content-exporter' ),
+		);
+
+		$rules = array();
+		foreach ( $help as $kind => $text ) {
+			$rules[ $kind ] = array(
+				'help'  => $text,
+				'guide' => Guide_Page::url( $kind ),
+			);
+		}
+
+		return $rules;
+	}
+
+	/**
 	 * Prints the container of the mapping editor with its initial data.
 	 *
 	 * @param mixed $post The feed being edited.
@@ -88,6 +114,8 @@ final class Mapping_Box {
 			'maxCases'          => Mapping_Validator::MAX_CASES,
 			'maxLengthLimit'    => Mapping_Validator::MAX_LENGTH_LIMIT,
 			'metaKeyMaxLength'  => Meta_Keys::MAX_LENGTH,
+			'rules'             => self::rules(),
+			'languageGuide'     => Guide_Page::url( 'overview' ) . '#kkce-guide-multilingual',
 		);
 
 		$draft = self::refused_mapping( $post->ID );
@@ -103,22 +131,11 @@ final class Mapping_Box {
 			}
 		}
 		?>
-		<p class="description kkce-box-intro"><?php esc_html_e( 'Each row defines one key of the JSON of every item. Use the preview to check the result before saving.', 'kk-content-exporter' ); ?></p>
-		<details class="kkce-mapping-help">
-			<summary><?php esc_html_e( 'How the rows work', 'kk-content-exporter' ); ?></summary>
-			<ul>
-				<li><?php esc_html_e( 'Keys: every item has all the keys, in the order of the rows; a key without a value is written as null, so the program that reads the feed always finds the same keys.', 'kk-content-exporter' ); ?></li>
-				<li><?php esc_html_e( 'JSON key: the name of the key in every item, for example "title". It is proposed from the field you choose, and you can change it.', 'kk-content-exporter' ); ?></li>
-				<li><?php esc_html_e( 'Rule "Field": the value is read from a field of the content. With "Add fallback" another field is used when the first one is empty; with "Different for" a post type can read other fields.', 'kk-content-exporter' ); ?></li>
-				<li><?php esc_html_e( 'Rule "Fixed value": every item gets the same text, for example the name of the site; with "Different for" a post type can get another one.', 'kk-content-exporter' ); ?></li>
-				<li><?php esc_html_e( 'Rule "Template": a text that joins fields and words, for example "{core.title} – {meta.place}". "Insert field" writes a field between braces; {a|b|"text"} uses the first one with a value; a part between square brackets, such as "[, {meta.address}]", is written only when its fields have a value.', 'kk-content-exporter' ); ?></li>
-				<li><?php esc_html_e( 'Rule "Lookup table": reads a field and translates its value, for example the post type "post" into "News". Every line of the table gives a fixed text or another field; when no line matches, the default is used (empty by default: the key is null). The comparison is exact, capital letters included.', 'kk-content-exporter' ); ?></li>
-				<li><?php esc_html_e( 'Rule "Condition": checks one field (is empty, is not empty, is equal to, is different from, is one of, contains) and writes one output when the check is true and another when it is false, for example the excerpt or, when it is empty, the title. "Contains" looks for a text inside the value, or for one element of a list.', 'kk-content-exporter' ); ?></li>
-				<li><?php esc_html_e( 'Maximum length: with the text output type (always for a template that is not HTML), a longer text is cut at a whole word and ends with "…".', 'kk-content-exporter' ); ?></li>
-				<li><?php esc_html_e( 'Output type: how the value is written in the JSON (text, HTML, number, true or false, date and time, URL, list). "Automatic" uses the type of the field.', 'kk-content-exporter' ); ?></li>
-				<li><?php esc_html_e( 'Preview: as soon as there is a row, the JSON of a published item of each checked post type appears beside the rules and changes while you edit them.', 'kk-content-exporter' ); ?></li>
-			</ul>
-		</details>
+		<p class="description kkce-box-intro">
+			<?php esc_html_e( 'Each row defines one key of the JSON of every item. Use the preview to check the result before saving.', 'kk-content-exporter' ); ?>
+			<?php // A new tab: the editor often has unsaved changes, and leaving it would ask to discard them. ?>
+			<a href="<?php echo esc_url( Guide_Page::url( 'overview' ) ); ?>" target="_blank"><?php esc_html_e( 'How the rows work', 'kk-content-exporter' ); ?><span class="screen-reader-text"> <?php esc_html_e( '(opens in a new tab)', 'kk-content-exporter' ); ?></span><span aria-hidden="true" class="dashicons dashicons-external"></span></a>
+		</p>
 		<div id="kkce-feed-mapping" class="kkce-mapping" data-kkce-mapping="<?php echo esc_attr( (string) wp_json_encode( $data ) ); ?>"></div>
 		<noscript>
 			<p><?php esc_html_e( 'The mapping editor needs JavaScript. Without it, saving the feed keeps the saved mapping unchanged.', 'kk-content-exporter' ); ?></p>

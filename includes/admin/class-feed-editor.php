@@ -53,7 +53,7 @@ final class Feed_Editor {
 	public const META_BOX_ID = 'kkce_feed_settings';
 
 	/**
-	 * Handle of the editor script.
+	 * Handle of the editor script and of its style.
 	 */
 	public const SCRIPT_HANDLE = 'kkce-feed-editor';
 
@@ -127,11 +127,12 @@ final class Feed_Editor {
 	}
 
 	/**
-	 * Loads the editor script on the screens that edit or create a feed, and nowhere else.
+	 * Loads the editor script and its style on the screens that edit or create a feed, and nowhere else.
 	 * Hooked on `admin_enqueue_scripts`.
 	 *
 	 * The script updates the address of the feed while the slug is typed and asks for confirmation
-	 * before leaving the page with unsaved changes in the settings box. The box works without it.
+	 * before leaving the page with unsaved changes in the settings box. The box works without it. The style
+	 * draws the status as an on/off switch.
 	 *
 	 * @param mixed $hook_suffix Admin page being loaded.
 	 * @return void
@@ -147,6 +148,12 @@ final class Feed_Editor {
 			array(),
 			KKCE_VERSION,
 			array( 'in_footer' => true )
+		);
+		wp_enqueue_style(
+			self::SCRIPT_HANDLE,
+			plugins_url( 'assets/css/feed-editor.css', KKCE_PLUGIN_FILE ),
+			array(),
+			KKCE_VERSION
 		);
 	}
 
@@ -268,8 +275,9 @@ final class Feed_Editor {
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Status', 'kk-content-exporter' ); ?></th>
 					<td>
-						<label for="kkce-feed-active">
-							<input type="checkbox" id="kkce-feed-active" name="<?php echo esc_attr( self::FIELD ); ?>[active]" value="1"<?php checked( $values['active'] ); ?> aria-describedby="kkce-feed-active-help">
+						<?php // An on/off switch: a real checkbox, so it is saved as before and works without JavaScript. ?>
+						<label for="kkce-feed-active" class="kkce-switch-label">
+							<input type="checkbox" id="kkce-feed-active" class="kkce-switch" role="switch" name="<?php echo esc_attr( self::FIELD ); ?>[active]" value="1"<?php checked( $values['active'] ); ?> aria-describedby="kkce-feed-active-help">
 							<?php esc_html_e( 'Enable the feed', 'kk-content-exporter' ); ?>
 						</label>
 						<p class="description" id="kkce-feed-active-help"><?php esc_html_e( 'A feed needs a slug and at least one source post type to be enabled.', 'kk-content-exporter' ); ?></p>

@@ -75,6 +75,8 @@ final class Plugin {
 		add_action( 'untrashed_post', array( Feed_Post_Type::class, 'disable_restored_feed' ) );
 		add_action( 'admin_menu', array( Admin\Settings_Page::class, 'add_menu' ) );
 		add_action( 'admin_init', array( Admin\Settings_Page::class, 'register_settings' ) );
+		// After the settings page, so the guide follows it in the menu.
+		add_action( 'admin_menu', array( Admin\Guide_Page::class, 'add_menu' ) );
 		add_filter( 'manage_' . Feed_Post_Type::POST_TYPE . '_posts_columns', array( Admin\Feed_List::class, 'columns' ) );
 		add_action( 'manage_' . Feed_Post_Type::POST_TYPE . '_posts_custom_column', array( Admin\Feed_List::class, 'render_column' ), 10, 2 );
 		add_filter( 'post_row_actions', array( Admin\Feed_List::class, 'row_actions' ), 10, 2 );
