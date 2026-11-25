@@ -11,33 +11,20 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 ## [0.0.4] - Unreleased
 ### Added
-- Feed endpoint `GET /wp-json/kkce/v1/<slug>` for published, enabled feeds, with `page` and `per_page`, ordered by modified date (GMT) and ID.
-- Authenticated feeds: Application Password of a user with `kkce_read_export`; same data a visitor would get.
-- Date filters `modified_after`, `modified_before` and `published_after`, each one can be turned off.
-- Setting to show or hide the feed endpoint in the REST API index.
-- Field "Featured image (URL)".
-- Taxonomy fields: the names of the terms of every public taxonomy as a list, and the first term as a text.
-- Language fields: site language and, with Polylang, the language of each item (code, locale, W3C code) and its translation group.
-- Optional `lang` parameter of the feed endpoint (Polylang): only the items of one language.
-- With Polylang, a new mapping proposes the rows `lang` and `translation_group`, and the editor warns when no row exports the language.
-- Warning for an enabled feed that is not published.
-- Preview warning when the author archive URL of an item shows the login name of the author.
-- Guide page under Content Exporter: how the rows of a mapping work, one tab per rule, with examples; the Mapping box links to it, and every rule links to its tab.
-- Development tooling: command-line runner of the Insomnia feed routes.
-- Development tooling: integration tests with Polylang, in a second run of the suite.
-- FAQ: how to create a user that can only read the feeds.
+- Feed endpoint `GET /wp-json/kkce/v1/<slug>` with pages, stable order, public or Application Password access.
+- Date filters `modified_after`, `modified_before`, `published_after`; optional `lang` with Polylang.
+- Fields: featured image URL, taxonomy terms, site and item language, translation group.
+- Guide page with one tab per rule; FAQ on a user that can only read the feeds.
+- Setting to hide the endpoint from the REST API index; warnings for unpublished feeds and author logins.
+- Development: Insomnia route runner, Polylang integration suite.
 ### Changed
-- A page of a feed costs the same database queries whatever the number of its items.
-- Mapping editor and validators restructured, without changes of behavior.
-- Mapping editor redesigned: clearer rows that close to a summary, exceptions and advanced options on request, compact preview with "Copy JSON", other meta keys from the list of fields.
-- Mapping rows laid out as a form: labels on the left, controls lined up, three parts (what, from where, how); the lookup table is a real table.
-- The status of a feed is an on/off switch.
+- Mapping editor redesigned: rows laid out as a form, collapsible, compact preview.
+- Feed status shown as an on/off switch.
+- A page of a feed costs the same queries whatever its number of items.
 ### Fixed
-- Only the feed editor changes the slug of a feed: other writes, such as a crafted Quick Edit request, keep it.
-- A feed restored from the trash while another feed uses its slug comes back without a slug, instead of sharing the address.
-- The preview no longer reports "not known" for a field that only another post type of the feed offers.
-- Choosing an item in the preview no longer triggers an unsaved-changes warning.
-- 401 responses of the plugin's REST routes include a Basic authentication challenge when Application Passwords are available.
+- Only the feed editor changes a feed slug; a restored feed never shares another feed's address.
+- Preview: no "not known" error for fields of another post type, no unsaved-changes warning on item choice.
+- 401 responses of the plugin routes include a Basic authentication challenge.
 
 ## [0.0.3] - 2026-11-19
 ### Added
