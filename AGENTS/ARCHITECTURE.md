@@ -8,7 +8,7 @@ the `KKCE` namespace under `includes/` and are loaded by the plugin's own autolo
 development tool only and is never shipped. The code contains the bootstrap, the private feed post type with its configuration meta, the
 feed list, the feed editor, the settings page, the uninstall cleanup, the mapping engine (format, validation,
 core sources, evaluation, normalization, rendering, check against the catalog), the admin REST routes of the
-mapping editor and the mapping editor with its save, the post meta, taxonomy, featured image and language sources (Polylang optional), and the feed endpoint with its pages, authentication, date filters and `lang` parameter: the other features of the 1.0 plan (IDs-only mode, protection of the slug) are not implemented yet, and those of 1.1.0 (meta dates, ACF and CMB2, duplication and export/import, `ids`, the log of the export errors) are not either. Update this file in the same change that adds them.
+mapping editor and the mapping editor with its save, the post meta, taxonomy, featured image and language sources (Polylang optional), and the feed endpoint with its pages, authentication, date filters and `lang` parameter: the features of 1.1.0 (meta dates, ACF and CMB2, duplication and export/import, the IDs-only mode, `ids`, the log of the export errors) are not implemented yet. Update this file in the same change that adds them.
 
 
 ## Key Directories and Files
@@ -266,7 +266,7 @@ the list of the namespaces. The admin routes are never listed:
   `finally`, and changes only the queries with the query variable `kkce_feed_order`. The query keeps the filters of
   other plugins (`suppress_filters` is false).
 
-Planned: a mode with the IDs only (1.0), the parameter `ids` and the aggregated log of the export errors (1.1.0).
+Planned for 1.1.0: a mode with the IDs only, the parameter `ids` and the aggregated log of the export errors.
 No shortcodes, cron jobs or WP-CLI commands are planned for 1.0 (the log of 1.1.0 brings a daily clean-up).
 
 

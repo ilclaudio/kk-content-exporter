@@ -444,6 +444,23 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The technical user documented in the readme: a role with the capability of the feeds only (not even `read`,
+	 * so no access to the dashboard) reads an authenticated feed with its Application Password.
+	 */
+	public function test_a_role_with_only_the_capability_of_the_feeds_reads_an_authenticated_feed() {
+		$this->feed( 'private-feed', array( 'access' => Feed_Meta::ACCESS_AUTHENTICATED ) );
+		$this->item();
+		add_role( 'kkce_reader', 'Feed reader', array( 'kkce_read_export' => true ) );
+		$reader = self::factory()->user->create( array( 'role' => 'kkce_reader' ) );
+
+		$this->assertFalse( user_can( $reader, 'read' ), 'No other capability.' );
+		$this->sign_in_with_application_password( $reader );
+		$this->assertSame( 200, $this->get( 'private-feed' )->get_status() );
+
+		remove_role( 'kkce_reader' );
+	}
+
+	/**
 	 * A served 401 advertises Basic authentication; successful and forbidden responses do not challenge.
 	 *
 	 * @dataProvider served_authentication_cases
@@ -531,9 +548,14 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 		$previous_server  = $_SERVER;
 		$had_cookie_auth  = array_key_exists( 'wp_rest_auth_cookie', $GLOBALS );
 		$cookie_auth      = $GLOBALS['wp_rest_auth_cookie'] ?? null;
+		$had_app_status   = array_key_exists( 'wp_rest_application_password_status', $GLOBALS );
+		$app_status       = $GLOBALS['wp_rest_application_password_status'] ?? null;
 		$previous_user    = get_current_user_id();
 		add_filter( 'wp_is_application_passwords_available', '__return_true' );
 		try {
+			// A previous Application Password test can leave a successful authentication status, which
+			// makes core skip cookie authentication. This fixture exercises cookie authentication only.
+			$GLOBALS['wp_rest_application_password_status'] = null;
 			wp_set_current_user( self::$admin );
 			$_COOKIE[ LOGGED_IN_COOKIE ] = wp_generate_auth_cookie( self::$admin, time() + HOUR_IN_SECONDS, 'logged_in' );
 			$nonce = wp_create_nonce( 'wp_rest' );
@@ -564,6 +586,11 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 				$GLOBALS['wp_rest_auth_cookie'] = $cookie_auth;
 			} else {
 				unset( $GLOBALS['wp_rest_auth_cookie'] );
+			}
+			if ( $had_app_status ) {
+				$GLOBALS['wp_rest_application_password_status'] = $app_status;
+			} else {
+				unset( $GLOBALS['wp_rest_application_password_status'] );
 			}
 			wp_set_current_user( $previous_user );
 		}

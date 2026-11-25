@@ -121,6 +121,12 @@ Availability is enabled only within test fixtures and restored afterwards; produ
 WordPress's existing availability decision.
 This covers WordPress's response-serving pipeline, not headers added later by a web server or proxy.
 
+`test_served_admin_cookie_authentication_headers` adds five cookie/nonce cases through that same
+pipeline: a valid session and nonce (200), an invalid nonce (403), no nonce with a valid cookie (401),
+a stale editor nonce after session loss (403), and neither session nor nonce (401). Only the 401
+responses advertise Basic authentication. Browser recovery and HTTP-authentication events are
+checked separately by `tests/e2e/specs/authentication.spec.js`.
+
 The feed-route regressions `test_query_visibility_is_anonymous_for_items_and_totals` and
 `test_query_exception_restores_the_authenticated_user` exercise user-dependent query restrictions,
 empty-page counts, unrelated queries and user/filter restoration after failures in either query path.

@@ -95,6 +95,19 @@ These messages describe possible problems; they do not change settings or repair
 
 Choose **Authenticated** under **Access** and save the feed. Your application must use HTTPS and a WordPress Application Password for an authorized user. Administrators receive access when the plugin is activated. Being logged into WordPress in a browser is not enough.
 
+= Which user should an application use to read authenticated feeds? =
+
+Not an administrator: if its Application Password leaks, whoever finds it can do anything on the site. Create a user that can only read the feeds, the capability `kkce_read_export`, for example with WP-CLI:
+
+    wp role create kkce_reader "Feed reader"
+    wp cap add kkce_reader kkce_read_export
+    wp user create feed-reader feed-reader@example.com --role=kkce_reader
+    wp user application-password create feed-reader "Importer" --porcelain
+
+The last command prints the Application Password: give it, with the user name, to the application, which sends them with HTTP Basic authentication over HTTPS. The role has no other capability, so the user cannot even open the dashboard. Without WP-CLI, a role editor plugin can create the same role; an administrator can then create the Application Password in the profile of the user (**Users**, then **Edit**, section **Application Passwords**).
+
+Revoke the Application Password, or delete the user, when the application no longer needs it. The plugin never generates or stores passwords. The role stays on the site when the plugin is deleted; with **Delete all the data of the plugin when the plugin is deleted** on, only the capability is removed.
+
 = How can an application read only what changed? =
 
 Add `modified_after` with the time of the previous reading, as an ISO 8601 date with a time zone, for example `?modified_after=2026-11-01T10:00:00Z`. `modified_before` and `published_after` work the same way; each filter can be turned off under **Content Exporter > Settings**.

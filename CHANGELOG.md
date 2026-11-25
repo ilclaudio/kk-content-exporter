@@ -25,6 +25,7 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 - Guide page under Content Exporter: how the rows of a mapping work, one tab per rule, with examples; the Mapping box links to it, and every rule links to its tab.
 - Development tooling: command-line runner of the Insomnia feed routes.
 - Development tooling: integration tests with Polylang, in a second run of the suite.
+- FAQ: how to create a user that can only read the feeds.
 ### Changed
 - A page of a feed costs the same database queries whatever the number of its items.
 - Mapping editor and validators restructured, without changes of behavior.

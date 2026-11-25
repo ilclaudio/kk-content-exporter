@@ -83,7 +83,7 @@ downloads, timeouts, import logs and scheduling.
 
 Planned for 1.1.0 (scope of 1.0 reduced on 2026-11-24 to publish earlier): conversion of meta dates (format and
 time zone of the source), ACF and CMB2 fields with their labels and formats, duplication and configuration
-export/import of feeds, the `ids` parameter, the map of the translations of an item, the diagnostics of the mapping
+export/import of feeds, the IDs-only mode of the endpoint (moved from 1.0 on 2026-11-25) and the `ids` parameter, the map of the translations of an item, the diagnostics of the mapping
 (aggregated log of the export errors, reasons of empty values in the preview).
 
 Out of V1 (after the 1.0.0 release): taxonomy/meta filters, cache with ETag/Last-Modified, WPML, an
@@ -93,8 +93,8 @@ language), which is added only for a concrete case that the other rule kinds can
 Done: foundations, the rule mapping with its editor and preview, core and post meta sources, the feed
 endpoint (pages, public and authenticated access, date filters, constant query cost per page), a test with the
 real importer, the featured image, the redesigned mapping editor, the language (sources, `lang` parameter, proposed
-rows) and the taxonomies. Next, in this order: the protection of feed slugs, the IDs-only mode, documentation,
-release 1.0.0.
+rows), the taxonomies, the guide page and the protection of feed slugs. Next, in this order: code clean-ups,
+documentation, review, release 1.0.0.
 
 
 ## REST API interoperability requirement
