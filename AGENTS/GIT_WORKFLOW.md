@@ -23,7 +23,8 @@ below are performed by the operator.
   and a commit message that follows the rules below.
 - Commit messages in English, with a prefix: `Feature:`, `Bug-fix:`, `Refactor:`, `Docs:`, `Chore:`
   (tooling, configuration, dependencies).
-- First line under 72 characters; avoid generic messages such as `fix` or `update`.
+- First line of at most 255 characters (operator decision of 2026-11-26; short lines remain preferable); avoid
+  generic messages such as `fix` or `update`.
 - Do not include unrelated changes in the same commit.
 - Commit messages and PR descriptions stay generic about security work: do not describe the
   exploitable details of an unfixed or recently fixed vulnerability.
@@ -51,7 +52,7 @@ Examples: `Feature: Add the kkce_feed post type and its meta`,
   3. PHPCS on the staged PHP files, errors only (`check-staged-phpcs.sh`);
   4. PHPStan on the whole plugin (`check-phpstan.sh`);
   5. the unit test suite.
-  `.githooks/commit-msg` checks the message (AI attribution, allowed prefix, first line under 72
+  `.githooks/commit-msg` checks the message (AI attribution, allowed prefix, first line of at most 255
   characters). PHPUnit, PHPStan and PHPCS must be installed
   (`composer install`).
 - Before proposing a commit, also run `composer run phpcs` (warnings included: the target is zero),

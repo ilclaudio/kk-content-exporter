@@ -21,7 +21,7 @@ WordPress.org Plugin Directory.
   integration tests (see `tests/README.md`).
 - Code, comments, documentation and commit messages are in English.
 - Commit messages: a prefix (`Feature:`, `Bug-fix:`, `Refactor:`, `Docs:`, `Chore:`) and a first line
-  under 72 characters.
+  of at most 255 characters.
 
 ## Reporting security issues
 

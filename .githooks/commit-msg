@@ -3,7 +3,7 @@
 # Checks the commit message:
 #   1. no AI attribution (Co-Authored-By trailer or "Generated with" line), see
 #      "AI attribution in commits" in AGENTS/GIT_WORKFLOW.md;
-#   2. first line with an allowed prefix and under 72 characters, see "Commits" in the same file.
+#   2. first line with an allowed prefix and at most 255 characters, see "Commits" in the same file.
 # Merge, revert, fixup and squash commits are exempt from the second check.
 
 set -euo pipefail
@@ -35,7 +35,7 @@ if ! [[ "$first_line" =~ ^(Feature|Bug-fix|Refactor|Docs|Chore):\  ]]; then
 	exit 1
 fi
 
-if [ "${#first_line}" -ge 72 ]; then
-	echo "Commit blocked: the first line must be under 72 characters (it has ${#first_line})." >&2
+if [ "${#first_line}" -gt 255 ]; then
+	echo "Commit blocked: the first line must have at most 255 characters (it has ${#first_line})." >&2
 	exit 1
 fi
