@@ -13,46 +13,29 @@
  * (the public defaults of wp-env: the environment holds no real data). The guard of
  * tests/bootstrap-integration.php refuses any database other than `kkce_wordpress_test`.
  *
- * Arguments are passed as arrays, never through a shell, so the script behaves the same on Windows.
+ * Commands run through tests/bin/tools.mjs: arguments as arrays, never through a shell, the same on Windows.
  *
  * @package KKCE
  */
 
-import { spawnSync } from 'node:child_process';
-import { createRequire } from 'node:module';
 import path from 'node:path';
 import { requireDocker } from './docker.mjs';
+import { bin, exec, root, run } from './tools.mjs';
 
-const require = createRequire( import.meta.url );
-const root = path.resolve( import.meta.dirname, '..', '..' );
-// The executable is declared in the `bin` field of the package, which does not export it as a module.
-const wpEnvPackage = require.resolve( '@wordpress/env/package.json' );
-const wpEnv = path.join( path.dirname( wpEnvPackage ), require( wpEnvPackage ).bin[ 'wp-env' ] );
+const wpEnv = bin( '@wordpress/env', 'wp-env' );
 const config = '--config=.wp-env.inttest.json';
 const pluginDir = 'wp-content/plugins/' + path.basename( root );
 
-/**
- * Runs wp-env with the given arguments and stops the script when it fails.
- *
- * @param {string[]} args    Arguments of wp-env.
- * @param {string}   message Message shown when the command fails.
- */
-function wpEnvRun( args, message ) {
-	const result = spawnSync( process.execPath, [ wpEnv, ...args ], { cwd: root, stdio: 'inherit' } );
-	if ( 0 !== result.status ) {
-		console.error( '\n' + message );
-		process.exit( result.status || 1 );
-	}
-}
-
 requireDocker();
 
-wpEnvRun(
+run(
+	wpEnv,
 	[ 'start', config ],
 	'The wp-env test environment could not start. Is Docker Desktop running? See tests/integration/README.md.'
 );
 
-wpEnvRun(
+run(
+	wpEnv,
 	[ 'run', config, 'cli', 'wp', 'db', 'query', 'CREATE DATABASE IF NOT EXISTS kkce_wordpress_test' ],
 	'The database kkce_wordpress_test could not be created in the wp-env test environment.'
 );
@@ -65,10 +48,9 @@ wpEnvRun(
  * @return {number} Exit code of PHPUnit.
  */
 function phpunit( suite, env ) {
-	const result = spawnSync(
-		process.execPath,
+	return exec(
+		wpEnv,
 		[
-			wpEnv,
 			'run',
 			config,
 			'cli',
@@ -84,11 +66,8 @@ function phpunit( suite, env ) {
 			'--testsuite',
 			suite,
 			...process.argv.slice( 2 ),
-		],
-		{ cwd: root, stdio: 'inherit' }
+		]
 	);
-
-	return null === result.status ? 1 : result.status;
 }
 
 const failed = [];

@@ -632,6 +632,27 @@ class KKCE_Mapping_Validator_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
+	 * Every rule that has confirmations writes them last among its own fields, before the common options; the
+	 * canonical order is the same for every rule.
+	 */
+	public function test_the_confirmations_come_last_among_the_fields_of_every_rule() {
+		$email = array( 'meta.organizer_email' );
+		$rows  = array(
+			array( 'key' => 't', 'kind' => 'template', 'templates' => array( '*' => '{meta.organizer_email}' ), 'confirmed' => $email, 'max_length' => 10 ),
+			array( 'key' => 'l', 'kind' => 'lookup', 'inputs' => array( '*' => 'meta.organizer_email' ), 'cases' => array( array( 'match' => 'a', 'output' => array( 'fixed' => 'b' ) ) ), 'default' => array( 'input' => true ), 'confirmed' => $email ),
+			array( 'key' => 'c', 'kind' => 'condition', 'inputs' => array( '*' => 'meta.organizer_email' ), 'operator' => 'equals', 'matches' => array( 'a' ), 'then' => array( 'fixed' => 'y' ), 'else' => array( 'fixed' => 'n' ), 'confirmed' => $email ),
+			array( 'key' => 'f', 'kind' => 'fixed', 'values' => array( '*' => 'x' ) ),
+		);
+
+		$normalized = Mapping_Validator::normalize( $this->mapping( $rows ) )['rows'];
+
+		$this->assertSame( array( 'key', 'kind', 'type', 'templates', 'confirmed', 'max_length' ), array_keys( $normalized[0] ) );
+		$this->assertSame( array( 'key', 'kind', 'type', 'inputs', 'cases', 'default', 'confirmed' ), array_keys( $normalized[1] ) );
+		$this->assertSame( array( 'key', 'kind', 'type', 'inputs', 'operator', 'matches', 'then', 'else', 'confirmed' ), array_keys( $normalized[2] ) );
+		$this->assertSame( array( 'key', 'kind', 'type', 'values' ), array_keys( $normalized[3] ) );
+	}
+
+	/**
 	 * The author archive URL needs a confirmation like a sensitive source.
 	 */
 	public function test_the_author_url_needs_a_confirmation() {

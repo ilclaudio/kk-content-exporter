@@ -85,7 +85,8 @@ final class Normalizer {
 			default    => null,
 		};
 
-		return null === $result ? self::absent( self::ERROR_NOT_CONVERTIBLE ) : self::present( $result[0] );
+		// Every converter gives null only when the value cannot be converted: `false`, `0`, `""` and `[]` are values.
+		return null === $result ? self::absent( self::ERROR_NOT_CONVERTIBLE ) : self::present( $result );
 	}
 
 	/**
@@ -147,19 +148,19 @@ final class Normalizer {
 	 * Plain text.
 	 *
 	 * @param mixed $value Value.
-	 * @return array{0: string}|null
+	 * @return string|null The text, or null when the value cannot be converted.
 	 */
-	private static function to_string( $value ): ?array {
+	private static function to_string( $value ): ?string {
 		if ( is_bool( $value ) ) {
-			return array( $value ? 'true' : 'false' );
+			return $value ? 'true' : 'false';
 		}
 
 		if ( is_int( $value ) || is_float( $value ) ) {
-			return array( (string) $value );
+			return (string) $value;
 		}
 
 		if ( is_string( $value ) ) {
-			return array( html_entity_decode( self::strip_tags( $value ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
+			return html_entity_decode( self::strip_tags( $value ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 		}
 
 		if ( is_array( $value ) && array_is_list( $value ) ) {
@@ -169,10 +170,10 @@ final class Normalizer {
 				if ( null === $text ) {
 					return null;
 				}
-				$parts[] = $text[0];
+				$parts[] = $text;
 			}
 
-			return array( implode( ', ', $parts ) );
+			return implode( ', ', $parts );
 		}
 
 		return null;
@@ -197,29 +198,29 @@ final class Normalizer {
 	 * HTML text.
 	 *
 	 * @param mixed $value Value.
-	 * @return array{0: string}|null
+	 * @return string|null The HTML, or null when the value cannot be converted.
 	 */
-	private static function to_html( $value ): ?array {
+	private static function to_html( $value ): ?string {
 		if ( is_string( $value ) ) {
-			return array( $value );
+			return $value;
 		}
 
-		return is_int( $value ) || is_float( $value ) ? array( (string) $value ) : null;
+		return is_int( $value ) || is_float( $value ) ? (string) $value : null;
 	}
 
 	/**
 	 * Number.
 	 *
 	 * @param mixed $value Value.
-	 * @return array{0: int|float}|null
+	 * @return int|float|null The number, or null when the value cannot be converted.
 	 */
-	private static function to_number( $value ): ?array {
+	private static function to_number( $value ): int|float|null {
 		if ( is_int( $value ) ) {
-			return array( $value );
+			return $value;
 		}
 
 		if ( is_float( $value ) ) {
-			return is_finite( $value ) ? array( $value ) : null;
+			return is_finite( $value ) ? $value : null;
 		}
 
 		if ( ! is_string( $value ) || ! is_numeric( trim( $value ) ) ) {
@@ -229,7 +230,7 @@ final class Normalizer {
 		$text    = trim( $value );
 		$integer = filter_var( $text, FILTER_VALIDATE_INT );
 		if ( false !== $integer ) {
-			return array( $integer );
+			return $integer;
 		}
 
 		if ( ctype_digit( ltrim( $text, '+-' ) ) ) {
@@ -238,26 +239,26 @@ final class Normalizer {
 			$signed  = ( str_starts_with( $text, '-' ) ? '-' : '' ) . ( '' === $digits ? '0' : $digits );
 			$integer = filter_var( $signed, FILTER_VALIDATE_INT );
 
-			return false === $integer ? null : array( $integer );
+			return false === $integer ? null : $integer;
 		}
 
 		$number = (float) $text;
-		return is_finite( $number ) ? array( $number ) : null;
+		return is_finite( $number ) ? $number : null;
 	}
 
 	/**
 	 * Boolean.
 	 *
 	 * @param mixed $value Value.
-	 * @return array{0: bool}|null
+	 * @return bool|null The boolean, or null when the value cannot be converted.
 	 */
-	private static function to_boolean( $value ): ?array {
+	private static function to_boolean( $value ): ?bool {
 		if ( is_bool( $value ) ) {
-			return array( $value );
+			return $value;
 		}
 
 		if ( 1 === $value || 0 === $value ) {
-			return array( 1 === $value );
+			return 1 === $value;
 		}
 
 		if ( ! is_string( $value ) ) {
@@ -266,20 +267,20 @@ final class Normalizer {
 
 		$word = strtolower( trim( $value ) );
 
-		return array_key_exists( $word, self::BOOLEANS ) ? array( self::BOOLEANS[ $word ] ) : null;
+		return array_key_exists( $word, self::BOOLEANS ) ? self::BOOLEANS[ $word ] : null;
 	}
 
 	/**
 	 * Date, or date and time in UTC.
 	 *
 	 * @param mixed $value Value.
-	 * @return array{0: string}|null
+	 * @return string|null The date in ISO 8601, or null when the value cannot be converted.
 	 */
-	private static function to_datetime( $value ): ?array {
+	private static function to_datetime( $value ): ?string {
 		$utc = new DateTimeZone( 'UTC' );
 
 		if ( is_int( $value ) ) {
-			return array( ( new DateTimeImmutable( '@' . $value ) )->setTimezone( $utc )->format( 'Y-m-d\TH:i:s\Z' ) );
+			return ( new DateTimeImmutable( '@' . $value ) )->setTimezone( $utc )->format( 'Y-m-d\TH:i:s\Z' );
 		}
 
 		if ( ! is_string( $value ) || str_contains( $value, "\0" ) ) {
@@ -290,13 +291,13 @@ final class Normalizer {
 
 		$date = self::parse( '!Y-m-d', $text, $utc );
 		if ( null !== $date ) {
-			return array( $date->format( 'Y-m-d' ) );
+			return $date->format( 'Y-m-d' );
 		}
 
 		foreach ( array( '!Y-m-d H:i:s', '!Y-m-d\TH:i:s', '!Y-m-d\TH:i:sP', '!Y-m-d\TH:i:s\Z' ) as $format ) {
 			$moment = self::parse( $format, $text, $utc );
 			if ( null !== $moment ) {
-				return array( $moment->setTimezone( $utc )->format( 'Y-m-d\TH:i:s\Z' ) );
+				return $moment->setTimezone( $utc )->format( 'Y-m-d\TH:i:s\Z' );
 			}
 		}
 
@@ -331,9 +332,9 @@ final class Normalizer {
 	 *
 	 * @param mixed  $value  Value.
 	 * @param string $origin Origin of the site.
-	 * @return array{0: string}|null
+	 * @return string|null The URL, or null when the value cannot be converted.
 	 */
-	private static function to_url( $value, string $origin ): ?array {
+	private static function to_url( $value, string $origin ): ?string {
 		if ( ! is_string( $value ) ) {
 			return null;
 		}
@@ -350,18 +351,18 @@ final class Normalizer {
 			return null;
 		}
 
-		return array( $url );
+		return $url;
 	}
 
 	/**
 	 * List of plain values.
 	 *
 	 * @param mixed $value Value.
-	 * @return array{0: list<int|float|string|bool>}|null
+	 * @return list<int|float|string|bool>|null The list, or null when the value cannot be converted.
 	 */
 	private static function to_list( $value ): ?array {
 		if ( is_scalar( $value ) ) {
-			return array( array( $value ) );
+			return array( $value );
 		}
 
 		if ( ! is_array( $value ) || ! array_is_list( $value ) ) {
@@ -374,7 +375,7 @@ final class Normalizer {
 			}
 		}
 
-		return array( $value );
+		return $value;
 	}
 
 	/**

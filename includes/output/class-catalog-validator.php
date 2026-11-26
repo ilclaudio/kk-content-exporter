@@ -59,13 +59,13 @@ final class Catalog_Validator {
 			return self::failure( array( self::mapping_error( $too_large ? 'too_large' : 'json' ) ) );
 		}
 
-		$errors = self::validate( $decoded, $catalog );
-		if ( array() !== $errors ) {
-			return self::failure( $errors );
+		$checked = self::check( $decoded, $catalog );
+		$mapping = $checked['mapping'];
+		if ( null === $mapping ) {
+			return self::failure( $checked['errors'] );
 		}
 
-		$mapping = Mapping_Validator::normalize( $decoded );
-		$saved   = $encode( $mapping );
+		$saved = $encode( $mapping );
 		if ( ! is_string( $saved ) || strlen( $saved ) > Mapping::MAX_BYTES ) {
 			return self::failure( array( self::mapping_error( 'too_large' ) ) );
 		}
@@ -112,12 +112,29 @@ final class Catalog_Validator {
 	 *                                                              empty list for a valid mapping.
 	 */
 	public static function validate( $mapping, Catalog $catalog ): array {
+		return self::check( $mapping, $catalog )['errors'];
+	}
+
+	/**
+	 * Checks a decoded mapping and gives its canonical form, normalized once: the format first, then, on a
+	 * valid mapping, the sources against the catalog.
+	 *
+	 * @param mixed   $mapping Decoded mapping.
+	 * @param Catalog $catalog Catalog of the feed.
+	 * @return array{mapping: array{version: int, rows: list<array<string, mixed>>}|null, errors: list<array{row: int, field: string, code: string}>}
+	 *         The canonical mapping (null when there is an error) and every error.
+	 */
+	private static function check( $mapping, Catalog $catalog ): array {
 		$errors = Mapping_Validator::validate( $mapping );
 		if ( array() !== $errors || ! is_array( $mapping ) ) {
-			return $errors;
+			return array(
+				'mapping' => null,
+				'errors'  => $errors,
+			);
 		}
 
-		foreach ( Mapping_Validator::normalize( $mapping )['rows'] as $index => $row ) {
+		$normalized = Mapping_Validator::normalize( $mapping );
+		foreach ( $normalized['rows'] as $index => $row ) {
 			$found = array();
 			foreach ( self::row_errors( $row, $catalog ) as $error ) {
 				$found[ $error[0] . ':' . $error[1] ] = $error;
@@ -131,7 +148,10 @@ final class Catalog_Validator {
 			}
 		}
 
-		return $errors;
+		return array(
+			'mapping' => array() === $errors ? $normalized : null,
+			'errors'  => $errors,
+		);
 	}
 
 	/**

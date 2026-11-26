@@ -201,16 +201,10 @@ final class Mapping_Validator {
 
 			if ( 'field' === $kind ) {
 				$out['sources'] = self::normalize_map( $row['sources'] ?? array(), static fn( $chain ) => array_values( (array) $chain ) );
-				if ( array() !== ( $row['confirmed'] ?? array() ) ) {
-					$out['confirmed'] = array_values( (array) $row['confirmed'] );
-				}
 			} elseif ( 'fixed' === $kind ) {
 				$out['values'] = self::normalize_map( $row['values'] ?? array(), static fn( $value ) => $value );
 			} elseif ( 'template' === $kind ) {
 				$out['templates'] = self::normalize_map( $row['templates'] ?? array(), static fn( $template ) => (string) $template );
-				if ( array() !== ( $row['confirmed'] ?? array() ) ) {
-					$out['confirmed'] = array_values( (array) $row['confirmed'] );
-				}
 			} elseif ( 'lookup' === $kind ) {
 				$out['inputs'] = self::normalize_map( $row['inputs'] ?? array(), static fn( $source ) => (string) $source );
 				$out['cases']  = array();
@@ -223,9 +217,6 @@ final class Mapping_Validator {
 				if ( array_key_exists( 'default', $row ) ) {
 					$out['default'] = $row['default'];
 				}
-				if ( array() !== ( $row['confirmed'] ?? array() ) ) {
-					$out['confirmed'] = array_values( (array) $row['confirmed'] );
-				}
 			} elseif ( 'condition' === $kind ) {
 				$out['inputs']   = self::normalize_map( $row['inputs'] ?? array(), static fn( $source ) => (string) $source );
 				$out['operator'] = $row['operator'] ?? '';
@@ -234,9 +225,11 @@ final class Mapping_Validator {
 						$out[ $field ] = $row[ $field ];
 					}
 				}
-				if ( array() !== ( $row['confirmed'] ?? array() ) ) {
-					$out['confirmed'] = array_values( (array) $row['confirmed'] );
-				}
+			}
+
+			// The confirmations come last among the fields of the rule, for every rule that has them.
+			if ( in_array( 'confirmed', self::KIND_FIELDS[ $kind ] ?? array(), true ) && array() !== ( $row['confirmed'] ?? array() ) ) {
+				$out['confirmed'] = array_values( (array) $row['confirmed'] );
 			}
 
 			if ( array() !== ( $row['options'] ?? array() ) ) {

@@ -71,7 +71,7 @@ mapping editor and the mapping editor with its save, the post meta, taxonomy, fe
 | `tests/unit/`, `tests/bootstrap-unit.php`, `phpunit.xml` | Unit tests (PHPUnit + Brain Monkey, no WordPress) |
 | `tests/integration/`, `tests/bootstrap-integration.php`, `phpunit-integration.xml` | Integration tests (WordPress test suite in the wp-env test environment, dedicated database); two suites in separate processes: `integration` without optional plugins, `polylang` (`tests/integration/polylang/`) with Polylang loaded (`KKCE_TEST_POLYLANG=1`) |
 | `tests/e2e/`, `playwright.config.js` | End-to-end tests (Playwright, Chromium, axe-core): `specs/`, `support/`, README with the list of the tests |
-| `tests/bin/` | Node scripts behind the Composer test commands: `integration.mjs`, `e2e.mjs`, `docker.mjs` (Docker check) |
+| `tests/bin/` | Node scripts behind the Composer test commands: `integration.mjs`, `e2e.mjs`, `docker.mjs` (Docker check), `tools.mjs` (shared: plugin root, executables of npm packages, commands run as arrays without a shell) |
 | `package.json`, `package-lock.json` | npm test tools only (`@wordpress/env`, `@playwright/test`, `@axe-core/playwright`, exact versions); never shipped |
 | `.wp-env.e2etest.json`, `.wp-env.inttest.json` | wp-env environments: development (E2E, port 8890) and tests (integration, port 8891), WordPress 7.1.4, PHP 8.3; the test environment also mounts Polylang 3.9.2 from WordPress.org, not activated |
 | `.github/workflows/` | `ci.yml` (automatic checks and integration suite), `functional.yml` (*End-to-end tests*, started by hand) |
