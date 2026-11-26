@@ -30,11 +30,15 @@ final class Item_Exporter {
 	/**
 	 * Object exported for an item.
 	 *
-	 * @param WP_Post      $post    Item.
-	 * @param array<mixed> $mapping Mapping of the feed (canonical form).
+	 * @param WP_Post      $post       Item.
+	 * @param array<mixed> $mapping    Mapping of the feed (canonical form).
+	 * @param string[]     $post_types Post types of the feed, to decide the type `auto` on the whole feed; empty for
+	 *                                 the post type of the item only.
 	 * @return array<string, mixed>
+	 *
+	 * @phpstan-param list<string> $post_types
 	 */
-	public static function export( WP_Post $post, array $mapping ): array {
+	public static function export( WP_Post $post, array $mapping, array $post_types = array() ): array {
 		$context_names = array( 'post', 'id', 'authordata', 'currentday', 'currentmonth', 'page', 'pages', 'multipage', 'more', 'numpages' );
 		$context       = array_intersect_key( $GLOBALS, array_flip( $context_names ) );
 		$previous      = get_current_user_id();
@@ -54,7 +58,7 @@ final class Item_Exporter {
 			$GLOBALS['post'] = $post; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Block context and template tags require the target post; restored in finally.
 			setup_postdata( $post );
 
-			return Rule_Evaluator::evaluate_mapping( $mapping, $post->post_type, $read, self::declared_types( $post->post_type ), self::origin() );
+			return Rule_Evaluator::evaluate_mapping( $mapping, $post->post_type, $read, self::declared_types( array() === $post_types ? array( $post->post_type ) : $post_types ), self::origin() );
 		} finally {
 			// Restore the exact previous loop state, including unset globals and explicit nulls.
 			foreach ( $context_names as $kkce_context_name ) {
@@ -70,18 +74,30 @@ final class Item_Exporter {
 	}
 
 	/**
-	 * Declared type of the known sources of a post type, for the rows with the type `auto`: the core ones, the
-	 * language ones, the taxonomies (list, text for the first term) and the post meta (registered type, text for the
-	 * others).
+	 * Declared type of the known sources of a feed, for the rows with the type `auto`: the core ones, the language
+	 * ones, the taxonomies (list, text for the first term) and the post meta. A post meta can be registered with a
+	 * different type in each post type: its type is the common one over the post types of the feed (text when they
+	 * differ), so a key has the same JSON type in every item of the feed.
 	 *
-	 * @param string $post_type Post type of the item.
+	 * @param string[] $post_types Post types of the feed.
 	 * @return callable(string): ?string Gives null for a source of unknown type (it counts as text).
+	 *
+	 * @phpstan-param list<string> $post_types
 	 */
-	private static function declared_types( string $post_type ): callable {
+	private static function declared_types( array $post_types ): callable {
 		$core = Core_Provider::types() + Language_Provider::types();
-		$meta = Meta_Provider::declared_types( $post_type );
+		$meta = array_map( array( Meta_Provider::class, 'declared_types' ), $post_types );
 
-		return static fn( string $source ): ?string => $core[ $source ] ?? Taxonomy_Provider::declared_type( $source ) ?? $meta( $source );
+		return static function ( string $source ) use ( $core, $meta ): ?string {
+			$known = $core[ $source ] ?? Taxonomy_Provider::declared_type( $source );
+			if ( null !== $known ) {
+				return $known;
+			}
+
+			$types = array_map( static fn( callable $declared ): ?string => $declared( $source ), $meta );
+
+			return array() === array_filter( $types, static fn( ?string $type ): bool => null !== $type ) ? null : Normalizer::common_type( $types );
+		};
 	}
 
 	/**

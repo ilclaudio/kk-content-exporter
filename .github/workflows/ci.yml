@@ -11,14 +11,20 @@ on:
     branches: [ main, dev ]
   pull_request:
     branches: [ main, dev ]
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
     name: Checks (PHP ${{ matrix.php }})
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -26,6 +32,8 @@ jobs:
     steps:
       - name: Check out the code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
       - name: Set up PHP
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
@@ -33,6 +41,9 @@ jobs:
           php-version: ${{ matrix.php }}
           tools: composer:v2
           coverage: none
+
+      - name: Validate Composer configuration and lock file
+        run: composer validate --no-check-publish
 
       - name: Install the development tools
         run: composer install --no-interaction --no-progress --prefer-dist
@@ -43,9 +54,12 @@ jobs:
   audit:
     name: Composer audit
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Check out the code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
       - name: Set up PHP
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
@@ -60,9 +74,12 @@ jobs:
   repository:
     name: Whitespace and conflict markers
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Check out the code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
       - name: Check every versioned file against an empty tree
         run: git diff --check "$(git hash-object -t tree /dev/null)" HEAD -- .
@@ -70,9 +87,12 @@ jobs:
   package:
     name: Release ZIP
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - name: Check out the code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
       - name: Set up PHP
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
@@ -80,6 +100,9 @@ jobs:
           php-version: '8.3'
           tools: composer:v2
           coverage: none
+
+      - name: Validate Composer configuration and lock file
+        run: composer validate --no-check-publish
 
       - name: Install the development tools
         run: composer install --no-interaction --no-progress --prefer-dist
@@ -91,19 +114,21 @@ jobs:
   npm-audit:
     name: npm audit (test tools)
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Check out the code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
       - name: Set up Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
 
-      # Only critical vulnerabilities fail: the known moderate and high ones are in a part of wp-env that
-      # the project does not use (see the issue in the private backlog).
+      # Test tools are never shipped; high and critical findings still block CI.
       - name: Audit the locked npm dependencies
-        run: npm audit --audit-level=critical
+        run: npm audit --audit-level=high
 
   integration:
     name: Integration (WordPress ${{ matrix.wordpress }})
@@ -124,6 +149,8 @@ jobs:
     steps:
       - name: Check out the code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
       - name: Set up PHP
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
@@ -138,6 +165,9 @@ jobs:
           node-version: '24'
           cache: npm
 
+      - name: Validate Composer configuration and lock file
+        run: composer validate --no-check-publish
+
       - name: Install the development tools
         run: |
           composer install --no-interaction --no-progress --prefer-dist
@@ -149,3 +179,16 @@ jobs:
       - name: Stop the environment
         if: always()
         run: npm run env:tests:stop
+
+  actionlint:
+    name: Workflow validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Lint the workflows
+        run: docker run --rm -v "$GITHUB_WORKSPACE:/repo:ro" --workdir /repo rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -color

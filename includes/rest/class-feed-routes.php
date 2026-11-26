@@ -437,14 +437,17 @@ final class Feed_Routes {
 
 		list( $post_types ) = Exportable_Post_Types::split( Feed_Meta::post_types( $feed->ID ), Exportable_Post_Types::selectable() );
 
-		$items = array();
-		$total = 0;
-		if ( array() !== $post_types ) {
-			$date_query = Date_Filters::date_query( $dates );
-			$language   = $request->get_param( self::LANG );
-			$language   = is_string( $language ) ? Language_Provider::language_filter( $language, $post_types ) : null;
-			$query      = self::query( $post_types, $page, $per_page, $date_query, false, $language );
-			$posts      = array_values( array_filter( $query->posts, static fn( $post ): bool => $post instanceof WP_Post ) );
+		$items      = array();
+		$total      = 0;
+		$date_query = Date_Filters::date_query( $dates );
+		$language   = $request->get_param( self::LANG );
+		$language   = is_string( $language ) && array() !== $post_types ? Language_Provider::language_filter( $language, $post_types ) : null;
+		if ( array() !== $post_types && ! Feed_Response::offset_fits( $page, $per_page ) ) {
+			// A page whose offset is not a whole number is after the last one: no items, the real total.
+			$total = (int) self::query( $post_types, 1, 1, $date_query, true, $language )->found_posts;
+		} elseif ( array() !== $post_types ) {
+			$query = self::query( $post_types, $page, $per_page, $date_query, false, $language );
+			$posts = array_values( array_filter( $query->posts, static fn( $post ): bool => $post instanceof WP_Post ) );
 
 			// The query loads meta and terms for the whole page; the authors and the featured images (attachments
 			// with their meta) are loaded here, all at once, so that their sources do not cost queries per item.
@@ -452,7 +455,7 @@ final class Feed_Routes {
 			update_post_thumbnail_cache( $query );
 
 			foreach ( $posts as $post ) {
-				$items[] = Item_Exporter::export( $post, $mapping );
+				$items[] = Item_Exporter::export( $post, $mapping, $post_types );
 			}
 			$total = (int) $query->found_posts;
 

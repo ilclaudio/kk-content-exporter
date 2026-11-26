@@ -32,8 +32,9 @@ downloads, timeouts, import logs and scheduling.
 - Feeds stored in the private administrative post type `kkce_feed` (not exposed in REST): title for the
   name, post meta for mapping and options; no revisions (the post type supports only the title, and core
   revisions do not store post meta): a restore of the configuration is not a requirement.
-- One public, read-only REST endpoint per feed: `GET /wp-json/kkce/v1/<feed-slug>`; slug unique, feed
-  can be enabled or disabled; new and imported feeds start disabled.
+- One public, read-only REST endpoint per feed: `GET /wp-json/kkce/v1/<feed-slug>`; slug unique and changed only
+  by the feed editor (a feed restored from the trash while another feed uses its slug comes back without one), feed
+  can be enabled or disabled; new and restored feeds start disabled.
 - Post types per feed: one or more (one is the particular case). Items of different types share the
   response, its order and its pagination; a field with the post type of the item is always selectable.
 - Mapping rows, starting from the output: free JSON key (proposed equal to the source name), a **value
@@ -93,8 +94,9 @@ language), which is added only for a concrete case that the other rule kinds can
 Done: foundations, the rule mapping with its editor and preview, core and post meta sources, the feed
 endpoint (pages, public and authenticated access, date filters, constant query cost per page), a test with the
 real importer, the featured image, the redesigned mapping editor, the language (sources, `lang` parameter, proposed
-rows), the taxonomies, the guide page and the protection of feed slugs. Next, in this order: code clean-ups,
-documentation, review, release 1.0.0.
+rows), the taxonomies, the guide page, the protection of feed slugs, the documentation of a user that only reads the
+feeds and the code clean-ups. The guide for the developers of an importer is `docs/reading-a-feed.md` (repository
+only, not in the package). Next, in this order: review, release 1.0.0.
 
 
 ## REST API interoperability requirement

@@ -6,7 +6,7 @@ Tags: export, json, rest-api, feed, content
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.3
-Stable tag: 0.0.4
+Stable tag: 1.0.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -28,11 +28,7 @@ Choose the content and fields to include, give the fields your own names, and co
 * Share public feeds or require an Application Password, with pagination and a configurable page limit.
 * Let applications read only what changed, with date filters.
 
-Only published, non-password-protected content and selected fields are exported. The plugin makes no requests to external services; other systems read or import the feed themselves.
-
-= Development status =
-
-This plugin is in development. Feeds are served, with pages, access control and date filters, and can include the URL of the featured image, the terms of the taxonomies and the language. Polylang is optional.
+Only published, non-password-protected content and selected fields are exported. Authors appear only through the fields you map (ID, display name, archive URL after a confirmation), never with their e-mail address; the preview warns when an author's display name is still the login name, as WordPress sets it for a new user. The plugin makes no requests to external services; other systems read or import the feed themselves.
 
 == Installation ==
 
@@ -135,6 +131,9 @@ No. It leaves the original content, its visibility and WordPress's existing REST
 It works on a single site. Network activation is not supported in this version: activate the plugin on each site where you need it.
 
 == Changelog ==
+
+= 1.0.0 =
+* In development: guide for the developers of an importer, reviewed Italian translation, code clean-ups.
 
 = 0.0.4 =
 * Feed endpoint with pages, access control, date filters and `lang`; featured image, taxonomy and language fields; redesigned mapping editor; guide to the rules; slug protection.

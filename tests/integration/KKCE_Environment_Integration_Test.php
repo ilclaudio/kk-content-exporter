@@ -29,15 +29,16 @@ class KKCE_Environment_Integration_Test extends WP_UnitTestCase {
 	 * (load_plugin_textdomain() on init, see AGENTS/CODING_STANDARDS.md).
 	 */
 	public function test_bundled_italian_translation_is_loaded() {
-		// No sentence is written here, in English or Italian: the expected translation is read from the
-		// compiled catalogue that the plugin ships, so a change of the wording does not break the test.
-		// If the catalogue were not loaded, the notice would stay in English and differ from it.
-		$english = Plugin::development_notice();
+		// A string of the plugin (the title of the settings box of a feed) read through the text domain; its
+		// Italian translation is read from the compiled catalogue that the plugin ships, so a change of the
+		// translation does not break the test. If the catalogue were not loaded, the text would stay in English.
+		$translate = static fn(): string => __( 'Feed settings', 'kk-content-exporter' );
+		$english   = $translate();
 
 		$catalogue = new MO();
 		$this->assertTrue( $catalogue->import_from_file( KKCE_TEST_PLUGIN_DIR . '/languages/kk-content-exporter-it_IT.mo' ) );
 		$italian = $catalogue->translate( $english );
-		$this->assertNotSame( $english, $italian, 'The notice has no Italian translation in the catalogue.' );
+		$this->assertNotSame( $english, $italian, 'The text has no Italian translation in the catalogue.' );
 
 		// switch_to_locale() needs the core it_IT language pack, absent from the test checkout:
 		// force the locale instead and reload the text domain as init does.
@@ -50,7 +51,7 @@ class KKCE_Environment_Integration_Test extends WP_UnitTestCase {
 		Plugin::load_textdomain();
 
 		try {
-			$this->assertSame( $italian, Plugin::development_notice() );
+			$this->assertSame( $italian, $translate() );
 		} finally {
 			remove_filter( 'determine_locale', $force_italian );
 			remove_filter( 'locale', $force_italian );
@@ -58,6 +59,6 @@ class KKCE_Environment_Integration_Test extends WP_UnitTestCase {
 			Plugin::load_textdomain();
 		}
 
-		$this->assertSame( $english, Plugin::development_notice(), 'The default locale is back to English.' );
+		$this->assertSame( $english, $translate(), 'The default locale is back to English.' );
 	}
 }

@@ -87,13 +87,24 @@ file `tests/routes/routes.config.json` (ignored by Git). Details: [routes/README
 
 | Check | `pre-commit` hook | CI on every push and pull request | CI started by hand |
 |---|---|---|---|
-| Lint, PHPCS, PHPStan, unit | Yes (lint and PHPCS on the staged files) | Yes, PHP 8.3 and 8.4 (`ci.yml`) | No |
-| `composer audit` | No | Yes (`ci.yml`) | No |
-| Whitespace and conflict markers (`git diff --check` on every file) | No | Yes (`ci.yml`) | No |
-| Release ZIP built and verified | No | Yes (`ci.yml`) | No |
-| `npm audit` of the test tools (fails on critical only) | No | Yes (`ci.yml`) | No |
-| Integration (Docker), WordPress 7.1.4 and 6.4.14, without and with Polylang (its tests are skipped on 6.4) | No | Yes (`ci.yml`) | No |
+| Lint, PHPCS, PHPStan, unit | Yes (lint and PHPCS on the staged files) | Yes, PHP 8.3 and 8.4 (`ci.yml`) | Yes (`ci.yml`) |
+| Composer manifest/lock validation | No | Yes (`ci.yml`) | Yes (`ci.yml`) |
+| GitHub Actions workflow validation (actionlint) | No | Yes (`ci.yml`) | Yes (`ci.yml`) |
+| `composer audit` | No | Yes (`ci.yml`) | Yes (`ci.yml`) |
+| Whitespace and conflict markers (`git diff --check` on every file) | No | Yes (`ci.yml`) | Yes (`ci.yml`) |
+| Release ZIP built and verified | No | Yes (`ci.yml`) | Yes (`ci.yml`) |
+| `npm audit` of the test tools (fails on high and critical) | No | Yes (`ci.yml`) | Yes (`ci.yml`) |
+| Integration (Docker), WordPress 7.1.4 and 6.4.14, without and with Polylang (its tests are skipped on 6.4) | No | Yes (`ci.yml`) | Yes (`ci.yml`) |
 | End-to-end | No | No | Yes (workflow *End-to-end tests*, `functional.yml`: *Run workflow*) |
+
+CI also validates Composer configuration and its lockfile before installation, and runs actionlint
+on the workflow files. Both CI and End-to-end tests can be started with *Run workflow* once their
+definitions are on the default branch. CI cancels superseded runs for the same workflow and ref;
+all jobs have timeouts and all checkouts disable persistent credentials.
+
+Dependabot checks GitHub Actions, Composer and npm monthly, opens at most three PRs per ecosystem
+and targets `dev`. Composer/npm minor and patch updates are grouped; major updates stay separate.
+The configuration must be present on the default branch for scheduled updates to become active.
 
 ## What the commit checks
 
@@ -110,7 +121,7 @@ and PHPStan), `KKCE_PHPStan_Config_Unit_Test` (every PHP file analyzed, level â‰
 `KKCE_Agents_Docs_Unit_Test` (AI context documents and their references), `KKCE_Release_Build_Unit_Test`
 (`.distignore` and package verification), `KKCE_Composer_Scripts_Unit_Test` (scripts work on a fresh
 clone and all entry points select the matching named test environment), `KKCE_Git_Ignore_Unit_Test` (credentials, build output and private files ignored by Git),
-`KKCE_CI_Workflow_Unit_Test` (GitHub Actions pinned to a commit SHA, with the tag in a comment),
+`KKCE_CI_Workflow_Unit_Test` (action pins, workflow permissions, triggers, timeouts, checkout credentials and Dependabot policy),
 `KKCE_E2E_Catalog_Unit_Test` (every end-to-end test listed in the *Test list* of `e2e/README.md`),
 `KKCE_Integration_Config_Unit_Test` (the integration suite has only the Docker path, with the defaults of
 wp-env) and

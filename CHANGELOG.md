@@ -9,6 +9,24 @@ follows [Semantic Versioning](https://semver.org/). The version of the first ent
 Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 
+## [1.0.0] - Unreleased
+### Added
+- Guide for the developers of a program that reads the feeds, in `docs/` on the repository.
+### Changed
+- Plugin description: one or more post types.
+- Italian translation reviewed for consistent terms.
+- Development: shared helpers of the test runners; mappings normalized once during validation.
+- Development: workflow validation, bounded CI runs, monthly dependency updates and stricter npm auditing.
+### Removed
+- The development note in the row of the plugin on the Plugins screen.
+### Fixed
+- Post meta registered for every post type keep their declared type (for example true or false, not text).
+- With the output type Automatic, a key has the same JSON type in every item, also across post types.
+- Very large pages and page sizes answer with an empty page instead of an error.
+### Security
+- The preview warns when an exported author display name is still the login name.
+- Development: the route runner no longer prints parts of an invalid configuration file, which holds credentials.
+
 ## [0.0.4] - 2026-11-25
 ### Added
 - Feed endpoint `GET /wp-json/kkce/v1/<slug>` with pages, stable order, public or Application Password access.

@@ -92,7 +92,6 @@ final class Plugin {
 		add_action( 'rest_api_init', array( Rest\Admin_Routes::class, 'register' ) );
 		add_action( 'rest_api_init', array( Rest\Feed_Routes::class, 'register' ) );
 		add_filter( 'rest_post_dispatch', array( Rest\Feed_Routes::class, 'authentication_challenge' ), 10, 3 );
-		add_filter( 'plugin_row_meta', array( self::class, 'filter_plugin_row_meta' ), 10, 2 );
 	}
 
 	/**
@@ -110,32 +109,6 @@ final class Plugin {
 			false,
 			dirname( plugin_basename( KKCE_PLUGIN_FILE ) ) . '/languages'
 		);
-	}
-
-	/**
-	 * Adds a status note to the row of the plugin in the Plugins screen.
-	 *
-	 * @param mixed $meta        Row meta links and texts.
-	 * @param mixed $plugin_file Plugin file, relative to the plugins directory.
-	 * @return mixed The row meta, with the note for this plugin.
-	 */
-	public static function filter_plugin_row_meta( $meta, $plugin_file ) {
-		if ( ! is_array( $meta ) || plugin_basename( KKCE_PLUGIN_FILE ) !== $plugin_file ) {
-			return $meta;
-		}
-
-		$meta[] = esc_html( self::development_notice() );
-
-		return $meta;
-	}
-
-	/**
-	 * Note shown while the plugin is in development, until version 1.0.0: some sources are missing.
-	 *
-	 * @return string
-	 */
-	public static function development_notice(): string {
-		return __( 'Development version: some sources are not available yet. Not intended for production sites.', 'kk-content-exporter' );
 	}
 
 	/**

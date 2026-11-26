@@ -293,7 +293,7 @@ final class Admin_Routes {
 
 			return new WP_REST_Response(
 				array(
-					'items'       => array( self::preview_item( $post, $mapping ) ),
+					'items'       => array( self::preview_item( $post, $mapping, $post_types ) ),
 					'empty_types' => array(),
 				)
 			);
@@ -307,7 +307,7 @@ final class Admin_Routes {
 				$empty_types[] = $post_type;
 				continue;
 			}
-			$items[] = self::preview_item( $post, $mapping );
+			$items[] = self::preview_item( $post, $mapping, $post_types );
 		}
 
 		return new WP_REST_Response(
@@ -420,17 +420,26 @@ final class Admin_Routes {
 	/**
 	 * Preview of one item: which item, its exported object and the notices about it.
 	 *
-	 * @param WP_Post      $post    Item.
-	 * @param array<mixed> $mapping Canonical mapping.
+	 * @param WP_Post      $post       Item.
+	 * @param array<mixed> $mapping    Canonical mapping.
+	 * @param string[]     $post_types Post types of the feed (the type `auto` is decided on all of them).
 	 * @return array<string, mixed>
+	 *
+	 * @phpstan-param list<string> $post_types
 	 */
-	private static function preview_item( WP_Post $post, array $mapping ): array {
-		$data    = Item_Exporter::export( $post, $mapping );
+	private static function preview_item( WP_Post $post, array $mapping, array $post_types ): array {
+		$data    = Item_Exporter::export( $post, $mapping, $post_types );
 		$notices = array();
 		if ( self::exports_author_login( $post, $data ) ) {
 			$notices[] = array(
 				'code'    => 'author_login',
 				'message' => __( 'In this item the author archive URL contains the login name of the author: whoever reads the feed learns it.', 'kk-content-exporter' ),
+			);
+		}
+		if ( self::exports_author_display_login( $post, $data ) ) {
+			$notices[] = array(
+				'code'    => 'author_display_login',
+				'message' => __( 'In this item the display name of the author is the login name, as WordPress sets it for a new user: whoever reads the feed learns it. Ask the author to choose another display name in the profile.', 'kk-content-exporter' ),
 			);
 		}
 
@@ -471,11 +480,40 @@ final class Admin_Routes {
 			return false;
 		}
 
+		return self::contains_text( $data, $url );
+	}
+
+	/**
+	 * Whether the exported object of an item shows the login name of its author through the display name: WordPress
+	 * sets the display name of a new user to the login, and `core.author.name` needs no confirmation. The login itself
+	 * never leaves the server: the preview gets only the notice.
+	 *
+	 * @param WP_Post              $post Item.
+	 * @param array<string, mixed> $data Exported object.
+	 * @return bool
+	 */
+	private static function exports_author_display_login( WP_Post $post, array $data ): bool {
+		$author = get_userdata( (int) $post->post_author );
+		if ( false === $author || '' === $author->user_login || $author->display_name !== $author->user_login ) {
+			return false;
+		}
+
+		return self::contains_text( $data, $author->user_login );
+	}
+
+	/**
+	 * Whether a text of an exported object, at any depth, contains a given text.
+	 *
+	 * @param array<string, mixed> $data   Exported object.
+	 * @param string               $needle Text to look for.
+	 * @return bool
+	 */
+	private static function contains_text( array $data, string $needle ): bool {
 		$found = false;
 		array_walk_recursive(
 			$data,
-			static function ( $value ) use ( $url, &$found ) {
-				$found = $found || ( is_string( $value ) && str_contains( $value, $url ) );
+			static function ( $value ) use ( $needle, &$found ) {
+				$found = $found || ( is_string( $value ) && str_contains( $value, $needle ) );
 			}
 		);
 

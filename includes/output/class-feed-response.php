@@ -75,6 +75,22 @@ final class Feed_Response {
 	 * @return int
 	 */
 	private static function total_pages( int $total, int $per_page ): int {
-		return $total > 0 ? intdiv( $total + max( 1, $per_page ) - 1, max( 1, $per_page ) ) : 0;
+		$per_page = max( 1, $per_page );
+
+		// Without `$total + $per_page - 1`, which overflows with the largest page sizes (no ceiling in the settings).
+		return $total > 0 ? intdiv( $total, $per_page ) + ( 0 === $total % $per_page ? 0 : 1 ) : 0;
+	}
+
+	/**
+	 * Whether a page can be read: its offset, (page - 1) x per page, must be a whole number of PHP. The maximum items
+	 * per page has no ceiling, so a large page of a large page size can go beyond; such a page is after the last
+	 * one anyway.
+	 *
+	 * @param int $page     Page, from 1.
+	 * @param int $per_page Items per page, from 1.
+	 * @return bool
+	 */
+	public static function offset_fits( int $page, int $per_page ): bool {
+		return $page - 1 <= intdiv( PHP_INT_MAX, max( 1, $per_page ) );
 	}
 }

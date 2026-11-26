@@ -39,6 +39,10 @@ class KKCE_Meta_Provider_Integration_Test extends WP_UnitTestCase {
 		unregister_meta_key( 'post', 'kkce_open', 'kkce_event' );
 		unregister_meta_key( 'post', 'kkce_tags', 'kkce_event' );
 		unregister_meta_key( 'post', 'kkce_late', 'kkce_event' );
+		foreach ( array( 'kkce_global_flag', 'kkce_global_count', 'kkce_global_list', 'kkce_global_override' ) as $key ) {
+			unregister_meta_key( 'post', $key );
+		}
+		unregister_meta_key( 'post', 'kkce_global_override', 'kkce_event' );
 		parent::tear_down();
 	}
 
@@ -98,6 +102,43 @@ class KKCE_Meta_Provider_Integration_Test extends WP_UnitTestCase {
 		$this->assertNull( $declared( 'meta.kkce_tags' ) );
 		$this->assertSame( 'string', $declared( 'meta.unregistered' ) );
 		$this->assertNull( $declared( 'core.title' ) );
+	}
+
+	/**
+	 * Regression: a meta registered for every post type (`register_meta( 'post', ... )` without a subtype, as many
+	 * plugins do) keeps its declared type, like WordPress reads it: the registration of the post type comes first,
+	 * then the one for every post type. A registered structure stays out, also when it is found in the items.
+	 */
+	public function test_meta_registered_for_every_post_type_keep_their_type() {
+		register_meta( 'post', 'kkce_global_flag', array( 'type' => 'boolean', 'single' => true ) );
+		register_meta( 'post', 'kkce_global_count', array( 'type' => 'integer', 'single' => true ) );
+		register_meta( 'post', 'kkce_global_list', array( 'type' => 'array', 'single' => true, 'show_in_rest' => array( 'schema' => array( 'items' => array( 'type' => 'string' ) ) ) ) );
+		register_meta( 'post', 'kkce_global_override', array( 'type' => 'string', 'single' => true ) );
+		register_post_meta( 'kkce_event', 'kkce_global_override', array( 'type' => 'boolean', 'single' => true ) );
+		$this->event( array( 'kkce_global_list' => array( 'a' ), 'kkce_global_flag' => '1' ) );
+
+		$types = array();
+		foreach ( Meta_Provider::sources( 'kkce_event', true ) as $source ) {
+			$types[ $source->id ] = $source->type;
+		}
+
+		$this->assertSame( 'boolean', $types['meta.kkce_global_flag'] ?? null );
+		$this->assertSame( 'number', $types['meta.kkce_global_count'] ?? null );
+		$this->assertSame( 'boolean', $types['meta.kkce_global_override'] ?? null, 'The registration of the post type comes first.' );
+		$this->assertArrayNotHasKey( 'meta.kkce_global_list', $types, 'A structure stays out, also when found in the items.' );
+
+		$declared = Meta_Provider::declared_types( 'kkce_event' );
+		$this->assertSame( 'boolean', $declared( 'meta.kkce_global_flag' ) );
+		$this->assertSame( 'number', $declared( 'meta.kkce_global_count' ) );
+		$this->assertSame( 'boolean', $declared( 'meta.kkce_global_override' ) );
+		$this->assertNull( $declared( 'meta.kkce_global_list' ) );
+
+		$typed = array();
+		foreach ( Meta_Provider::sources( 'kkce_event', false, array( 'kkce_global_flag', 'kkce_global_list' ) ) as $source ) {
+			$typed[ $source->id ] = $source->type;
+		}
+		$this->assertSame( 'boolean', $typed['meta.kkce_global_flag'] ?? null, 'A key typed by hand gets the declared type too.' );
+		$this->assertArrayNotHasKey( 'meta.kkce_global_list', $typed );
 	}
 
 	/**

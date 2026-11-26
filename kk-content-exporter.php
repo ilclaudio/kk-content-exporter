@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       KK Content Exporter
  * Plugin URI:        https://github.com/ilclaudio/kk-content-exporter/
- * Description:       Exposes published content of a chosen post type as configurable, read-only JSON feeds.
- * Version:           0.0.4
+ * Description:       Exposes published content of one or more post types as configurable, read-only JSON feeds.
+ * Version:           1.0.0
  * Requires at least: 6.4
  * Requires PHP:      8.3
  * Author:            IoClaudio
@@ -20,7 +20,7 @@ namespace KKCE;
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'KKCE_VERSION', '0.0.4' );
+define( 'KKCE_VERSION', '1.0.0' );
 define( 'KKCE_PLUGIN_FILE', __FILE__ );
 define( 'KKCE_PLUGIN_DIR', __DIR__ . '/' );
 

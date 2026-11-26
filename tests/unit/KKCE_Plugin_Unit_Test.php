@@ -22,7 +22,8 @@ class KKCE_Plugin_Unit_Test extends KKCE_Unit_Test_Case {
 		Plugin::boot();
 
 		$this->assertSame( 10, has_action( 'init', array( Plugin::class, 'load_textdomain' ) ) );
-		$this->assertSame( 10, has_filter( 'plugin_row_meta', array( Plugin::class, 'filter_plugin_row_meta' ) ) );
+		// Version 1.0.0: no development note in the row of the plugin any more.
+		$this->assertFalse( has_filter( 'plugin_row_meta' ) );
 		$this->assertNotFalse( has_action( 'init', array( \KKCE\Feed_Post_Type::class, 'register' ) ) );
 		$this->assertNotFalse( has_action( 'init', array( \KKCE\Feed_Meta::class, 'register' ) ) );
 		$this->assertSame( 10, has_action( 'untrashed_post', array( \KKCE\Feed_Post_Type::class, 'disable_restored_feed' ) ) );
@@ -92,35 +93,5 @@ class KKCE_Plugin_Unit_Test extends KKCE_Unit_Test_Case {
 			->with( 'kk-content-exporter', false, 'kk-content-exporter/languages' );
 
 		Plugin::load_textdomain();
-	}
-
-	/**
-	 * The development notice is added only to the row of this plugin.
-	 */
-	public function test_row_meta_note_is_added_only_for_this_plugin() {
-		Functions\when( 'plugin_basename' )->justReturn( 'kk-content-exporter/kk-content-exporter.php' );
-
-		$own   = Plugin::filter_plugin_row_meta( array( 'Version 0.0.1' ), 'kk-content-exporter/kk-content-exporter.php' );
-		$other = Plugin::filter_plugin_row_meta( array( 'Version 1.0' ), 'hello-dolly/hello.php' );
-
-		$this->assertSame( array( 'Version 0.0.1', Plugin::development_notice() ), $own );
-		$this->assertSame( array( 'Version 1.0' ), $other );
-	}
-
-	/**
-	 * The feeds are served since version 0.0.4: the development notice no longer says otherwise.
-	 */
-	public function test_development_notice_does_not_say_that_feeds_are_not_served() {
-		$this->assertStringNotContainsString( 'not served', Plugin::development_notice() );
-		$this->assertStringContainsString( 'Development version', Plugin::development_notice() );
-	}
-
-	/**
-	 * A row meta value that is not an array is returned unchanged.
-	 */
-	public function test_row_meta_with_unexpected_type_is_returned_unchanged() {
-		Functions\when( 'plugin_basename' )->justReturn( 'kk-content-exporter/kk-content-exporter.php' );
-
-		$this->assertSame( 'not-an-array', Plugin::filter_plugin_row_meta( 'not-an-array', 'kk-content-exporter/kk-content-exporter.php' ) );
 	}
 }

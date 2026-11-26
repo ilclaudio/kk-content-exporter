@@ -8,7 +8,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: 2026-11-06T22:54:45+01:00\n"
-"PO-Revision-Date: 2026-11-25T21:20:44+00:00\n"
+"PO-Revision-Date: 2026-11-26T18:08:49+00:00\n"
 "Language: it_IT\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Loco https://localise.biz/\n"
@@ -26,8 +26,8 @@ msgstr "https://github.com/ilclaudio/kk-content-exporter/"
 
 #. Description of the plugin
 #: kk-content-exporter.php:5
-msgid "Exposes published content of a chosen post type as configurable, read-only JSON feeds."
-msgstr "Espone i contenuti pubblicati di un tipo di contenuto scelto come feed JSON configurabili e in sola lettura."
+msgid "Exposes published content of one or more post types as configurable, read-only JSON feeds."
+msgstr "Espone i contenuti pubblicati di uno o più tipi di contenuto come feed JSON configurabili e in sola lettura."
 
 #. Author of the plugin
 #: kk-content-exporter.php:9
@@ -116,13 +116,13 @@ msgstr "Per essere attivato, un feed ha bisogno di uno slug e di almeno un tipo 
 
 #: includes/admin/class-feed-editor.php:458
 msgid "This feed is enabled but not published: its address answers with a \"not found\" error until the feed is published."
-msgstr "Questo feed è abilitato ma non pubblicato: il suo indirizzo risponde con un errore «non trovato» finché il feed non viene pubblicato."
+msgstr "Questo feed è attivo ma non pubblicato: il suo indirizzo risponde con un errore «non trovato» finché il feed non viene pubblicato."
 
 #. translators: %s: slug of the feed before it was moved to the trash.
 #: includes/admin/class-feed-editor.php:469
 #, php-format
 msgid "This feed was restored from the trash without its address: another feed now uses the slug \"%s\". Choose another slug to enable it."
-msgstr "Questo feed è stato ripristinato dal cestino senza il suo indirizzo: un altro feed ora usa lo slug \"%s\". Scegli un altro slug per abilitarlo."
+msgstr "Questo feed è stato ripristinato dal cestino senza il suo indirizzo: un altro feed ora usa lo slug \"%s\". Scegli un altro slug per attivarlo."
 
 #: includes/admin/class-feed-editor.php:531
 msgid "Address of the feed:"
@@ -130,7 +130,7 @@ msgstr "Indirizzo del feed:"
 
 #: includes/admin/class-feed-editor.php:539
 msgid "The address answers only while the feed is published and enabled."
-msgstr "L'indirizzo risponde solo mentre il feed è pubblicato e abilitato."
+msgstr "L'indirizzo risponde solo mentre il feed è pubblicato e attivo."
 
 #: includes/admin/class-feed-editor.php:549
 msgid "(required)"
@@ -455,7 +455,7 @@ msgstr "Un elemento con la sola città:"
 
 #: includes/admin/class-guide-page.php:291
 msgid "Reads a field and translates its value with a table, like a switch: every line says which value to look for and what to write instead."
-msgstr "Legge un campo e ne traduce il valore con una tabella, come uno switch: ogni riga dice quale valore cercare e cosa scrivere al suo posto."
+msgstr "Legge un campo e ne traduce il valore con una tabella, come uno switch: ogni voce dice quale valore cercare e cosa scrivere al suo posto."
 
 #: includes/admin/class-guide-page.php:295
 msgid "The comparison is exact: capital letters count, spaces at the ends are ignored."
@@ -463,7 +463,7 @@ msgstr "Il confronto è esatto: le maiuscole contano, gli spazi agli estremi son
 
 #: includes/admin/class-guide-page.php:296
 msgid "The first line that matches gives the output: a fixed text, or another field."
-msgstr "La prima riga che corrisponde dà l'uscita: un testo fisso o un altro campo."
+msgstr "La prima voce che corrisponde dà l'uscita: un testo fisso o un altro campo."
 
 #: includes/admin/class-guide-page.php:297
 msgid "<strong>When no line matches</strong> decides what is written otherwise: nothing (<code>null</code>), a fixed text, a field, or the value read, unchanged."
@@ -862,11 +862,11 @@ msgstr "I feed, le loro impostazioni, queste impostazioni e la capability vengon
 
 #: includes/admin/class-settings-page.php:282
 msgid "The REST API seems to be blocked for anonymous requests, probably by a security plugin or a setting of the site. Public feeds cannot be read until anonymous requests to the REST API are allowed."
-msgstr "L'API REST sembra bloccata per le richieste anonime, probabilmente da un plugin di sicurezza o da un'impostazione del sito. I feed pubblici non possono essere letti finché le richieste anonime all'API REST non sono consentite."
+msgstr "L'API REST sembra bloccata per le richieste anonime, probabilmente da un plugin di sicurezza o da un'impostazione del sito. I feed pubblici non possono essere letti finché le richieste anonime alla REST API non sono consentite."
 
 #: includes/admin/class-settings-page.php:288
 msgid "Some feeds require authentication, but Application Passwords are not available on this site: WordPress offers them only over HTTPS or in a local environment. Authenticated feeds cannot be read until then."
-msgstr "Alcuni feed richiedono l'autenticazione, ma le Application Password non sono disponibili su questo sito: WordPress le offre solo tramite HTTPS o in un ambiente locale. I feed autenticati non possono essere letti finché non lo sono."
+msgstr "Alcuni feed richiedono l'autenticazione, ma le password per le applicazioni non sono disponibili su questo sito: WordPress le offre solo tramite HTTPS o in un ambiente locale. I feed autenticati non possono essere letti finché non lo sono."
 
 #. translators: %s: titles of the feeds, separated by commas.
 #: includes/admin/class-settings-page.php:295
@@ -926,10 +926,6 @@ msgstr "Nessun feed nel cestino."
 msgid "All Feeds"
 msgstr "Tutti i feed"
 
-#: includes/class-plugin.php:138
-msgid "Development version: some sources are not available yet. Not intended for production sites."
-msgstr "Versione di sviluppo: alcune sorgenti non sono ancora disponibili. Non adatta a siti in produzione."
-
 #: includes/class-settings.php:173
 msgid "The maximum items per page must be a whole number of at least 1. The previous value was kept."
 msgstr "Il massimo di elementi per pagina deve essere un numero intero di almeno 1. È stato mantenuto il valore precedente."
@@ -983,9 +979,13 @@ msgstr "Il mapping non è valido."
 msgid "No published item of the feed post types has this ID."
 msgstr "Nessun elemento pubblicato dei tipi di contenuto del feed ha questo ID."
 
-#: includes/rest/class-admin-routes.php:433
+#: includes/rest/class-admin-routes.php:436
 msgid "In this item the author archive URL contains the login name of the author: whoever reads the feed learns it."
-msgstr "In questo elemento l'URL dell'archivio dell'autore contiene il nome di accesso dell'autore: chi legge il feed lo conosce."
+msgstr "In questo elemento l'URL dell'archivio dell'autore contiene il nome di accesso dell'autore: chi legge il feed lo scopre."
+
+#: includes/rest/class-admin-routes.php:442
+msgid "In this item the display name of the author is the login name, as WordPress sets it for a new user: whoever reads the feed learns it. Ask the author to choose another display name in the profile."
+msgstr "In questo elemento il nome visualizzato dell'autore è il suo nome di accesso, come WordPress lo imposta per un nuovo utente: chi legge il feed lo scopre. Chiedi all'autore di scegliere un altro nome visualizzato nel profilo."
 
 #: includes/rest/class-feed-routes.php:110
 msgid "Slug of the feed."
@@ -997,7 +997,7 @@ msgstr "Pagina degli elementi, da 1."
 
 #: includes/rest/class-feed-routes.php:121
 msgid "Items per page; by default the value of the feed, at most the maximum of the settings."
-msgstr "Elementi per pagina; per impostazione predefinita il valore del feed, al massimo il valore massimo delle impostazioni."
+msgstr "Elementi per pagina; per impostazione predefinita il valore del feed, al massimo quello delle impostazioni."
 
 #: includes/rest/class-feed-routes.php:126
 msgid "Items modified at or after this moment (included), for example 2026-11-01T10:00:00Z."
@@ -1057,7 +1057,7 @@ msgstr "%1$s deve essere uno di questi valori: %2$s."
 msgid "modified_after must be earlier than modified_before."
 msgstr "modified_after deve essere precedente a modified_before."
 
-#: includes/rest/class-feed-routes.php:567
+#: includes/rest/class-feed-routes.php:570
 msgid "No feed is available at this address."
 msgstr "Nessun feed è disponibile a questo indirizzo."
 

@@ -112,4 +112,24 @@ class KKCE_Feed_Response_Unit_Test extends KKCE_Unit_Test_Case {
 		$this->assertSame( 10, Feed_Response::per_page( 50, 100, 10 ) );
 		$this->assertSame( 80, Feed_Response::per_page( 50, 100, 80 ) );
 	}
+
+	/**
+	 * Regression: the number of pages never overflows, also with the largest page size (it threw a TypeError).
+	 */
+	public function test_total_pages_does_not_overflow() {
+		$this->assertSame( 1, Feed_Response::build( array(), 1, PHP_INT_MAX, 5, 'news', self::GENERATED_AT )['pagination']['total_pages'] );
+		$this->assertSame( 1, Feed_Response::build( array(), 1, PHP_INT_MAX, PHP_INT_MAX, 'news', self::GENERATED_AT )['pagination']['total_pages'] );
+		$this->assertSame( 2, Feed_Response::build( array(), 1, PHP_INT_MAX - 1, PHP_INT_MAX, 'news', self::GENERATED_AT )['pagination']['total_pages'] );
+	}
+
+	/**
+	 * A page can be read only when its offset, (page - 1) x per page, is a whole number of PHP.
+	 */
+	public function test_offset_fits() {
+		$this->assertTrue( Feed_Response::offset_fits( 1, PHP_INT_MAX ) );
+		$this->assertTrue( Feed_Response::offset_fits( 2147483647, 100 ) );
+		$this->assertTrue( Feed_Response::offset_fits( 2, PHP_INT_MAX ) );
+		$this->assertFalse( Feed_Response::offset_fits( 3, PHP_INT_MAX ) );
+		$this->assertFalse( Feed_Response::offset_fits( 1000000, 10000000000000 ) );
+	}
 }

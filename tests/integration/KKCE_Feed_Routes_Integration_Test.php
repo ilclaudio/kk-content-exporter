@@ -276,6 +276,48 @@ class KKCE_Feed_Routes_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Regression: with the type `auto`, a key has the same JSON type in every item of a feed, also when its source
+	 * is declared with different types in the post types of the feed (here boolean for posts, text for pages): the
+	 * type is decided on the whole feed, text when the declarations differ.
+	 */
+	public function test_an_automatic_key_has_one_json_type_across_the_post_types_of_the_feed() {
+		register_post_meta( 'post', 'kkce_flag', array( 'type' => 'boolean', 'single' => true ) );
+		register_post_meta( 'page', 'kkce_flag', array( 'type' => 'string', 'single' => true ) );
+		$row = array( 'key' => 'flag', 'kind' => 'field', 'type' => 'auto', 'sources' => array( '*' => array( 'meta.kkce_flag' ) ) );
+		$this->feed( 'mixed', array( 'post_types' => array( 'post', 'page' ), 'rows' => array( $row ) ) );
+		$post = $this->item();
+		$page = $this->item( array( 'post_type' => 'page' ) );
+		update_post_meta( $post, 'kkce_flag', '1' );
+		update_post_meta( $page, 'kkce_flag', '1' );
+
+		$items = $this->get( 'mixed' )->get_data()['items'];
+		$types = array_map( static fn( $item ): string => gettype( ( (array) $item )['flag'] ), $items );
+
+		unregister_meta_key( 'post', 'kkce_flag', 'post' );
+		unregister_meta_key( 'post', 'kkce_flag', 'page' );
+		$this->assertCount( 2, $items );
+		$this->assertSame( array( 'string', 'string' ), $types );
+	}
+
+	/**
+	 * Regression: with a page size without ceiling (allowed by the settings), a page whose offset does not fit in a
+	 * whole number answers like a page after the last one: 200, no items, the real total; never an error.
+	 */
+	public function test_a_page_beyond_the_integer_range_is_empty() {
+		$this->settings( array( 'max_per_page' => PHP_INT_MAX ) );
+		$this->feed( 'huge' );
+		$this->item();
+		$this->item();
+
+		$response = $this->get( 'huge', array( 'page' => 3, 'per_page' => PHP_INT_MAX ) );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array(), $response->get_data()['items'] );
+		$this->assertSame( 2, $response->get_data()['pagination']['total'] );
+		$this->assertSame( 1, $response->get_data()['pagination']['total_pages'] );
+	}
+
+	/**
 	 * The route is registered in the namespace of the feeds, for GET only.
 	 */
 	public function test_the_route_is_registered_for_get() {

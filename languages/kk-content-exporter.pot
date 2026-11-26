@@ -2,14 +2,14 @@
 # This file is distributed under the GPL-3.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: KK Content Exporter 0.0.4\n"
+"Project-Id-Version: KK Content Exporter 1.0.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/kk-content-exporter\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-25T22:20:38+01:00\n"
+"POT-Creation-Date: 2026-11-26T19:08:38+01:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: kk-content-exporter\n"
@@ -26,7 +26,7 @@ msgstr ""
 
 #. Description of the plugin
 #: kk-content-exporter.php:5
-msgid "Exposes published content of a chosen post type as configurable, read-only JSON feeds."
+msgid "Exposes published content of one or more post types as configurable, read-only JSON feeds."
 msgstr ""
 
 #. Author of the plugin
@@ -926,10 +926,6 @@ msgstr ""
 msgid "All Feeds"
 msgstr ""
 
-#: includes/class-plugin.php:138
-msgid "Development version: some sources are not available yet. Not intended for production sites."
-msgstr ""
-
 #: includes/class-settings.php:173
 msgid "The maximum items per page must be a whole number of at least 1. The previous value was kept."
 msgstr ""
@@ -983,8 +979,12 @@ msgstr ""
 msgid "No published item of the feed post types has this ID."
 msgstr ""
 
-#: includes/rest/class-admin-routes.php:433
+#: includes/rest/class-admin-routes.php:436
 msgid "In this item the author archive URL contains the login name of the author: whoever reads the feed learns it."
+msgstr ""
+
+#: includes/rest/class-admin-routes.php:442
+msgid "In this item the display name of the author is the login name, as WordPress sets it for a new user: whoever reads the feed learns it. Ask the author to choose another display name in the profile."
 msgstr ""
 
 #: includes/rest/class-feed-routes.php:110
@@ -1057,7 +1057,7 @@ msgstr ""
 msgid "modified_after must be earlier than modified_before."
 msgstr ""
 
-#: includes/rest/class-feed-routes.php:567
+#: includes/rest/class-feed-routes.php:570
 msgid "No feed is available at this address."
 msgstr ""
 

@@ -22,6 +22,17 @@
 	"devDependencies": {
 		"@axe-core/playwright": "4.14.0",
 		"@playwright/test": "1.65.0",
-		"@wordpress/env": "12.1.0"
+		"@wordpress/env": "12.2.0"
+	},
+	"overrides": {
+		"@wordpress/env": {
+			"rimraf": "6.1.4"
+		},
+		"@wp-playground/cli": {
+			"express": "4.22.3"
+		},
+		"@wp-playground/storage": {
+			"isomorphic-git": "1.38.6"
+		}
 	}
 }

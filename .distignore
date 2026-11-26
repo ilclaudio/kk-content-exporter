@@ -58,8 +58,9 @@ desktop.ini
 /CLAUDE.md
 /DEV
 
-# Repository-only documentation
+# Repository-only documentation (docs/: guides for the developers of an importer, read on the repository)
 /README.md
+/docs
 /CONTRIBUTING.md
 /SECURITY.md
 /VERSION.txt

@@ -497,6 +497,39 @@ class KKCE_Admin_Routes_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Regression: WordPress sets the display name of a new user to the login, so `core.author.name` can export the
+	 * login without any confirmation. The preview warns when a text of the item contains a display name that is the
+	 * login of the author, and only then; the notice itself never contains the login.
+	 */
+	public function test_preview_warns_when_the_author_display_name_is_the_login() {
+		wp_set_current_user( self::$admin );
+		$author  = self::factory()->user->create( array( 'role' => 'author', 'user_login' => 'Mario.Rossi' ) );
+		$post_id = self::factory()->post->create( array( 'post_status' => 'publish', 'post_author' => $author ) );
+		$name    = array( 'key' => 'author', 'kind' => 'field', 'sources' => array( '*' => array( 'core.author.name' ) ) );
+		$notices = function ( array $rows ) use ( $post_id ): array {
+			$response = $this->preview( array( 'mapping' => $this->mapping( $rows ), 'post_types' => array( 'post' ), 'post_id' => $post_id ) );
+			$this->assertSame( 200, $response->get_status() );
+			$list = $response->get_data()['items'][0]['notices'];
+			$this->assertStringNotContainsString( 'Mario.Rossi', (string) wp_json_encode( $list ), 'The notice never shows the login.' );
+
+			return array_column( $list, 'code' );
+		};
+
+		$this->assertSame( 'Mario.Rossi', get_userdata( $author )->display_name, 'WordPress uses the login as display name.' );
+		$this->assertSame( array( 'author_display_login' ), $notices( array( $name ) ) );
+
+		// Also inside a template.
+		$this->assertSame( array( 'author_display_login' ), $notices( array( array( 'key' => 'by', 'kind' => 'template', 'templates' => array( '*' => 'By {core.author.name}' ) ) ) ) );
+
+		// A row that does not export the name says nothing.
+		$this->assertSame( array(), $notices( array( array( 'key' => 'title', 'kind' => 'field', 'sources' => array( '*' => array( 'core.title' ) ) ) ) ) );
+
+		// A real display name says nothing.
+		wp_update_user( array( 'ID' => $author, 'display_name' => 'Mario Rossi' ) );
+		$this->assertSame( array(), $notices( array( $name ) ) );
+	}
+
+	/**
 	 * The preview computes template rows, and refuses a template with a syntax error.
 	 */
 	public function test_preview_of_a_template_row() {

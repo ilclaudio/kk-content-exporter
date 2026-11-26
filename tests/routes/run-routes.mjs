@@ -70,19 +70,41 @@ function fail( message ) {
 /**
  * Reads a JSON file.
  *
- * @param {string} file Path.
- * @param {string} what What the file is, for the error message.
+ * The message of a JSON error of Node quotes a piece of the text near the error: for a file that holds credentials
+ * (the configuration, with the Application Passwords) only the position is printed, never the text.
+ *
+ * @param {string}  file      Path.
+ * @param {string}  what      What the file is, for the error message.
+ * @param {boolean} sensitive Whether the file can hold credentials.
  * @return {any} Decoded content.
  */
-function readJson( file, what ) {
+function readJson( file, what, sensitive = false ) {
 	if ( ! existsSync( file ) ) {
 		fail( `${ what } not found: ${ file }` );
 	}
+	const text = readFileSync( file, 'utf8' );
 	try {
-		return JSON.parse( readFileSync( file, 'utf8' ) );
+		return JSON.parse( text );
 	} catch ( error ) {
-		fail( `${ what } is not valid JSON: ${ file } (${ error.message })` );
+		if ( ! sensitive ) {
+			fail( `${ what } is not valid JSON: ${ file } (${ error.message })` );
+		}
+		const match = /position (\d+)/.exec( String( error.message ) );
+		const where = match ? ', ' + position( text, Number( match[ 1 ] ) ) : '';
+		fail( `${ what } is not valid JSON: ${ file }${ where }. Check the quotes and the commas there.` );
 	}
+}
+
+/**
+ * Line and column of a character of a text, counted from 1.
+ *
+ * @param {string} text   Text.
+ * @param {number} offset Index of the character.
+ * @return {string} For example `line 3, column 25`.
+ */
+function position( text, offset ) {
+	const before = text.slice( 0, offset ).split( '\n' );
+	return `line ${ before.length }, column ${ before[ before.length - 1 ].length + 1 }`;
 }
 
 /**
@@ -222,7 +244,7 @@ if ( ! existsSync( options.config ) ) {
 		`Copy ${ resolve( here, 'routes.config.example.json' ) } to that path and fill it in (see tests/routes/README.md).`
 	);
 }
-const config = readJson( options.config, 'Configuration file' );
+const config = readJson( options.config, 'Configuration file', true );
 const collectionFile = options.collection ?? ( config.collection ? resolve( dirname( options.config ), config.collection ) : resolve( here, 'Insomnia_Feed_Endpoint.json' ) );
 const collection = readJson( collectionFile, 'Collection' );
 const resources = Array.isArray( collection.resources ) ? collection.resources : fail( 'The collection has no resources: is it an Insomnia export (format 4)?' );

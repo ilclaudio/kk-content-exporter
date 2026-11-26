@@ -3,6 +3,7 @@
 [![CI](https://github.com/ilclaudio/kk-content-exporter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ilclaudio/kk-content-exporter/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/ilclaudio/kk-content-exporter)](LICENSE)
 [![PHPStan level 8](https://img.shields.io/badge/PHPStan-level%208-brightgreen.svg)](https://phpstan.org/)
+[![Version](https://img.shields.io/github/v/tag/ilclaudio/kk-content-exporter?sort=semver)](https://github.com/ilclaudio/kk-content-exporter/tags)
 
 KK Content Exporter makes published WordPress content available as read-only JSON feeds through a
 REST API. Other websites, applications and systems can read these feeds or use them to import data.
@@ -16,10 +17,11 @@ the plugin's operation, REST API and development workflow.
 
 ## Project status
 
-In development. Feed configuration, the mapping editor with preview and save, WordPress core fields
-and selected post meta are available, along with public and authenticated feeds with pagination and
-date filters, the URL of the featured image, the terms of the taxonomies and the language (of the site, and of
-each item with Polylang). A lighter IDs-only mode of the endpoint is planned for version 1.1.0.
+Version 1.0.0 is being prepared for the WordPress.org Plugin Directory. It offers feed configuration, the
+mapping editor with preview and save, WordPress core fields and selected post meta, public and authenticated
+feeds with pagination and date filters, the URL of the featured image, the terms of the taxonomies and the
+language (of the site, and of each item with Polylang). Version 1.1.0 plans meta dates, ACF and CMB2 fields,
+duplication and export/import of feeds, and a lighter IDs-only mode of the endpoint.
 
 ## Requirements
 
@@ -66,6 +68,9 @@ external requests. Feed-based diagnostics inspect at most 100 feeds; they are no
 of every feed on a large site.
 
 ## Using the REST API
+
+The complete guide for the developers of a program that reads the feeds (response, pages, access, date
+filters, removed items, languages, errors) is [`docs/reading-a-feed.md`](docs/reading-a-feed.md).
 
 Each feed has its own endpoint: `GET /wp-json/kkce/v1/<feed-slug>`. It must be published and enabled
 before it can be read. Requests have no body; use the exact feed URL shown in the editor.
@@ -186,6 +191,12 @@ composer run check             # lint + PHPCS + PHPStan + unit tests: the fast g
 composer run test:integration  # integration tests in Docker
 composer run test:e2e          # end-to-end tests in Chromium
 ```
+
+CI validates Composer files and GitHub Actions workflows, runs the checks and integration suites,
+builds the release ZIP, and audits dependencies (npm HIGH and CRITICAL findings block CI).
+It runs on pushes and pull requests to `main`/`dev` and can be started manually; E2E has its own manual
+workflow. Dependabot proposes monthly tool updates to `dev`, with up to three PRs per ecosystem.
+Manual workflow controls and scheduled dependency updates require their configuration on the default branch.
 
 The three test levels, every command and when to run it: [`tests/README.md`](tests/README.md).
 Manual checks of the feed endpoint on a development site, in Insomnia or with

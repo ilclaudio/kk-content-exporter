@@ -51,17 +51,20 @@ final class Meta_Provider {
 	public static function sources( string $post_type, bool $discover, array $extra = array() ): array {
 		$sources = array();
 
-		foreach ( self::registered( $post_type ) as $key => $type ) {
+		$registered = self::registrations( $post_type );
+		foreach ( self::registered( $registered ) as $key => $type ) {
 			$sources[ $key ] = new Source( Meta_Keys::GROUP . '.' . $key, $key, $post_type, $type );
 		}
 
 		if ( $discover ) {
 			foreach ( self::sampled_keys( $post_type ) as $key ) {
-				$sources[ $key ] ??= new Source( Meta_Keys::GROUP . '.' . $key, $key, $post_type, Meta_Keys::UNREGISTERED_TYPE );
+				// A registered key is already listed, or left out as a structure: never as text.
+				if ( ! isset( $registered[ $key ] ) ) {
+					$sources[ $key ] ??= new Source( Meta_Keys::GROUP . '.' . $key, $key, $post_type, Meta_Keys::UNREGISTERED_TYPE );
+				}
 			}
 		}
 
-		$registered = get_registered_meta_keys( 'post', $post_type );
 		foreach ( $extra as $key ) {
 			$type = Meta_Keys::declared_type( $registered[ $key ]['type'] ?? null );
 			if ( null !== $type && Meta_Keys::is_selectable( $key ) ) {
@@ -102,7 +105,7 @@ final class Meta_Provider {
 	 *                                   identifier is not a selectable meta key, or the key is a structure.
 	 */
 	public static function declared_types( string $post_type ): callable {
-		$registered = get_registered_meta_keys( 'post', $post_type );
+		$registered = self::registrations( $post_type );
 
 		return static function ( string $id ) use ( $registered ): ?string {
 			$key = Meta_Keys::key_from_source( $id );
@@ -112,15 +115,28 @@ final class Meta_Provider {
 	}
 
 	/**
-	 * Selectable keys registered for a post type, with their declared types. Structures are left out.
+	 * Meta registrations that apply to a post type, as WordPress reads them: those for every post type
+	 * (`register_meta( 'post', ... )` without a subtype, as many plugins do) and those of the post type, which come
+	 * first for the same key.
 	 *
 	 * @param string $post_type Post type.
+	 * @return array<mixed> Arguments of the registration by key.
+	 */
+	private static function registrations( string $post_type ): array {
+		// `+` keeps the keys (`array_merge()` would renumber a numeric meta key) and the left side wins.
+		return get_registered_meta_keys( 'post', $post_type ) + get_registered_meta_keys( 'post', '' );
+	}
+
+	/**
+	 * Selectable registered keys, with their declared types. Structures are left out.
+	 *
+	 * @param array<mixed> $registrations Registrations that apply to the post type (`registrations()`).
 	 * @return array<string, string> Declared type by key.
 	 */
-	private static function registered( string $post_type ): array {
+	private static function registered( array $registrations ): array {
 		$keys = array();
 
-		foreach ( get_registered_meta_keys( 'post', $post_type ) as $key => $args ) {
+		foreach ( $registrations as $key => $args ) {
 			$key  = (string) $key;
 			$type = Meta_Keys::declared_type( $args['type'] ?? null );
 			if ( null !== $type && Meta_Keys::is_selectable( $key ) ) {
