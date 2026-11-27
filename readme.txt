@@ -142,18 +142,4 @@ It works on a single site. Network activation is not supported in this version: 
 == Changelog ==
 
 = 1.0.0 =
-* In development: guide for the developers of an importer, reviewed Italian translation, code clean-ups.
-
-= 0.0.4 =
-* Feed endpoint with pages, access control, date filters and `lang`; featured image, taxonomy and language fields; redesigned mapping editor; guide to the rules; slug protection.
-
-= 0.0.3 =
-* Post meta fields in the mapping: the keys in use, hidden keys listed apart, and any key typed by hand.
-
-= 0.0.2 =
-* Fixes in the mapping editor: refused drafts stay editable, sensitive fields typed in a template ask for confirmation at once.
-
-= 0.0.1 =
-* Feeds with one or more post types, settings page and uninstall cleanup.
-* Field mapping with five rules, live preview and save; sensitive fields only after confirmation.
-* Italian translation.
+* First public release.
