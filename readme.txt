@@ -130,6 +130,15 @@ No. It leaves the original content, its visibility and WordPress's existing REST
 
 It works on a single site. Network activation is not supported in this version: activate the plugin on each site where you need it.
 
+== Screenshots ==
+
+1. The Mapping box: each row writes one JSON key, with a live preview of the items a reader will receive.
+2. Feed settings: address, source content types, public or authenticated access, items per page and status.
+3. The list of feeds with their address, source, access and status.
+4. Global settings: serving the feeds, REST API index, authentication, page limit and date filters.
+5. The built-in guide that explains every mapping rule with examples.
+6. The JSON of a public feed, read with a plain GET request without authentication.
+
 == Changelog ==
 
 = 1.0.0 =

@@ -58,9 +58,11 @@ desktop.ini
 /CLAUDE.md
 /DEV
 
-# Repository-only documentation (docs/: guides for the developers of an importer, read on the repository)
+# Repository-only documentation (docs/: guides for the developers of an importer, read on the repository;
+# assets/screenshots/: images of the README, WordPress.org takes its screenshots from the SVN assets folder)
 /README.md
 /docs
+/assets/screenshots
 /CONTRIBUTING.md
 /SECURITY.md
 /VERSION.txt

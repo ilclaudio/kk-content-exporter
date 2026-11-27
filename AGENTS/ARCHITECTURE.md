@@ -63,6 +63,7 @@ mapping editor and the mapping editor with its save, the post meta, taxonomy, fe
 | `includes/class-feed-validator.php` | `KKCE\Feed_Validator`: pure validation (no WordPress call) of the slug, the items per page, the access and the list of source post types; returns error codes, the editor writes the messages |
 | `languages/` | `kk-content-exporter.pot`, `kk-content-exporter-it_IT.po` / `.mo`, and the generated JSON translations of the admin scripts (`kk-content-exporter-<locale>-<md5>.json`) |
 | `readme.txt` | WordPress.org readme (Stable tag, requirements, changelog) |
+| `assets/screenshots/` | Images of the README on the repository (`screenshot-1.jpg` … `screenshot-6.jpg`, the same subjects as `== Screenshots ==` in `readme.txt`), left out of the package (`.distignore`): WordPress.org takes its screenshots from the `assets/` folder of SVN |
 | `docs/` | Public guides on the repository, left out of the package (`.distignore`): `reading-a-feed.md`, for the developers of a program that reads the feeds (response, pages, access, date filters, removed items, languages, errors, limits) |
 | `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md` | Repository documentation |
 | `VERSION.txt` | Current version (see *Version alignment* in `AGENTS/GIT_WORKFLOW.md`) |

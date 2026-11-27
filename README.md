@@ -46,6 +46,32 @@ queries source content directly, so a source post type does not need `show_in_re
 original content and its visibility unchanged, and does not replace WordPress's native REST API.
 The receiving system handles reading or importing the data.
 
+## Screenshots
+
+The Mapping box: each row writes one JSON key, with a live preview of the items a reader will receive.
+
+![Mapping box with JSON preview](assets/screenshots/screenshot-1.jpg)
+
+Feed settings: address, source content types, public or authenticated access, items per page and status.
+
+![Feed settings](assets/screenshots/screenshot-2.jpg)
+
+The list of feeds with their address, source, access and status.
+
+![List of feeds](assets/screenshots/screenshot-3.jpg)
+
+Global settings: serving the feeds, REST API index, authentication, page limit and date filters.
+
+![Global settings](assets/screenshots/screenshot-4.jpg)
+
+The built-in guide that explains every mapping rule with examples.
+
+![Built-in guide](assets/screenshots/screenshot-5.jpg)
+
+The JSON of a public feed, read with a plain GET request without authentication.
+
+![JSON of a public feed](assets/screenshots/screenshot-6.jpg)
+
 ## Global settings
 
 Administrators manage **Content Exporter > Settings** through the WordPress Settings API. The option
