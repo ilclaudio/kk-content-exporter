@@ -9,6 +9,7 @@ namespace KKCE\Output;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use KKCE\Arrays;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -163,7 +164,7 @@ final class Normalizer {
 			return html_entity_decode( self::strip_tags( $value ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 		}
 
-		if ( is_array( $value ) && array_is_list( $value ) ) {
+		if ( is_array( $value ) && Arrays::is_list( $value ) ) {
 			$parts = array();
 			foreach ( $value as $item ) {
 				$text = is_scalar( $item ) ? self::to_string( $item ) : null;
@@ -365,7 +366,7 @@ final class Normalizer {
 			return array( $value );
 		}
 
-		if ( ! is_array( $value ) || ! array_is_list( $value ) ) {
+		if ( ! is_array( $value ) || ! Arrays::is_list( $value ) ) {
 			return null;
 		}
 

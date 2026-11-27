@@ -7,6 +7,7 @@
 
 namespace KKCE\Admin;
 
+use KKCE\Arrays;
 use KKCE\Feed_Meta;
 use KKCE\Feed_Post_Type;
 use KKCE\Output\Mapping;
@@ -161,7 +162,7 @@ final class Mapping_Box {
 
 		$mapping = Mapping::decode( $draft['mapping'] ?? null );
 		$rows    = $mapping['rows'] ?? null;
-		$usable  = is_array( $rows ) && array_is_list( $rows ) && array() === array_filter( $rows, static fn( $row ): bool => ! is_array( $row ) );
+		$usable  = is_array( $rows ) && Arrays::is_list( $rows ) && array() === array_filter( $rows, static fn( $row ): bool => ! is_array( $row ) );
 
 		return array(
 			'mapping' => $usable ? (string) $draft['mapping'] : null,

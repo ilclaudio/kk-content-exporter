@@ -7,6 +7,8 @@
 
 namespace KKCE\Output;
 
+use KKCE\Arrays;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -138,7 +140,7 @@ final class Mapping_Validator {
 	 *                                                              empty list for a valid mapping.
 	 */
 	public static function validate( $mapping ): array {
-		if ( ! is_array( $mapping ) || ( array() !== $mapping && array_is_list( $mapping ) ) ) {
+		if ( ! is_array( $mapping ) || ( array() !== $mapping && Arrays::is_list( $mapping ) ) ) {
 			return array( self::error( self::MAPPING_ROW, '', 'not_object' ) );
 		}
 
@@ -154,7 +156,7 @@ final class Mapping_Validator {
 		}
 
 		$rows = $mapping['rows'] ?? null;
-		if ( ! is_array( $rows ) || ( array() !== $rows && ! array_is_list( $rows ) ) ) {
+		if ( ! is_array( $rows ) || ( array() !== $rows && ! Arrays::is_list( $rows ) ) ) {
 			$errors[] = self::error( self::MAPPING_ROW, 'rows', 'format' );
 			return $errors;
 		}
@@ -258,7 +260,7 @@ final class Mapping_Validator {
 	 * @return list<array{row: int, field: string, code: string}>
 	 */
 	private static function validate_row( int $index, $row, array &$keys ): array {
-		if ( ! is_array( $row ) || ( array() !== $row && array_is_list( $row ) ) ) {
+		if ( ! is_array( $row ) || ( array() !== $row && Arrays::is_list( $row ) ) ) {
 			return array( self::error( $index, '', 'format' ) );
 		}
 
@@ -400,7 +402,7 @@ final class Mapping_Validator {
 
 		$codes = array();
 		foreach ( $sources as $chain ) {
-			if ( ! is_array( $chain ) || ( array() !== $chain && ! array_is_list( $chain ) ) ) {
+			if ( ! is_array( $chain ) || ( array() !== $chain && ! Arrays::is_list( $chain ) ) ) {
 				$codes[] = 'format';
 			} elseif ( array() === $chain ) {
 				$codes[] = 'empty';
@@ -537,7 +539,7 @@ final class Mapping_Validator {
 			return 'required';
 		}
 
-		if ( ! is_array( $matches ) || ! array_is_list( $matches ) ) {
+		if ( ! is_array( $matches ) || ! Arrays::is_list( $matches ) ) {
 			return 'format';
 		}
 
@@ -604,7 +606,7 @@ final class Mapping_Validator {
 			return array( 'required' );
 		}
 
-		if ( ! is_array( $cases ) || ! array_is_list( $cases ) ) {
+		if ( ! is_array( $cases ) || ! Arrays::is_list( $cases ) ) {
 			return array( 'format' );
 		}
 
@@ -779,7 +781,7 @@ final class Mapping_Validator {
 	 * @return bool
 	 */
 	private static function is_confirmation_list( $confirmed, array $sources ): bool {
-		if ( ! is_array( $confirmed ) || ! array_is_list( $confirmed ) ) {
+		if ( ! is_array( $confirmed ) || ! Arrays::is_list( $confirmed ) ) {
 			return false;
 		}
 
@@ -842,7 +844,7 @@ final class Mapping_Validator {
 	 * @return list<string> Error codes, in order.
 	 */
 	private static function options_errors( $options, bool $can_have ): array {
-		if ( ! is_array( $options ) || ( array() !== $options && array_is_list( $options ) ) ) {
+		if ( ! is_array( $options ) || ( array() !== $options && Arrays::is_list( $options ) ) ) {
 			return array( 'format' );
 		}
 
@@ -877,7 +879,7 @@ final class Mapping_Validator {
 	 * @return bool
 	 */
 	private static function is_post_type_map( $map ): bool {
-		if ( ! is_array( $map ) || array() === $map || array_is_list( $map ) ) {
+		if ( ! is_array( $map ) || array() === $map || Arrays::is_list( $map ) ) {
 			return false;
 		}
 

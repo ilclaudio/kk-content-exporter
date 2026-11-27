@@ -17,6 +17,7 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 - Italian translation reviewed for consistent terms.
 - Development: shared helpers of the test runners; mappings normalized once during validation.
 - Development: workflow validation, bounded CI runs, monthly dependency updates and stricter npm auditing.
+- Development: an own list check instead of `array_is_list()`, which Plugin Check reports as above WordPress 6.4.
 ### Removed
 - The development note in the row of the plugin on the Plugins screen.
 ### Fixed
