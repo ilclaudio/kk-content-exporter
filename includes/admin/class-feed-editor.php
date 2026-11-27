@@ -498,10 +498,10 @@ final class Feed_Editor {
 	 * @return FormValues
 	 */
 	private static function current_values( int $post_id ): array {
-		$slug = get_post_field( 'post_name', $post_id );
+		$post = get_post( $post_id );
 
 		return array(
-			'slug'       => is_string( $slug ) ? $slug : '',
+			'slug'       => $post instanceof \WP_Post ? $post->post_name : '',
 			'post_types' => Feed_Meta::post_types( $post_id ),
 			'access'     => Feed_Meta::sanitize_access( get_post_meta( $post_id, Feed_Meta::META_ACCESS, true ) ),
 			'active'     => Feed_Meta::sanitize_active( get_post_meta( $post_id, Feed_Meta::META_ACTIVE, true ) ),

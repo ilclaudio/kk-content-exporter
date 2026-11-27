@@ -156,8 +156,8 @@ final class Feed_List {
 	 * @return void
 	 */
 	private static function print_endpoint( int $post_id ): void {
-		$slug = get_post_field( 'post_name', $post_id );
-		$url  = is_string( $slug ) ? Plugin::feed_url( $slug ) : '';
+		$post = get_post( $post_id );
+		$url  = $post instanceof \WP_Post ? Plugin::feed_url( $post->post_name ) : '';
 
 		if ( '' === $url ) {
 			self::print_text( '' );

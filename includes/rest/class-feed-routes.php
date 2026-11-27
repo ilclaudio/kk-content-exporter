@@ -447,7 +447,7 @@ final class Feed_Routes {
 			$total = (int) self::query( $post_types, 1, 1, $date_query, true, $language )->found_posts;
 		} elseif ( array() !== $post_types ) {
 			$query = self::query( $post_types, $page, $per_page, $date_query, false, $language );
-			$posts = array_values( array_filter( $query->posts, static fn( $post ): bool => $post instanceof WP_Post ) );
+			$posts = array_values( array_filter( (array) $query->posts, static fn( $post ): bool => $post instanceof WP_Post ) );
 
 			// The query loads meta and terms for the whole page; the authors and the featured images (attachments
 			// with their meta) are loaded here, all at once, so that their sources do not cost queries per item.

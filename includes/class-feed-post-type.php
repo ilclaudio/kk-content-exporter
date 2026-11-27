@@ -85,8 +85,8 @@ final class Feed_Post_Type {
 			return $data;
 		}
 
-		$field    = get_post_field( 'post_name', $post_id, 'raw' );
-		$stored   = is_string( $field ) ? $field : '';
+		$post     = get_post( $post_id );
+		$stored   = $post instanceof \WP_Post ? $post->post_name : '';
 		$proposed = (string) ( $data['post_name'] ?? '' );
 		$status   = (string) ( $data['post_status'] ?? $previous );
 		$taken    = static fn( string $slug ): bool => self::slug_is_taken( $slug, $post_id );
