@@ -9,7 +9,7 @@ follows [Semantic Versioning](https://semver.org/). The version of the first ent
 Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 
-## [1.0.0] - Unreleased
+## [1.0.0] - 2026-11-27
 ### Added
 - Guide for the developers of a feed reader, in `docs/` on the repository.
 ### Changed
