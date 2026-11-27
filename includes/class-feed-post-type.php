@@ -111,19 +111,20 @@ final class Feed_Post_Type {
 	 * @return bool
 	 */
 	public static function slug_is_taken( string $slug, int $post_id ): bool {
+		// Two results at most: the feed itself and another one. The feed is left out here, not with
+		// `post__not_in`, which Plugin Check discourages.
 		$found = get_posts(
 			array(
 				'post_type'     => self::POST_TYPE,
 				'name'          => $slug,
 				'post_status'   => 'any',
-				'post__not_in'  => array( $post_id ),
-				'numberposts'   => 1,
+				'numberposts'   => 2,
 				'fields'        => 'ids',
 				'no_found_rows' => true,
 			)
 		);
 
-		return array() !== $found;
+		return array() !== array_diff( array_map( 'intval', $found ), array( $post_id ) );
 	}
 
 	/**

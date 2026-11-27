@@ -56,7 +56,8 @@ the settings of the plugin. Otherwise the answer is `404`.
 - Dates and times are ISO 8601 in UTC (`2026-11-20T09:15:00Z`); a date without a time stays `2026-11-20`.
 - URLs are absolute (`http` or `https`).
 - The type of each value (text, HTML, number, true or false, date, URL, list) is chosen by the administrator in the
-  row; a value that cannot be converted to it is `null`.
+  row; a value that cannot be converted to it is `null`. With **Automatic**, the default, the type follows the field
+  read, and a key has the same JSON type in every item of the feed.
 
 The plugin exports only published content without a password, and only the fields of the mapping: never drafts,
 private content, unmapped custom fields, or the e-mail address or login name of an author.
@@ -66,7 +67,7 @@ private content, unmapped custom fields, or the e-mail address or login name of 
 | Parameter | Value | Default |
 |---|---|---|
 | `page` | Whole number from 1 | `1` |
-| `per_page` | Whole number from 1 to the maximum of the site | The value of the feed |
+| `per_page` | Whole number from 1 to the maximum of the site | The value of the feed, at most the maximum of the site |
 
 A `per_page` above the maximum set on the site (100 by default) is refused with `400` and the maximum in the message;
 it is never reduced silently. A page after the last one answers `200` with an empty `items` and the real `total`, so

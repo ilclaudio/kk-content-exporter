@@ -10,17 +10,22 @@ Stable tag: 1.0.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-Publish selected WordPress content as read-only JSON feeds through a REST API, with the fields and structure you choose.
+Share WordPress content with other websites and applications through custom JSON feeds with a consistent structure.
 
 == Description ==
 
-KK Content Exporter lets you share selected WordPress content with other websites and applications through read-only JSON feeds, accessed via a REST API.
+KK Content Exporter makes your WordPress content available to other websites, applications and importers in a JSON format you define.
 
-Choose the content and fields to include, give the fields your own names, and combine different content types in one feed with a common structure.
+Use the feeds to import content into other WordPress sites or external systems, adapting fields and values to the destination's needs.
+
+Combine posts, pages and custom post types in one JSON feed with a common structure. Define shared rules and add exceptions for each post type, mapping different source fields to the same output keys.
+
+Feeds are available through dedicated, read-only REST API endpoints. The original content stays unchanged.
 
 = Features =
 
-* Include one or more content types and selected WordPress fields, the featured image URL, categories, tags and other taxonomies, or custom fields (post meta).
+* Combine multiple post types in one feed, with shared mapping rules and exceptions for each type.
+* Select WordPress fields, the featured image URL, categories, tags, other taxonomies and custom fields (post meta).
 * On multilingual sites with Polylang, include the language of each item and the group of its translations, or read one language only.
 * Rename fields and build values using fixed text, templates, lookup tables and conditions.
 * Preview the JSON before saving your feed.
@@ -28,7 +33,7 @@ Choose the content and fields to include, give the fields your own names, and co
 * Share public feeds or require an Application Password, with pagination and a configurable page limit.
 * Let applications read only what changed, with date filters.
 
-Only published, non-password-protected content and selected fields are exported. Authors appear only through the fields you map (ID, display name, archive URL after a confirmation), never with their e-mail address; the preview warns when an author's display name is still the login name, as WordPress sets it for a new user. The plugin makes no requests to external services; other systems read or import the feed themselves.
+Only published, non-password-protected content and selected fields are exported. The plugin makes no requests to external services: it provides the feeds, while the external system reads them, imports the content and keeps its own copy up to date.
 
 == Installation ==
 
@@ -48,7 +53,7 @@ This example creates a public feed of post titles and links. You need at least o
 5. Add a second row with **Rule** = **Field**, **Permalink** as the field, and `url` as the **JSON key**.
 6. Check the preview, then turn on **Enable the feed** and click **Publish** (or **Update** for an existing feed). The feed must be both published and enabled.
 
-To use the other rules (fixed values, templates, lookup tables and conditions), open **Content Exporter > Guide**: it explains every rule with examples. The Mapping box links to it, and every row links to the tab of its rule.
+For examples of every mapping rule, open **Content Exporter > Guide** or follow the guide links in the Mapping box.
 
 = Read the feed =
 
@@ -56,36 +61,44 @@ Copy the feed URL shown below **Slug** and open it in your browser. For the exam
 
 `https://example.com/wp-json/kkce/v1/news`
 
-Use your site's address in place of `https://example.com`. Applications read the same URL with an HTTP `GET` request and no request body. From a terminal, for example:
+Replace `https://example.com` with your site's address. Applications use an HTTP `GET` request, for example:
 
     curl 'https://example.com/wp-json/kkce/v1/news?page=1&per_page=10'
 
-Here, `page=1` selects the first page and `per_page=10` requests ten items. Increase `page` to read the next page; the page size cannot exceed the maximum in the plugin settings.
+This requests ten items from page 1. Increase `page` to continue; `per_page` cannot exceed the maximum in the settings.
 
-The JSON response contains `items` (the selected fields), `pagination` (page information) and `meta` (feed information). Items are sorted by modification date, oldest first, so pages stay stable while an application reads them.
+The JSON response contains `items` (the selected fields), `pagination` (page information) and `meta` (feed information). Items are sorted by modification date, oldest first, then by ID when dates match. Content changes during reading can move items between pages.
 
 = Global settings =
 
-Open **Content Exporter > Settings** to see the **Content Exporter settings** page. These settings apply to all feeds. Click **Save Changes** to apply them.
+Open **Content Exporter > Settings** to configure all feeds, then click **Save Changes**.
 
-* **Endpoints — Serve the feeds** (on by default): the main switch for serving feeds. Turn it off to stop all feed endpoints from answering. Your feeds and their configuration are kept. When it is on, each feed must still be published and enabled individually.
-* **REST API index — Show the feed endpoint in the REST API index** (on by default): lets tools discover the feed route and its parameters through `/wp-json/`. Turning it off hides that description, but feeds can still be read at their URLs. Use authentication to restrict access.
-* **Authentication — Require authentication for all feeds** (off by default): requires an authorized user's Application Password for every feed, including those marked **Public**. Leave it off to use each feed's own **Access** setting. See the authenticated-feed FAQ below for connection requirements.
-* **Maximum items per page** (100 by default): the largest page any feed can return. Enter a whole number of at least 1. A feed configured above this maximum is limited to it; a request that explicitly asks for more is rejected. There is no fixed upper limit, but large pages may slow down the site.
-* **Date filters** (all on by default): allow applications to use `modified_after`, `modified_before` and `published_after` (see the FAQ below). A filter turned off is rejected with an error, never ignored.
-* **Uninstall — Delete all the data of the plugin when the plugin is deleted** (off by default): when enabled, deleting the plugin permanently removes feeds, their configuration, global settings and the access permission added by the plugin. Deactivation alone does not remove them. Leave this off to keep the configuration for a later reinstall. Source content is always kept.
+* **Serve the feeds** (on by default): switch all endpoints on or off without deleting their configuration; each feed must also be published and enabled.
+* **Show the feed endpoint in the REST API index** (on by default): allow discovery through `/wp-json/`; hiding it does not restrict access to feed URLs.
+* **Require authentication for all feeds** (off by default): require an authorized user's Application Password even for public feeds; see the FAQ below.
+* **Maximum items per page** (100 by default): cap the page size for all feeds; requests above the maximum are rejected, and large pages may slow down the site.
+* **Date filters** (all on by default): allow `modified_after`, `modified_before` and `published_after`; disabled filters return an error.
+* **Delete all the data of the plugin when the plugin is deleted** (off by default): remove feeds, settings and the plugin's access permission on deletion; deactivation keeps them, and source content is always kept.
 
 = Diagnostic messages =
 
-The settings page may also warn about:
+The settings page reports:
 
-* **Public REST access blocked:** another plugin or a site setting may prevent anonymous readers from opening public feeds.
-* **Application Passwords unavailable:** authenticated feeds need this WordPress feature, normally available over HTTPS or in a local development environment.
-* **Sensitive fields included:** enabled feeds contain fields explicitly confirmed as sensitive or personal. Review whether those values should be shared, especially in public feeds.
+* **Public REST access blocked:** another plugin or setting may block anonymous readers.
+* **Application Passwords unavailable:** authenticated feeds need this feature, normally available over HTTPS or locally.
+* **Sensitive fields included:** review the sensitive fields confirmed for enabled feeds, especially public ones.
 
-These messages describe possible problems; they do not change settings or repair the site automatically.
+These messages do not change settings automatically.
 
 == Frequently Asked Questions ==
+
+= Which custom fields can I export? =
+
+You can select post meta with simple values, such as text, numbers and booleans, or enter a meta key manually. ACF and CMB2 fields can be read as stored post meta; repeaters, groups, relationships and other complex structures are not supported in this version.
+
+= Which author details can I export? =
+
+Only mapped author fields: ID, display name and archive URL (the URL requires confirmation), never e-mail. The preview warns when the display name matches the login or the archive URL may reveal it.
 
 = How do I read an authenticated feed? =
 
@@ -93,22 +106,22 @@ Choose **Authenticated** under **Access** and save the feed. Your application mu
 
 = Which user should an application use to read authenticated feeds? =
 
-Not an administrator: if its Application Password leaks, whoever finds it can do anything on the site. Create a user that can only read the feeds, the capability `kkce_read_export`, for example with WP-CLI:
+Use a dedicated user with only the `kkce_read_export` capability to limit the impact of a leaked password. For example, with WP-CLI:
 
     wp role create kkce_reader "Feed reader"
     wp cap add kkce_reader kkce_read_export
     wp user create feed-reader feed-reader@example.com --role=kkce_reader
     wp user application-password create feed-reader "Importer" --porcelain
 
-The last command prints the Application Password: give it, with the user name, to the application, which sends them with HTTP Basic authentication over HTTPS. The role has no other capability, so the user cannot even open the dashboard. Without WP-CLI, a role editor plugin can create the same role; an administrator can then create the Application Password in the profile of the user (**Users**, then **Edit**, section **Application Passwords**).
+The last command prints the Application Password. The application sends it with the user name using HTTP Basic authentication over HTTPS. This role cannot access the dashboard. Without WP-CLI, use a role editor plugin to create the role, then create an Application Password in the user's profile as an administrator.
 
-Revoke the Application Password, or delete the user, when the application no longer needs it. The plugin never generates or stores passwords. The role stays on the site when the plugin is deleted; with **Delete all the data of the plugin when the plugin is deleted** on, only the capability is removed.
+Revoke the password or delete the user when no longer needed. The plugin never generates or stores passwords. Uninstall cleanup removes its capability, but keeps the custom role.
 
 = How can an application read only what changed? =
 
-Add `modified_after` with the time of the previous reading, as an ISO 8601 date with a time zone, for example `?modified_after=2026-11-01T10:00:00Z`. `modified_before` and `published_after` work the same way; each filter can be turned off under **Content Exporter > Settings**.
+Use `modified_after` with the previous reading time in ISO 8601 with a time zone, for example `?modified_after=2026-11-01T10:00:00Z`. The other date filters are `modified_before` and `published_after`.
 
-An item is returned again when its modification date changes, which happens every time it is saved, also in the editor. Changes made only to custom fields, categories, tags or the featured image by another plugin or by code, without saving the item, do not change that date: those items are not returned until they are saved again. Applications should therefore also read the whole feed from time to time.
+Saving an item updates its modification date. Changes made only to custom fields, terms or the featured image by code may leave that date unchanged, so date filters miss them until the item is saved again. Applications should also read the whole feed periodically.
 
 = Does it work on a multilingual site? =
 
@@ -116,7 +129,7 @@ Yes, with Polylang. A feed returns every language unless the application adds `l
 
 = Why does my feed answer "not found"? =
 
-A feed answers only when it is published, enabled and has at least one mapping row, and while **Serve the feeds** is on in **Content Exporter > Settings**. A draft, pending or scheduled feed answers "not found" even when it is enabled: the editor and the list of the feeds show a warning. Check also that the slug in the address is written exactly as in the feed, in lowercase.
+A feed must be published, enabled and have mapping rows, with **Serve the feeds** on in the settings. Draft, pending and scheduled feeds answer "not found" even when enabled. The URL must match the feed's lowercase slug exactly.
 
 A feed restored from the trash starts disabled. If another feed took its slug meanwhile, it comes back without a slug: choose a new one in the editor, which says which slug is taken.
 
