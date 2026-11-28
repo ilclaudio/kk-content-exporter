@@ -320,10 +320,13 @@ final class Feed_Editor {
 
 		// No checkbox checked sends nothing: an empty list. A value that is not a list (a tampered request)
 		// becomes null, which the validation refuses, keeping the saved list.
+		// Post types and access go through sanitize_text_field(), not sanitize_key(): sanitize_key() would repair
+		// a wrong value ('PUBLIC' or 'pub lic' into 'public', 'Post<' into 'post') and Feed_Form would accept it,
+		// while a value that is not exactly an allowed one must be refused and keep the saved one.
 		$post_types = array();
 		if ( isset( $_POST[ self::FIELD ]['post_types'] ) ) {
 			$post_types = is_array( $_POST[ self::FIELD ]['post_types'] )
-				? array_values( array_map( 'sanitize_key', wp_unslash( $_POST[ self::FIELD ]['post_types'] ) ) )
+				? array_values( array_map( 'sanitize_text_field', wp_unslash( $_POST[ self::FIELD ]['post_types'] ) ) )
 				: null;
 		}
 
@@ -344,7 +347,7 @@ final class Feed_Editor {
 		$input = array(
 			'slug'       => $slug,
 			'post_types' => $post_types,
-			'access'     => isset( $_POST[ self::FIELD ]['access'] ) ? sanitize_key( wp_unslash( $_POST[ self::FIELD ]['access'] ) ) : '',
+			'access'     => isset( $_POST[ self::FIELD ]['access'] ) ? sanitize_text_field( wp_unslash( $_POST[ self::FIELD ]['access'] ) ) : '',
 			'active'     => isset( $_POST[ self::FIELD ]['active'] ) && '1' === sanitize_text_field( wp_unslash( $_POST[ self::FIELD ]['active'] ) ),
 			'per_page'   => isset( $_POST[ self::FIELD ]['per_page'] ) ? sanitize_text_field( wp_unslash( $_POST[ self::FIELD ]['per_page'] ) ) : '',
 		);
