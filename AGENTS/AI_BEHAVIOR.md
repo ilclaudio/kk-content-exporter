@@ -125,7 +125,7 @@ How to run single tests and how to add new ones: `tests/README.md`.
   Trigger C presentation block) are written here in English and rendered in the operator's language.
 - Everything written to the repository is in English: code, identifiers, comments, docblocks,
   documentation (`README.md`, `readme.txt`, `CHANGELOG.md`, guides), `AGENTS/` context, commit
-  messages. User-facing strings are English source strings, translated through `languages/`.
+  messages. User-facing strings are English source strings, translated on translate.wordpress.org (`AGENTS/I18N.md`).
 
 
 ## Learning Support
@@ -159,7 +159,7 @@ Do not install or enable skills without the operator's authorization.
 | WordPress.org compliance: GPL, naming/trademarks, readme, external calls, upsells, release review | `wp-plugin-directory-guidelines` |
 | REST routes of the feeds: `register_rest_route`, schema, argument validation, `permission_callback`, Application Passwords, response shaping | `wp-rest-api` |
 | PHPStan configuration, stubs for optional plugins, typing of WordPress APIs | `wp-phpstan` |
-| WP-CLI on the Local site (i18n, plugin activation, Plugin Check, options, cache) | `wp-wpcli-and-ops` |
+| WP-CLI on the Local site (plugin activation, Plugin Check, options, cache) | `wp-wpcli-and-ops` |
 | Structured inspection of the repository or an unfamiliar area | `wp-project-triage`, `wordpress-router` |
 | Slow queries, autoloaded options, large feeds, caching (Phase 6) | `wp-performance` |
 | Disposable WordPress instances (clean install tests of the ZIP) | `wp-playground`, `blueprint` |
@@ -280,8 +280,6 @@ template, resolution flow). It is not read during bootstrap.
 | Path | Nature | How to intervene |
 |---|---|---|
 | `vendor/` | Composer development dependencies | Never edit, never review, never ship |
-| `languages/*.mo` | Compiled translations | Never edit: edit the `.po` and run `composer run make-mo` |
-| `languages/*.pot` | Generated template | Never edit: run `composer run make-pot` |
 | `.phpunit.cache/`, `build/` | Tool caches and generated output | Never edit by hand |
 | `DEV/` | Symlink to private working material | Read when needed; modify only when the operator asks; never stage |
 | `AGENTS/ISSUES_TODO.md`, `AGENTS/ISSUES_RESOLVED.md`, `AGENTS/CODE_REVIEW_PROGRESS.md` | Local ignored files (the first two are symlinks to `DEV/CODE_REVIEW/`) | Write through the link; never replace the symlinks with regular files; never stage. When `DEV/` does not exist (fresh clone, CI) they are ordinary local files created by the bootstrap |

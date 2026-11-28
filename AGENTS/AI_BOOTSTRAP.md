@@ -80,7 +80,7 @@ order:
 - `TRIGGERS.md`: detailed workflows of the triggers A-D, shared issue rules, Issue Management; read only
   when a request matches a trigger or concerns an issue.
 - `CODE_REVIEW.md`: review method, evidence, coverage and project plan; read only by Trigger D.
-- `I18N.md`: translation workflow (new language, `.pot`/`.po`/`.mo`, future JavaScript translations);
+- `I18N.md`: where translations come from (translate.wordpress.org, no bundled files) and JavaScript translations;
   read only for translation work.
 - `CODE_REVIEW_PROGRESS.md`: ignored local state of a full code-review run; created and read only by
   Trigger D, never at bootstrap; never committed.

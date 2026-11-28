@@ -197,6 +197,7 @@ final class Mapping_Box {
 			array( 'in_footer' => true )
 		);
 
-		wp_set_script_translations( self::SCRIPT_HANDLE, 'kk-content-exporter', KKCE_PLUGIN_DIR . 'languages' );
+		// Without a path: WordPress reads the JSON translations of the language packs of translate.wordpress.org.
+		wp_set_script_translations( self::SCRIPT_HANDLE, 'kk-content-exporter' );
 	}
 }

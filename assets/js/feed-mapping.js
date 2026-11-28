@@ -203,38 +203,72 @@
 	}
 
 	/**
-	 * Whether this interface can edit a row: a `field` row whose sources are a map of chains, or a `fixed`
-	 * row whose values are a map of values. Other rows are kept unchanged.
+	 * Whether the controls can safely read a row, including its nested values. Empty maps and unfinished text
+	 * remain editable; incompatible types and rules this interface does not know are kept unchanged.
 	 *
 	 * @param {Object} row Row of the mapping.
 	 * @return {boolean} Whether the row can be edited.
 	 */
 	function isEditable( row ) {
 		const isMap = function ( value ) {
-			return value && 'object' === typeof value && ! Array.isArray( value );
+			return null !== value && 'object' === typeof value && ! Array.isArray( value );
 		};
+		const isText = function ( value ) {
+			return 'string' === typeof value;
+		};
+		const isScalar = function ( value ) {
+			return [ 'string', 'number', 'boolean' ].includes( typeof value );
+		};
+		const isMapOf = function ( value, accepts ) {
+			return isMap( value ) && Object.values( value ).every( accepts );
+		};
+		const isOutput = function ( value ) {
+			return isMap( value ) && Object.keys( value ).length <= 1 && Object.keys( value ).every( function ( name ) {
+				return 'source' === name ? isText( value[ name ] )
+					: 'fixed' === name ? isScalar( value[ name ] )
+						: 'input' === name && 'boolean' === typeof value[ name ];
+			} );
+		};
+		if ( ! isMap( row ) || ( undefined !== row.key && ! isText( row.key ) )
+			|| ( undefined !== row.type && ! isText( row.type ) )
+			|| ( undefined !== row.options && ! isMapOf( row.options, isScalar ) )
+			|| ( undefined !== row.max_length && ! isScalar( row.max_length ) )
+			|| ( undefined !== row.confirmed && ( ! Array.isArray( row.confirmed ) || ! row.confirmed.every( isText ) ) ) ) {
+			return false;
+		}
 		if ( 'field' === row.kind ) {
-			return isMap( row.sources ) && Object.keys( row.sources ).every( function ( scope ) {
-				return Array.isArray( row.sources[ scope ] );
+			return isMapOf( row.sources, function ( chain ) {
+				return Array.isArray( chain ) && chain.every( isText );
 			} );
 		}
 		if ( 'fixed' === row.kind ) {
-			return isMap( row.values );
+			return isMapOf( row.values, isScalar );
 		}
 		if ( 'template' === row.kind ) {
-			return isMap( row.templates );
+			return isMapOf( row.templates, isText );
 		}
 		if ( 'lookup' === row.kind ) {
-			return isMap( row.inputs ) && Array.isArray( row.cases ) && row.cases.every( function ( item ) {
-				return isMap( item ) && isMap( item.output );
-			} ) && ( undefined === row.default || isMap( row.default ) );
+			return isMapOf( row.inputs, isText ) && Array.isArray( row.cases ) && row.cases.every( function ( item ) {
+				return isMap( item ) && ( undefined === item.match || isText( item.match ) ) && isOutput( item.output );
+			} ) && ( undefined === row.default || isOutput( row.default ) );
 		}
 		if ( 'condition' === row.kind ) {
-			return isMap( row.inputs ) && 'string' === typeof row.operator && ( undefined === row.matches || Array.isArray( row.matches ) ) && [ row.then, row.else ].every( function ( output ) {
-				return undefined === output || isMap( output );
+			return isMapOf( row.inputs, isText ) && isText( row.operator ) && ( undefined === row.matches || ( Array.isArray( row.matches ) && row.matches.every( isText ) ) ) && [ row.then, row.else ].every( function ( output ) {
+				return undefined === output || isOutput( output );
 			} );
 		}
 		return false;
+	}
+
+	/**
+	 * Text of an output key for the interface. A structured key in a refused draft cannot be converted to text
+	 * safely; it is shown empty while the original row is kept unchanged.
+	 *
+	 * @param {Object} row Row of the mapping.
+	 * @return {string} Key, or an empty string for an incompatible type.
+	 */
+	function keyText( row ) {
+		return 'string' === typeof row.key ? row.key : '';
 	}
 
 	/**
@@ -370,6 +404,11 @@
 	 * @return {string[]} Source identifiers.
 	 */
 	function rowSources( row ) {
+		// A refused row with incompatible nested types is displayed as non-editable. None of its sources may be
+		// traversed, including when collecting unlisted meta keys after the first render.
+		if ( ! isEditable( row ) ) {
+			return [];
+		}
 		const found = [];
 		const add = function ( source ) {
 			if ( source && -1 === found.indexOf( String( source ) ) ) {
@@ -1233,7 +1272,7 @@
 			}
 
 			const row = rows[ error.row ];
-			const key = row && row.data.key ? String( row.data.key ) : __( '(no key)', 'kk-content-exporter' );
+			const key = row && keyText( row.data ) ? keyText( row.data ) : __( '(no key)', 'kk-content-exporter' );
 			if ( '' === error.field ) {
 				/* translators: 1: position of the row, 2: output key of the row, 3: what is wrong with it. */
 				return sprintf( __( 'Row %1$d (%2$s): %3$s', 'kk-content-exporter' ), error.row + 1, key, message );
@@ -1250,6 +1289,8 @@
 		 */
 		function commit( byUser ) {
 			rows.forEach( function ( row ) {
+				// Editing the key or output type can make a refused row editable for the first time.
+				withGeneralScope( row.data );
 				tidy( row.data );
 			} );
 			field.value = JSON.stringify( {
@@ -1394,7 +1435,7 @@
 		 * @return {string} Legend.
 		 */
 		function legendText( index, row ) {
-			const key = String( row.data.key || '' );
+			const key = keyText( row.data );
 			if ( '' === key ) {
 				/* translators: %d: position of the row. */
 				return sprintf( __( 'Row %d (no key)', 'kk-content-exporter' ), index + 1 );
@@ -1969,7 +2010,7 @@
 		 */
 		function summaryParts( row ) {
 			const item = row.data;
-			const key = String( item.key || '' ) || __( '(no key)', 'kk-content-exporter' );
+			const key = keyText( item ) || __( '(no key)', 'kk-content-exporter' );
 			let what = '—';
 			if ( ! isEditable( item ) ) {
 				what = __( 'kept unchanged', 'kk-content-exporter' );
@@ -1992,7 +2033,7 @@
 					: sprintf( __( 'Condition (%s)', 'kk-content-exporter' ), input );
 			}
 			const isTemplate = 'template' === item.kind;
-			const type = isTemplate ? ( 'html' === item.type ? 'html' : 'string' ) : ( item.type || 'auto' );
+			const type = isTemplate ? ( 'html' === item.type ? 'html' : 'string' ) : ( 'string' === typeof item.type && item.type ? item.type : 'auto' );
 			const typeLabel = ( TYPES.find( function ( entry ) {
 				return entry[ 0 ] === type;
 			} ) || [ type, type ] )[ 1 ];
@@ -2070,7 +2111,7 @@
 				type: 'text',
 				id: prefix + '-key',
 				className: 'kkce-mapping-key',
-				value: String( row.data.key || '' ),
+				value: keyText( row.data ),
 				maxLength: data.keyMaxLength,
 				autocomplete: 'off',
 				spellcheck: false,
@@ -2140,7 +2181,7 @@
 			const types = isTemplate ? TYPES.filter( function ( type ) {
 				return 'string' === type[ 0 ] || 'html' === type[ 0 ];
 			} ) : TYPES;
-			const type = isTemplate ? ( 'html' === row.data.type ? 'html' : 'string' ) : ( row.data.type || 'auto' );
+			const type = isTemplate ? ( 'html' === row.data.type ? 'html' : 'string' ) : ( 'string' === typeof row.data.type && row.data.type ? row.data.type : 'auto' );
 			output.appendChild( labelled( __( 'Output type', 'kk-content-exporter' ), select( { id: prefix + '-type', className: 'kkce-mapping-type', 'data-uid': String( row.uid ) }, types, type ) ) );
 			const textOutput = editable && hasTextOutput( Object.assign( {}, row.data, { type: type } ) );
 
@@ -2182,9 +2223,9 @@
 				const others = rows.filter( function ( other, position ) {
 					return position !== index;
 				} ).map( function ( other ) {
-					return String( other.data.key || '' );
+					return keyText( other.data );
 				} );
-				const message = keyError( String( row.data.key || '' ), others, data.keyMaxLength, keyPattern );
+				const message = keyError( keyText( row.data ), others, data.keyMaxLength, keyPattern );
 				const input = document.getElementById( 'kkce-mapping-' + row.uid + '-key' );
 				const error = document.getElementById( 'kkce-mapping-' + row.uid + '-key-error' );
 				if ( ! input || ! error ) {
@@ -2279,7 +2320,7 @@
 		 */
 		function proposeKey( row, id ) {
 			const source = findSource( id );
-			const key = String( row.data.key || '' );
+			const key = keyText( row.data );
 			if ( source && source.suggested_key && ( '' === key || key === row.autoKey ) ) {
 				row.data.key = source.suggested_key;
 				row.autoKey = source.suggested_key;
@@ -2431,7 +2472,7 @@
 				const end = area.selectionEnd;
 				area.value = area.value.slice( 0, start ) + placeholder + area.value.slice( end );
 				map[ scope ] = area.value;
-				if ( '' === String( row.data.key || '' ) ) {
+				if ( '' === keyText( row.data ) ) {
 					proposeKey( row, picker.value );
 				}
 				commit( true );

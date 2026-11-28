@@ -1072,7 +1072,9 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( 30, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ) );
 		$draft = $this->draft( $feed );
 		$this->assertIsArray( $draft );
-		$this->assertSame( 'too_large' === $code ? '' : $json, $draft['mapping'], 'A text too large is not kept.' );
+		// The draft is the text encoded again (the provider builds it with wp_json_encode, so it is the same);
+		// a text that cannot be read or is too large is not kept.
+		$this->assertSame( in_array( $code, array( 'json', 'too_large' ), true ) ? '' : $json, $draft['mapping'] );
 		$this->assertSame( $field, $draft['errors'][0]['field'] );
 		$this->assertSame( $code, $draft['errors'][0]['code'] );
 		$this->assertSame( 'not_saved', $this->notices( $feed )['mapping'] );
@@ -1117,6 +1119,21 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->submit( $feed, $this->fields( array( 'mapping' => $this->mapping_json( $rows ) ) ) );
 
 		$this->assertSame( array( 'meta.gone' ), Feed_Meta::mapping( $feed )['rows'][0]['sources']['post'] );
+	}
+
+	/**
+	 * The draft of a refused mapping is never the submitted text: it is decoded and encoded again, and a value
+	 * that does not have the shape of a mapping is not kept.
+	 */
+	public function test_the_draft_is_sanitized() {
+		$feed = $this->feed();
+
+		$this->submit( $feed, $this->fields( array( 'mapping' => '{ "version" : 1, "rows" : [ { "kind" : "other", "note" : "<script>x</script>" } ] }' ) ) );
+		$this->assertSame( '{"version":1,"rows":[{"kind":"other","note":"<script>x<\/script>"}]}', $this->draft( $feed )['mapping'] );
+
+		$this->submit( $feed, $this->fields( array( 'mapping' => '{"version":1,"rows":["<script>x</script>"]}' ) ) );
+		$this->assertSame( '', $this->draft( $feed )['mapping'] );
+		$this->assertNotSame( array(), $this->draft( $feed )['errors'], 'The errors are still shown.' );
 	}
 
 	/**

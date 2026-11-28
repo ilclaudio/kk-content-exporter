@@ -18,7 +18,8 @@ defined( 'ABSPATH' ) || exit;
 final class Plugin {
 
 	/**
-	 * Text domain of the plugin.
+	 * Text domain of the plugin, equal to its slug: WordPress loads the translations of translate.wordpress.org
+	 * (language packs) by itself, so the plugin ships and loads no translation files.
 	 */
 	public const TEXT_DOMAIN = 'kk-content-exporter';
 
@@ -69,7 +70,6 @@ final class Plugin {
 		}
 		self::$booted = true;
 
-		add_action( 'init', array( self::class, 'load_textdomain' ) );
 		add_action( 'init', array( Feed_Post_Type::class, 'register' ) );
 		add_action( 'init', array( Feed_Meta::class, 'register' ) );
 		add_action( 'untrashed_post', array( Feed_Post_Type::class, 'disable_restored_feed' ) );
@@ -92,23 +92,6 @@ final class Plugin {
 		add_action( 'rest_api_init', array( Rest\Admin_Routes::class, 'register' ) );
 		add_action( 'rest_api_init', array( Rest\Feed_Routes::class, 'register' ) );
 		add_filter( 'rest_post_dispatch', array( Rest\Feed_Routes::class, 'authentication_challenge' ), 10, 3 );
-	}
-
-	/**
-	 * Loads the translations shipped in `languages/`.
-	 *
-	 * Language packs from translate.wordpress.org, when installed, take precedence over the
-	 * bundled files. The call is kept on purpose: without it the bundled translations are not
-	 * loaded (see "Internationalization" in AGENTS/CODING_STANDARDS.md).
-	 *
-	 * @return void
-	 */
-	public static function load_textdomain(): void {
-		load_plugin_textdomain(
-			self::TEXT_DOMAIN,
-			false,
-			dirname( plugin_basename( KKCE_PLUGIN_FILE ) ) . '/languages'
-		);
 	}
 
 	/**

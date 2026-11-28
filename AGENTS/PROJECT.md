@@ -24,7 +24,7 @@ downloads, timeouts, import logs and scheduling.
 | Requirements | WordPress 6.4 or later, PHP 8.3 or later |
 | Current version | `VERSION.txt` (see *Version alignment* in `AGENTS/GIT_WORKFLOW.md`) |
 | Distribution | Public Git repository and the official WordPress.org Plugin Directory |
-| Languages | English source strings; Italian (`it_IT`) translation included |
+| Languages | English source strings; translations from translate.wordpress.org (no bundled files, `AGENTS/I18N.md`) |
 
 
 ## Scope of version 1.0.0 (summary)

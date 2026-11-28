@@ -6,8 +6,9 @@
  *
  * Steps: (1) unless --allow-dirty, the working tree must be clean, so the package matches a commit;
  * (2) unless --skip-checks, `composer run check` must pass; (3) the files not excluded by .distignore
- * are copied to build/kk-content-exporter/; (4) the package is verified: no development file,
- * required files present, versions aligned; (5) the ZIP is written with the folder
+ * are copied to build/kk-content-exporter/; (4) the package is verified: no development file and no
+ * translation file (translations come from translate.wordpress.org, AGENTS/I18N.md), required files
+ * present, versions aligned; (5) the ZIP is written with the folder
  * `kk-content-exporter/` at its root. Exit code 0 on success, 1 on any failure. Non-interactive.
  *
  * @package KKCE
@@ -95,7 +96,13 @@ foreach ( $kkce_iterator as $kkce_file ) {
 sort( $kkce_files );
 
 // 4. Verify the package.
-$kkce_forbidden = kkce_release_forbidden_files( $kkce_files );
+$kkce_forbidden    = kkce_release_forbidden_files( $kkce_files );
+$kkce_translations = array_filter( $kkce_forbidden, static fn( string $file ): bool => str_starts_with( $file, 'languages/' ) );
+if ( array() !== $kkce_translations ) {
+	// For example a translation saved by Loco Translate in its "Author" location: it belongs in
+	// wp-content/languages/, not in the plugin.
+	kkce_build_fail( "the plugin ships no translation files (they come from translate.wordpress.org, AGENTS/I18N.md); remove the languages/ folder:\n  " . implode( "\n  ", $kkce_translations ) );
+}
 if ( array() !== $kkce_forbidden ) {
 	kkce_build_fail( "development files would be shipped (add them to .distignore):\n  " . implode( "\n  ", $kkce_forbidden ) );
 }

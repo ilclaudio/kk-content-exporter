@@ -98,12 +98,13 @@ logic is in `bin/release-functions.php` (`KKCE_Release_Build_Unit_Test`).
 3. copies to `build/kk-content-exporter/` every file that `.distignore` does not exclude
    (`.distignore` is the single list of exclusions; its syntax is described at its top);
 4. refuses the package when it contains a development file anyway (safety net in
-   `kkce_release_forbidden_files()`), when a required file is missing (main file, `uninstall.php`,
-   `readme.txt`, `LICENSE`, `includes/`, a compiled `.mo`) or when the versions are not aligned;
+   `kkce_release_forbidden_files()`, a `languages/` folder included: translations come from
+   translate.wordpress.org), when a required file is missing (main file, `uninstall.php`, `readme.txt`,
+   `LICENSE`, `includes/`, the admin scripts and style) or when the versions are not aligned;
 5. writes `build/kk-content-exporter-<version>.zip` with the folder `kk-content-exporter/` at its root.
 
-The package contains `kk-content-exporter.php`, `uninstall.php`, `includes/`, `languages/`,
-`readme.txt`, `LICENSE`, `CHANGELOG.md` (and future runtime `assets/`). When a new top-level file or
+The package contains `kk-content-exporter.php`, `uninstall.php`, `includes/`, the runtime `assets/`
+(`css/`, `js/`), `readme.txt`, `LICENSE` and `CHANGELOG.md`. When a new top-level file or
 folder is added to the repository, decide whether it ships and update `.distignore` and
 `KKCE_Release_Build_Unit_Test` in the same change.
 

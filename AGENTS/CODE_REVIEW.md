@@ -14,9 +14,8 @@ unattended (see *Unattended run*).
 
 Review first-party code and its call-sites: PHP under the plugin root and `includes/`, `uninstall.php`,
 `bin/`, `.githooks/`, configuration files, test support code and, when they exist, admin JavaScript and
-CSS. Exclude third-party internals (`vendor/`). Calls into excluded code remain in scope. Inspect
-generated outputs (`.pot`, `.mo`) only against their source; do not duplicate a source finding against
-its generated copy. Report inaccessible or unsupported files as coverage limits. Respect the exclusions
+CSS. Exclude third-party internals (`vendor/`). Calls into excluded code remain in scope. Do not
+duplicate a source finding against a generated copy. Report inaccessible or unsupported files as coverage limits. Respect the exclusions
 and plan below; propose scope changes rather than silently widening a review.
 
 ## Inventory, baseline, and phases
@@ -77,8 +76,7 @@ Read complete relevant functions and files and check call-sites before reporting
 finding needs a file and line, the triggering input or state, expected and observed behavior, impact,
 and a practical correction proposal. Identify who controls sensitive input and the actual execution
 path: an unescaped value or a search hit alone does not prove a vulnerability. Honor the intentional
-patterns documented in `AGENTS/ARCHITECTURE.md` and `AGENTS/CODING_STANDARDS.md` (for example the
-`load_plugin_textdomain()` call). Use the severity levels of `AGENTS/TRIGGERS.md` (*Issue Management*) conservatively.
+patterns documented in `AGENTS/ARCHITECTURE.md` and `AGENTS/CODING_STANDARDS.md`. Use the severity levels of `AGENTS/TRIGGERS.md` (*Issue Management*) conservatively.
 Keep unverified hypotheses in a separate "Assumptions and open questions" section; never file them.
 Deduplicate against this run and `AGENTS/ISSUES_TODO.md`; extend an existing root cause instead of
 creating duplicates. Propose the closure of stale backlog entries with evidence; do not close them
@@ -164,5 +162,5 @@ are recorded as skipped); when resuming, keep the batches recorded in the progre
 9. Tooling: `bin/`, `.githooks/`, Composer scripts, PHPCS/PHPStan/PHPUnit configuration, test support.
 10. Coverage reconciliation and final report.
 
-Standing exclusions: `vendor/`, `DEV/`, `.phpunit.cache/`, `build/`, compiled translations (`.mo`),
-the generated `.pot`, and the local issue and progress files.
+Standing exclusions: `vendor/`, `DEV/`, `.phpunit.cache/`, `build/`, and the local issue and progress
+files.

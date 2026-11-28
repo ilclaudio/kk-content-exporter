@@ -280,7 +280,7 @@ class KKCE_Mapping_Box_Integration_Test extends WP_UnitTestCase {
 		$this->assertSame( array( 'wp-api-fetch', 'wp-i18n' ), $script->deps );
 		$this->assertSame( 1, wp_scripts()->get_data( Mapping_Box::SCRIPT_HANDLE, 'group' ), 'Loaded in the footer.' );
 		$this->assertSame( 'kk-content-exporter', $script->textdomain );
-		$this->assertSame( KKCE_PLUGIN_DIR . 'languages', $script->translations_path );
+		$this->assertSame( '', $script->translations_path, 'No path: the JSON translations come from the language packs.' );
 		$this->assertFileExists( KKCE_PLUGIN_DIR . 'assets/js/feed-mapping.js' );
 		$this->assertFileExists( KKCE_PLUGIN_DIR . 'assets/css/feed-mapping.css' );
 	}
@@ -326,30 +326,6 @@ class KKCE_Mapping_Box_Integration_Test extends WP_UnitTestCase {
 			'settings page' => array( 'settings_page_kkce', 'kkce_feed_page_kkce-settings' ),
 		);
 	}
-
-	/**
-	 * The Italian translations of the script are shipped as a JSON file that WordPress finds.
-	 */
-	public function test_the_italian_script_translations_are_found() {
-		$force_italian = static fn() => 'it_IT';
-		add_filter( 'determine_locale', $force_italian );
-		add_filter( 'locale', $force_italian );
-		set_current_screen( 'kkce_feed' );
-		Mapping_Box::enqueue_assets( 'post.php' );
-
-		try {
-			$json = load_script_textdomain( Mapping_Box::SCRIPT_HANDLE, 'kk-content-exporter', KKCE_PLUGIN_DIR . 'languages' );
-		} finally {
-			remove_filter( 'determine_locale', $force_italian );
-			remove_filter( 'locale', $force_italian );
-		}
-
-		$this->assertIsString( $json );
-		$messages = json_decode( $json, true )['locale_data']['messages'];
-		$this->assertArrayHasKey( 'Add row', $messages );
-		$this->assertNotSame( array( 'Add row' ), $messages['Add row'] );
-	}
-
 
 	/**
 	 * The mapping box opens with a short introduction that points to the preview, then to the guide page, which

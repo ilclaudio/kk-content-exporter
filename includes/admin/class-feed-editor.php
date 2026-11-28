@@ -12,6 +12,7 @@ use KKCE\Feed_Meta;
 use KKCE\Feed_Post_Type;
 use KKCE\Feed_Validator;
 use KKCE\Output\Catalog_Validator;
+use KKCE\Output\Mapping;
 use KKCE\Plugin;
 use KKCE\Settings;
 use KKCE\Sources\Catalog_Factory;
@@ -322,7 +323,7 @@ final class Feed_Editor {
 		$post_types = array();
 		if ( isset( $_POST[ self::FIELD ]['post_types'] ) ) {
 			$post_types = is_array( $_POST[ self::FIELD ]['post_types'] )
-				? array_values( array_map( 'sanitize_text_field', wp_unslash( $_POST[ self::FIELD ]['post_types'] ) ) )
+				? array_values( array_map( 'sanitize_key', wp_unslash( $_POST[ self::FIELD ]['post_types'] ) ) )
 				: null;
 		}
 
@@ -343,7 +344,7 @@ final class Feed_Editor {
 		$input = array(
 			'slug'       => $slug,
 			'post_types' => $post_types,
-			'access'     => isset( $_POST[ self::FIELD ]['access'] ) ? sanitize_text_field( wp_unslash( $_POST[ self::FIELD ]['access'] ) ) : '',
+			'access'     => isset( $_POST[ self::FIELD ]['access'] ) ? sanitize_key( wp_unslash( $_POST[ self::FIELD ]['access'] ) ) : '',
 			'active'     => isset( $_POST[ self::FIELD ]['active'] ) && '1' === sanitize_text_field( wp_unslash( $_POST[ self::FIELD ]['active'] ) ),
 			'per_page'   => isset( $_POST[ self::FIELD ]['per_page'] ) ? sanitize_text_field( wp_unslash( $_POST[ self::FIELD ]['per_page'] ) ) : '',
 		);
@@ -574,8 +575,10 @@ final class Feed_Editor {
 	/**
 	 * Mapping sent with the form, checked against the catalog of the post types the feed will have.
 	 *
-	 * The JSON text is kept as it was sent: it is either saved through the sanitizer of the meta, which writes
-	 * its canonical form, or kept as the draft that the editor shows again with its errors.
+	 * The submitted text is never kept as it is. A valid mapping is replaced by its canonical form, built by
+	 * `Catalog_Validator` from the known rules, sources and types. A refused one is replaced by its draft
+	 * (`Mapping::draft()`: decoded and encoded again, only when it has the shape of a mapping), which the editor
+	 * shows again with its errors.
 	 *
 	 * @param string[] $post_types Post types of the feed after this save.
 	 * @return array{text: string, errors: list<array{row: int, field: string, code: string}>, rows: int}|null
@@ -590,18 +593,21 @@ final class Feed_Editor {
 			return null;
 		}
 
-		// A JSON document cannot go through a text sanitizer (tags and backslashes are part of it): it is decoded,
-		// checked by Catalog_Validator and saved through the sanitizer of the meta, which re-encodes it.
+		// A JSON document cannot go through a text sanitizer (tags and backslashes are part of it): it is decoded
+		// and sanitized by encoding again what was read, below.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$raw    = wp_unslash( $_POST[ self::FIELD ]['mapping'] );
-		$text   = is_string( $raw ) ? $raw : '';
-		$result = Catalog_Validator::validate_text( $text, Catalog_Factory::for_post_types( $post_types ), 'wp_json_encode' );
+		$result = Catalog_Validator::validate_text( $raw, Catalog_Factory::for_post_types( $post_types ), 'wp_json_encode' );
 
-		// A text too large is not kept as a draft (it would be written to the options table as it is).
-		$too_large = in_array( 'too_large', array_column( $result['errors'], 'code' ), true );
+		if ( null === $result['mapping'] ) {
+			$text = Mapping::draft( $raw, 'wp_json_encode' );
+		} else {
+			$canonical = wp_json_encode( $result['mapping'] );
+			$text      = is_string( $canonical ) ? $canonical : '';
+		}
 
 		return array(
-			'text'   => $too_large ? '' : $text,
+			'text'   => $text,
 			'errors' => $result['errors'],
 			'rows'   => null === $result['mapping'] ? 0 : count( $result['mapping']['rows'] ),
 		);

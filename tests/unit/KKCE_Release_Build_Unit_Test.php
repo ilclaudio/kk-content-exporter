@@ -80,7 +80,7 @@ class KKCE_Release_Build_Unit_Test extends KKCE_Unit_Test_Case {
 	 * @return array<string, array{0: string}>
 	 */
 	public static function data_runtime_paths() {
-		$paths = array( 'kk-content-exporter.php', 'uninstall.php', 'includes/class-plugin.php', 'includes/admin/class-feed-editor.php', 'assets/js/feed-editor.js', 'assets/js/feed-mapping.js', 'assets/css/feed-mapping.css', 'languages/kk-content-exporter-it_IT.mo', 'languages/kk-content-exporter.pot', 'readme.txt', 'LICENSE', 'CHANGELOG.md' );
+		$paths = array( 'kk-content-exporter.php', 'uninstall.php', 'includes/class-plugin.php', 'includes/admin/class-feed-editor.php', 'assets/js/feed-editor.js', 'assets/js/feed-mapping.js', 'assets/css/feed-mapping.css', 'readme.txt', 'LICENSE', 'CHANGELOG.md' );
 		return array_combine( $paths, array_map( static fn( $path ) => array( $path ), $paths ) );
 	}
 
@@ -88,23 +88,24 @@ class KKCE_Release_Build_Unit_Test extends KKCE_Unit_Test_Case {
 	 * The safety net reports development files even without .distignore.
 	 */
 	public function test_forbidden_files_are_reported() {
-		$files = array( 'kk-content-exporter.php', 'tests/a.php', '.githooks/pre-commit', 'composer.json', 'AGENTS.md', 'includes/wp-tests-config.local.php', 'includes/class-plugin.php', 'vendor/autoload.php', 'package.json', 'package-lock.json', '.wp-env.e2etest.json', 'playwright.config.js', 'playwright-report/index.html', 'test-results/a/trace.zip', 'assets/js/package.json.md' );
+		$files = array( 'kk-content-exporter.php', 'tests/a.php', '.githooks/pre-commit', 'composer.json', 'AGENTS.md', 'includes/wp-tests-config.local.php', 'includes/class-plugin.php', 'vendor/autoload.php', 'package.json', 'package-lock.json', '.wp-env.e2etest.json', 'playwright.config.js', 'playwright-report/index.html', 'test-results/a/trace.zip', 'assets/js/package.json.md', 'languages/kk-content-exporter-it_IT.mo' );
 
 		$this->assertSame(
-			array( 'tests/a.php', '.githooks/pre-commit', 'composer.json', 'AGENTS.md', 'includes/wp-tests-config.local.php', 'vendor/autoload.php', 'package.json', 'package-lock.json', '.wp-env.e2etest.json', 'playwright.config.js', 'playwright-report/index.html', 'test-results/a/trace.zip' ),
-			kkce_release_forbidden_files( $files )
+			array( 'tests/a.php', '.githooks/pre-commit', 'composer.json', 'AGENTS.md', 'includes/wp-tests-config.local.php', 'vendor/autoload.php', 'package.json', 'package-lock.json', '.wp-env.e2etest.json', 'playwright.config.js', 'playwright-report/index.html', 'test-results/a/trace.zip', 'languages/kk-content-exporter-it_IT.mo' ),
+			kkce_release_forbidden_files( $files ),
+			'Translations come from translate.wordpress.org: a languages folder is never shipped.'
 		);
 	}
 
 	/**
-	 * Missing required files are reported, a compiled translation included.
+	 * Missing required files are reported.
 	 */
 	public function test_missing_required_files_are_reported() {
-		$complete = array( 'kk-content-exporter.php', 'uninstall.php', 'readme.txt', 'LICENSE', 'includes/class-plugin.php', 'includes/class-autoloader.php', 'assets/js/feed-editor.js', 'assets/js/feed-mapping.js', 'assets/css/feed-mapping.css', 'languages/kk-content-exporter-it_IT.mo' );
+		$complete = array( 'kk-content-exporter.php', 'uninstall.php', 'readme.txt', 'LICENSE', 'includes/class-plugin.php', 'includes/class-autoloader.php', 'assets/js/feed-editor.js', 'assets/js/feed-mapping.js', 'assets/css/feed-mapping.css' );
 
 		$this->assertSame( array(), kkce_release_missing_files( $complete ) );
-		$without_license_and_mo = array_values( array_diff( $complete, array( 'LICENSE', 'languages/kk-content-exporter-it_IT.mo' ) ) );
-		$this->assertSame( array( 'LICENSE', 'languages/kk-content-exporter-<locale>.mo' ), kkce_release_missing_files( $without_license_and_mo ) );
+		$without_license = array_values( array_diff( $complete, array( 'LICENSE' ) ) );
+		$this->assertSame( array( 'LICENSE' ), kkce_release_missing_files( $without_license ) );
 		$without_script = array_values( array_diff( $complete, array( 'assets/js/feed-editor.js' ) ) );
 		$this->assertSame( array( 'assets/js/feed-editor.js' ), kkce_release_missing_files( $without_script ) );
 		$without_mapping_assets = array_values( array_diff( $complete, array( 'assets/js/feed-mapping.js', 'assets/css/feed-mapping.css' ) ) );

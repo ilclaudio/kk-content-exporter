@@ -68,7 +68,7 @@ function kkce_release_is_excluded( string $relative, array $patterns ): bool {
  * @return list<string> The offending paths.
  */
 function kkce_release_forbidden_files( array $files ): array {
-	$forbidden = '#^(?:\.[^/]+|AGENTS|DEV|bin|build|tests|vendor|node_modules)(?:/|$)|^(?:playwright-report|test-results)(?:/|$)|^(?:AGENTS\.md|CLAUDE\.md|composer\.(?:json|lock)|package(?:-lock)?\.json|playwright\.config\.[cm]?[jt]s|phpcs\.xml(?:\.dist)?|phpstan\.neon(?:\.dist)?|phpunit[^/]*\.xml(?:\.dist)?)$|(?:^|/)wp-tests-config[^/]*\.php$#';
+	$forbidden = '#^(?:\.[^/]+|AGENTS|DEV|bin|build|languages|tests|vendor|node_modules)(?:/|$)|^(?:playwright-report|test-results)(?:/|$)|^(?:AGENTS\.md|CLAUDE\.md|composer\.(?:json|lock)|package(?:-lock)?\.json|playwright\.config\.[cm]?[jt]s|phpcs\.xml(?:\.dist)?|phpstan\.neon(?:\.dist)?|phpunit[^/]*\.xml(?:\.dist)?)$|(?:^|/)wp-tests-config[^/]*\.php$#';
 
 	return array_values( array_filter( $files, static fn( string $file ): bool => 1 === preg_match( $forbidden, $file ) ) );
 }
@@ -82,11 +82,7 @@ function kkce_release_forbidden_files( array $files ): array {
 function kkce_release_missing_files( array $files ): array {
 	$required = array( KKCE_RELEASE_SLUG . '.php', 'uninstall.php', 'readme.txt', 'LICENSE', 'includes/class-plugin.php', 'includes/class-autoloader.php', 'assets/js/feed-editor.js', 'assets/js/feed-mapping.js', 'assets/css/feed-mapping.css' );
 
-	$missing = array_values( array_diff( $required, $files ) );
-	if ( array() === preg_grep( '#^languages/' . preg_quote( KKCE_RELEASE_SLUG, '#' ) . '-[a-z]{2,3}_[A-Z]{2}\.mo$#', $files ) ) {
-		$missing[] = 'languages/' . KKCE_RELEASE_SLUG . '-<locale>.mo';
-	}
-	return $missing;
+	return array_values( array_diff( $required, $files ) );
 }
 
 /**

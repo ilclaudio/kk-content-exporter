@@ -162,8 +162,7 @@ Primary references:
   `wp plugin check <plugin-root>/build/kk-content-exporter`. On the working folder
   (`wp plugin check kk-content-exporter`, or Tools → Plugin Check) it also reports the development
   files (`bin/`, `tests/`, dotfiles, `AGENTS.md`), which `.distignore` keeps out of the package.
-  Its known, accepted warning is
-  `PluginCheck.CodeAnalysis.DiscouragedFunctions.load_plugin_textdomainFound` (see *Internationalization*).
+  The package must have no error and no warning.
 
 
 ## Optional integrations (ACF, CMB2, Polylang)
@@ -200,12 +199,9 @@ Primary references:
   each one; use numbered placeholders (`%1$s`) when there is more than one; use `_n()` for plurals and
   `_x()` when a word needs context.
 - Do not translate before `init` (WordPress 6.7+ reports `_load_textdomain_just_in_time` notices).
-- Loading: `KKCE\Plugin::load_textdomain()` calls `load_plugin_textdomain()` on `init` with the
-  `languages/` folder. This is a **deliberate decision** (2026-11-06): the plugin ships its own
-  `it_IT` translation and supports WordPress 6.4, and just-in-time loading only looks in
-  `wp-content/languages/`. Language packs from translate.wordpress.org, when present, take precedence.
-  Plugin Check reports the call as a warning: accepted and documented, do not remove the call.
-  Covered by `KKCE_Environment_Integration_Test::test_bundled_italian_translation_is_loaded`.
+- Loading: none in the plugin. It ships no translation files and does not call `load_plugin_textdomain()`:
+  WordPress loads the language packs of translate.wordpress.org by itself (decision of 2026-11-28, after
+  the first review of WordPress.org; it replaces the bundled `it_IT` translation of 2026-11-06).
 - Translation workflow (new strings, new language, JavaScript): `AGENTS/I18N.md`.
 
 
@@ -237,7 +233,7 @@ Never state that something was verified when the check did not run. The canonica
 | PHP, configuration or release files | `composer run test:unit` | Also run by the pre-commit hook |
 | WordPress behavior (hooks firing, post types, meta, capabilities, queries, REST, activation, translations) | `composer run test:integration` | In Docker (wp-env), dedicated database `kkce_wordpress_test`; see `tests/integration/README.md` |
 | Admin screens and their JavaScript (mapping editor, feed editor, settings, list of the feeds) | `composer run test:e2e` | Playwright on the wp-env development environment (started by the command when needed); includes the axe-core check of the elements of the plugin; see `tests/e2e/README.md` |
-| New or changed strings | `composer run i18n` | Regenerates `.pot`, merges `.po`, compiles `.mo`; then translate the new `it_IT` entries |
+| New or changed strings | Review of the strings | English source, literal text domain, `translators:` comments; translated on translate.wordpress.org (`AGENTS/I18N.md`) |
 | Runtime behavior | Activate/use the plugin on http://kkce.local with `WP_DEBUG` | No notices, warnings or deprecations in `wp-content/debug.log` |
 | Before a release | Plugin Check, `composer audit` | See *WordPress.org Plugin Directory Rules* |
 

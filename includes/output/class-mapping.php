@@ -7,6 +7,8 @@
 
 namespace KKCE\Output;
 
+use KKCE\Arrays;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -112,6 +114,41 @@ final class Mapping {
 		$data = json_decode( $json, true, self::MAX_DEPTH );
 
 		return is_array( $data ) ? $data : null;
+	}
+
+	/**
+	 * Sanitized form of a refused mapping, kept as a draft so that the editor can show its rows again.
+	 *
+	 * A refused mapping cannot go through `Mapping_Validator`, which would drop the unfinished rows the user is
+	 * still editing. The text is decoded and encoded again instead, so only well-formed JSON with the shape of a
+	 * mapping is kept: an object whose `rows` is a list of objects. JSON objects stay objects (`{}` is not turned
+	 * into `[]`), so an unfinished row stays editable. The values are not filtered: a template of type HTML may
+	 * contain tags, and the editor shows every value as text.
+	 *
+	 * @param mixed    $json   Submitted text.
+	 * @param callable $encode Encoder (`wp_json_encode`), so this class calls no WordPress function.
+	 * @return string The encoded draft, or an empty string when the text is not a readable mapping or is too large.
+	 *
+	 * @phpstan-param callable(mixed): (string|false) $encode
+	 */
+	public static function draft( $json, callable $encode ): string {
+		if ( ! is_string( $json ) || '' === $json || strlen( $json ) > self::MAX_BYTES ) {
+			return '';
+		}
+
+		$data = json_decode( $json, false, self::MAX_DEPTH );
+		if ( ! $data instanceof \stdClass || ! isset( $data->rows ) || ! is_array( $data->rows ) || ! Arrays::is_list( $data->rows ) ) {
+			return '';
+		}
+		foreach ( $data->rows as $row ) {
+			if ( ! $row instanceof \stdClass ) {
+				return '';
+			}
+		}
+
+		$draft = $encode( $data );
+
+		return is_string( $draft ) && strlen( $draft ) <= self::MAX_BYTES ? $draft : '';
 	}
 
 	/**

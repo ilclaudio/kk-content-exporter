@@ -14,14 +14,15 @@ use KKCE\Plugin;
 class KKCE_Plugin_Unit_Test extends KKCE_Unit_Test_Case {
 
 	/**
-	 * boot() registers the text domain loader on init and the row meta filter.
+	 * boot() registers the hooks of the plugin, and no loader of translation files: WordPress loads the
+	 * language packs of translate.wordpress.org by itself.
 	 */
 	public function test_boot_registers_hooks_without_translating_early() {
 		Functions\expect( '__' )->never();
 
 		Plugin::boot();
 
-		$this->assertSame( 10, has_action( 'init', array( Plugin::class, 'load_textdomain' ) ) );
+		$this->assertFalse( method_exists( Plugin::class, 'load_textdomain' ) );
 		// Version 1.0.0: no development note in the row of the plugin any more.
 		$this->assertFalse( has_filter( 'plugin_row_meta' ) );
 		$this->assertNotFalse( has_action( 'init', array( \KKCE\Feed_Post_Type::class, 'register' ) ) );
@@ -81,17 +82,5 @@ class KKCE_Plugin_Unit_Test extends KKCE_Unit_Test_Case {
 		Plugin::deactivate();
 
 		$this->addToAssertionCount( 1 );
-	}
-
-	/**
-	 * The text domain is loaded from the languages folder of the plugin.
-	 */
-	public function test_load_textdomain_uses_the_bundled_languages_folder() {
-		Functions\when( 'plugin_basename' )->justReturn( 'kk-content-exporter/kk-content-exporter.php' );
-		Functions\expect( 'load_plugin_textdomain' )
-			->once()
-			->with( 'kk-content-exporter', false, 'kk-content-exporter/languages' );
-
-		Plugin::load_textdomain();
 	}
 }

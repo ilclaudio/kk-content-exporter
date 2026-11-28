@@ -49,6 +49,59 @@ class KKCE_Mapping_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
+	 * The draft of a refused mapping is the text decoded and encoded again: unfinished rows stay editable
+	 * (an empty object stays `{}`), values are kept, and whitespace or duplicate keys of the submitted text are not.
+	 */
+	public function test_draft_encodes_again_a_mapping_with_unfinished_rows() {
+		$json = '{ "version": 1, "rows": [ {}, { "key": "t", "kind": "template", "template": "<b>{core.title}</b>", "key": "x" } ] }';
+
+		$this->assertSame(
+			'{"version":1,"rows":[{},{"key":"x","kind":"template","template":"<b>{core.title}</b>"}]}',
+			Mapping::draft( $json, static fn( $value ) => json_encode( $value, JSON_UNESCAPED_SLASHES ) )
+		);
+	}
+
+	/**
+	 * A text that does not have the shape of a mapping, or that is too large, gives no draft.
+	 *
+	 * @dataProvider no_draft_provider
+	 *
+	 * @param mixed $value Submitted value.
+	 */
+	public function test_draft_is_empty_without_the_shape_of_a_mapping( $value ) {
+		$this->assertSame( '', Mapping::draft( $value, 'json_encode' ) );
+	}
+
+	/**
+	 * Data for test_draft_is_empty_without_the_shape_of_a_mapping().
+	 *
+	 * @return array<string, array{0: mixed}>
+	 */
+	public function no_draft_provider(): array {
+		return array(
+			'not a string'      => array( array( 'rows' => array() ) ),
+			'empty'             => array( '' ),
+			'damaged'           => array( '{"version":1,"rows":[' ),
+			'invalid UTF-8'     => array( "{\"rows\":[{\"key\":\"\xC3\x28\"}]}" ),
+			'a list'            => array( '[{"key":"t"}]' ),
+			'without rows'      => array( '{"version":1}' ),
+			'rows not a list'   => array( '{"rows":{"0":{"key":"t"}}}' ),
+			'rows as an object' => array( '{"rows":{"a":{}}}' ),
+			'a row not object'  => array( '{"rows":[{"key":"t"},"<script>"]}' ),
+			'too deep'          => array( '{"rows":[{"a":{"b":{"c":{"d":{"e":{"f":{"g":1}}}}}}}]}' ),
+			'too large'         => array( '{"rows":[],"x":"' . str_repeat( 'a', Mapping::MAX_BYTES ) . '"}' ),
+		);
+	}
+
+	/**
+	 * A draft whose encoded form is above the limit, or that cannot be encoded, is not kept.
+	 */
+	public function test_draft_is_empty_when_the_encoded_form_is_not_usable() {
+		$this->assertSame( '', Mapping::draft( '{"rows":[]}', static fn(): bool => false ) );
+		$this->assertSame( '', Mapping::draft( '{"rows":[]}', static fn(): string => str_repeat( 'a', Mapping::MAX_BYTES + 1 ) ) );
+	}
+
+	/**
 	 * Anything that is not a JSON object (or a list) gives null: damaged text, scalars, empty values,
 	 * values that are not strings, texts above the size limit and nesting that is too deep.
 	 *

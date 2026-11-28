@@ -30,13 +30,14 @@ class KKCE_Composer_Scripts_Unit_Test extends KKCE_Unit_Test_Case {
 	}
 
 	/**
-	 * The translation script also writes the JSON translations of the admin scripts, after the `.mo` (see AGENTS/I18N.md).
+	 * Translations come from translate.wordpress.org: there is no script that writes translation files.
 	 */
-	public function test_i18n_script_writes_the_javascript_translations() {
+	public function test_there_is_no_translation_script() {
 		$scripts = json_decode( $this->read_plugin_file( 'composer.json' ), true )['scripts'];
 
-		$this->assertSame( array( '@make-pot', '@update-po', '@make-mo', '@make-json' ), $scripts['i18n'] );
-		$this->assertSame( 'wp i18n make-json languages', $scripts['make-json'] );
+		foreach ( array( 'i18n', 'make-pot', 'update-po', 'make-mo', 'make-json' ) as $name ) {
+			$this->assertArrayNotHasKey( $name, $scripts );
+		}
 	}
 
 	/**

@@ -23,42 +23,4 @@ class KKCE_Environment_Integration_Test extends WP_UnitTestCase {
 		// The main file wires boot(); the hooks boot() adds are covered by KKCE_Plugin_Unit_Test.
 		$this->assertSame( 10, has_action( 'plugins_loaded', array( Plugin::class, 'boot' ) ) );
 	}
-
-	/**
-	 * The bundled Italian translation is used when the locale is it_IT
-	 * (load_plugin_textdomain() on init, see AGENTS/CODING_STANDARDS.md).
-	 */
-	public function test_bundled_italian_translation_is_loaded() {
-		// A string of the plugin (the title of the settings box of a feed) read through the text domain; its
-		// Italian translation is read from the compiled catalogue that the plugin ships, so a change of the
-		// translation does not break the test. If the catalogue were not loaded, the text would stay in English.
-		$translate = static fn(): string => __( 'Feed settings', 'kk-content-exporter' );
-		$english   = $translate();
-
-		$catalogue = new MO();
-		$this->assertTrue( $catalogue->import_from_file( KKCE_TEST_PLUGIN_DIR . '/languages/kk-content-exporter-it_IT.mo' ) );
-		$italian = $catalogue->translate( $english );
-		$this->assertNotSame( $english, $italian, 'The text has no Italian translation in the catalogue.' );
-
-		// switch_to_locale() needs the core it_IT language pack, absent from the test checkout:
-		// force the locale instead and reload the text domain as init does.
-		$force_italian = static function () {
-			return 'it_IT';
-		};
-		add_filter( 'determine_locale', $force_italian );
-		add_filter( 'locale', $force_italian );
-		unload_textdomain( Plugin::TEXT_DOMAIN );
-		Plugin::load_textdomain();
-
-		try {
-			$this->assertSame( $italian, $translate() );
-		} finally {
-			remove_filter( 'determine_locale', $force_italian );
-			remove_filter( 'locale', $force_italian );
-			unload_textdomain( Plugin::TEXT_DOMAIN );
-			Plugin::load_textdomain();
-		}
-
-		$this->assertSame( $english, $translate(), 'The default locale is back to English.' );
-	}
 }

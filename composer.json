@@ -16,8 +16,7 @@
     "phpunit/phpunit": "^9.6",
     "squizlabs/php_codesniffer": "^3.13",
     "szepeviktor/phpstan-wordpress": "^2.0",
-    "wp-cli/i18n-command": "^2.6",
-    "wp-cli/wp-cli": "^2.11",
+    "wp-cli/mustangostang-spyc": "^0.6.7",
     "wp-coding-standards/wpcs": "^3.1",
     "yoast/phpunit-polyfills": "^4.0"
   },
@@ -52,16 +51,6 @@
     "env:stop": [
       "Composer\\Config::disableProcessTimeout",
       "npm run env:stop --"
-    ],
-    "make-pot": "wp i18n make-pot . languages/kk-content-exporter.pot --slug=kk-content-exporter --domain=kk-content-exporter --exclude=vendor,node_modules,tests,DEV,AGENTS,bin,build,playwright-report,test-results",
-    "update-po": "wp i18n update-po languages/kk-content-exporter.pot languages",
-    "make-mo": "wp i18n make-mo languages",
-    "make-json": "wp i18n make-json languages",
-    "i18n": [
-      "@make-pot",
-      "@update-po",
-      "@make-mo",
-      "@make-json"
     ],
     "hooks:install": "git config core.hooksPath .githooks",
     "build:zip": "@php bin/build-zip.php",
@@ -120,11 +109,6 @@
     "test:e2e": "End-to-end tests with Playwright; starts the wp-env development environment when needed",
     "env:start": "Start the wp-env development environment of the end-to-end tests (http://localhost:8890); composer run test:e2e starts it by itself",
     "env:stop": "Stop the wp-env development environment (data kept)",
-    "make-pot": "Regenerate languages/kk-content-exporter.pot",
-    "update-po": "Merge the .pot into every languages/*.po",
-    "make-mo": "Compile every languages/*.po into .mo",
-    "make-json": "Write the JSON translations of the admin scripts from every languages/*.po",
-    "i18n": "make-pot, update-po, make-mo and make-json in order",
     "hooks:install": "Activate the Git hooks of .githooks/ in this clone",
     "build:zip": "Build build/kk-content-exporter-<version>.zip (clean tree, checks, .distignore, verification); options after --: --allow-dirty, --skip-checks",
     "svn:prepare": "Prepare the WordPress.org SVN working copy from the build (dry run by default; --apply; never commits)",

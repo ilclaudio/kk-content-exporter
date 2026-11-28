@@ -6,7 +6,7 @@ Tags: export, json, rest-api, feed, content
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.3
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -139,6 +139,10 @@ Other errors: a wrong parameter (for example a page size above the maximum, a da
 
 No. It leaves the original content, its visibility and WordPress's existing REST API unchanged. Feeds have their own addresses and configuration.
 
+= Is the plugin available in my language? =
+
+The plugin is written in English. Translations are made by the community on translate.wordpress.org, and WordPress installs them automatically on sites in that language. Anyone can contribute a translation.
+
 = Does the plugin work on a multisite network? =
 
 It works on a single site. Network activation is not supported in this version: activate the plugin on each site where you need it.
@@ -154,5 +158,5 @@ It works on a single site. Network activation is not supported in this version: 
 
 == Changelog ==
 
-= 1.0.0 =
+= 1.0.1 =
 * First public release.

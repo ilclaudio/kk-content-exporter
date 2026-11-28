@@ -17,7 +17,7 @@ importer guidance, see [`Reading a feed`](docs/reading-a-feed.md).
 
 ## Project status
 
-Version 1.0.0 is being prepared for the WordPress.org Plugin Directory.
+Version 1.0.1 has been submitted to the WordPress.org Plugin Directory and is awaiting review.
 
 ## Requirements
 
@@ -91,7 +91,7 @@ Tools needed on the development machine: PHP 8.3+ and Composer for the static ch
 tests; in addition, for the integration and end-to-end tests in Docker, Node 24 and Docker Desktop.
 
 ```sh
-composer install                 # PHP tools: PHPCS, PHPStan, PHPUnit, Brain Monkey, WP-CLI i18n
+composer install                 # PHP tools: PHPCS, PHPStan, PHPUnit, Brain Monkey
 composer run hooks:install       # Git hooks: secret scan, lint, PHPCS, PHPStan, unit tests
 npm ci                           # test tools: wp-env, Playwright, axe-core
 npx playwright install chromium  # browser of the end-to-end tests (once per machine)
@@ -138,4 +138,6 @@ folder.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): rules for contributions.
 - [`SECURITY.md`](SECURITY.md): how to report a vulnerability.
 - [`CHANGELOG.md`](CHANGELOG.md): changes per version.
+- Translations: on [translate.wordpress.org](https://translate.wordpress.org/) once the plugin is published;
+  the plugin ships no translation files.
 - License: GPL-3.0-or-later, see [`LICENSE`](LICENSE).
