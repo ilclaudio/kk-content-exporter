@@ -94,7 +94,7 @@ final class Feed_Form {
 
 		$code = Feed_Validator::validate_per_page( $input['per_page'], $context['max_per_page'] );
 		if ( Feed_Validator::VALID === $code ) {
-			$values['per_page'] = Feed_Meta::sanitize_per_page( $input['per_page'] );
+			$values['per_page'] = (int) $input['per_page'];
 		} else {
 			$errors['per_page'] = $code;
 		}

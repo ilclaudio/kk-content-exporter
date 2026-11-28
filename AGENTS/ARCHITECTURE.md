@@ -172,7 +172,8 @@ post type must be a public post type, `attachment` excluded (a list with one tha
 the previous list is kept; duplicates are saved once), or one already saved for the feed: a saved post type that is no
 longer selectable (its plugin deactivated) stays checked with the note "not available" and is kept until it is unchecked; the items per page of a feed cannot exceed the
 global maximum of the settings (a feed that already exceeds a lowered maximum keeps its value, and the editor
-reports it at every save until it is lowered).
+reports it at every save until it is lowered). Accepted integer text is converted directly to the validated
+number: a leading plus or surrounding whitespace never replaces it with the default items per page.
 
 Settings page: the warnings are shown on the page only, not on every admin screen. The REST check asks a new
 `WP_REST_Server` object to `check_authentication()` (the core method that runs the filter `rest_authentication_errors`)

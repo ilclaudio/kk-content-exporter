@@ -456,6 +456,25 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A value close to an allowed one is refused, never repaired: an authenticated feed stays authenticated with
+	 * `PUBLIC` or `pub lic`, and a post type written in capitals or with other characters is not accepted.
+	 */
+	public function test_values_close_to_allowed_ones_are_refused_not_repaired() {
+		$feed = $this->feed();
+		$this->submit( $feed, $this->fields() );
+
+		foreach ( array( 'PUBLIC', 'pub lic', 'Public', ' public<' ) as $access ) {
+			$this->submit( $feed, $this->fields( array( 'access' => $access ) ) );
+			$this->assertSame( 'authenticated', get_post_meta( $feed, '_kkce_access', true ), $access );
+		}
+
+		foreach ( array( 'PAGE', 'Post<', 'po st' ) as $post_type ) {
+			$this->submit( $feed, $this->fields( array( 'post_types' => array( $post_type ) ) ) );
+			$this->assertSame( array( 'page' ), Feed_Meta::post_types( $feed ), $post_type );
+		}
+	}
+
+	/**
 	 * A damaged stored access never opens a feed: the editor shows it as authenticated and keeps it
 	 * authenticated when the form sends an unknown value.
 	 */
@@ -502,6 +521,25 @@ class KKCE_Feed_Editor_Integration_Test extends WP_UnitTestCase {
 		$this->submit( $feed, $this->fields( array( 'per_page' => '200' ) ) );
 
 		$this->assertSame( 200, Feed_Meta::sanitize_per_page( get_post_meta( $feed, '_kkce_per_page', true ) ), 'A higher maximum allows it.' );
+	}
+
+	/**
+	 * Accepted numeric text is stored as the validated integer through the actual editor and meta sanitizer.
+	 */
+	public function test_validated_per_page_is_saved_as_the_same_integer() {
+		update_option( \KKCE\Settings::OPTION, array( 'enabled' => '1', 'max_per_page' => '10' ) );
+		$feed = $this->feed();
+
+		foreach ( array( '+2' => 2, '  +10  ' => 10 ) as $submitted => $expected ) {
+			$this->submit( $feed, $this->fields( array( 'per_page' => $submitted ) ) );
+
+			$this->assertSame( (string) $expected, get_post_meta( $feed, '_kkce_per_page', true ) );
+			$this->assertFalse( $this->notices( $feed ), 'Accepted values create no error notice.' );
+		}
+
+		$this->submit( $feed, $this->fields( array( 'per_page' => '+11' ) ) );
+		$this->assertSame( '10', get_post_meta( $feed, '_kkce_per_page', true ), 'A value above the maximum keeps the previous number.' );
+		$this->assertSame( 'too_large', $this->notices( $feed )['per_page'] );
 	}
 
 	/**

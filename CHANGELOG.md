@@ -10,8 +10,9 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 
 ## [1.0.1] - 2026-11-28
-### Changed
-- Post types and access of the feed form are sanitized with `sanitize_key()`.
+### Fixed
+- Malformed rows in a refused mapping draft no longer stop the editor.
+- Accepted items-per-page values keep the validated number when the feed is saved.
 ### Removed
 - The bundled Italian translation: translations come from translate.wordpress.org.
 ### Security
@@ -21,11 +22,11 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 ### Added
 - Guide for the developers of a feed reader, in `docs/` on the repository.
 ### Changed
+- Italian translation reviewed for consistent terms.
 - Development: stricter CI, monthly dependency updates, code clean-ups.
 ### Removed
 - The development note on the Plugins screen.
 ### Fixed
-- Malformed rows in a refused mapping draft no longer stop the editor.
 - Post meta registered for every post type keep their declared type.
 - With the output type Automatic, a key has the same JSON type in every item.
 - Very large page numbers or sizes return an empty page instead of an error.

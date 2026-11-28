@@ -287,6 +287,37 @@ class KKCE_Feed_Form_Unit_Test extends KKCE_Unit_Test_Case {
 			'text'     => array( 'many', 'not_integer' ),
 			'decimal'  => array( '2.5', 'not_integer' ),
 			'empty'    => array( '', 'not_integer' ),
+			'signed above maximum' => array( '+101', 'too_large' ),
+			'integer overflow' => array( (string) PHP_INT_MAX . '0', 'not_integer' ),
+		);
+	}
+
+	/**
+	 * Accepted integer text must keep the validated number instead of falling back to the default 50.
+	 *
+	 * @dataProvider accepted_per_page_text_provider
+	 *
+	 * @param string $value    Submitted value.
+	 * @param int    $expected Validated number.
+	 */
+	public function test_validated_per_page_is_saved_as_the_same_integer( string $value, int $expected ) {
+		$result = Feed_Form::process( $this->input( array( 'per_page' => $value ) ), $this->context( array( 'max_per_page' => 10 ) ) );
+
+		$this->assertSame( $expected, $result['values']['per_page'] );
+		$this->assertArrayNotHasKey( 'per_page', $result['errors'] );
+	}
+
+	/**
+	 * Integer formats accepted by the validator, with a maximum lower than the default 50.
+	 *
+	 * @return array<string, array{0: string, 1: int}>
+	 */
+	public function accepted_per_page_text_provider(): array {
+		return array(
+			'plus sign' => array( '+2', 2 ),
+			'spaces' => array( ' 2 ', 2 ),
+			'other whitespace' => array( "\t+2\n", 2 ),
+			'signed maximum' => array( '+10', 10 ),
 		);
 	}
 
