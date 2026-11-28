@@ -1,7 +1,5 @@
 === KK Content Exporter ===
 Contributors: ioclaudio
-Author: ioclaudio
-Author URI: https://www.claudiobattaglino.it/
 Tags: export, json, rest-api, feed, content
 Requires at least: 6.4
 Tested up to: 7.1
@@ -46,7 +44,7 @@ Only published, non-password-protected content and selected fields are exported.
 
 This example creates a public feed of post titles and links. You need at least one published post without a password to see sample data.
 
-1. In the WordPress admin, open **Content Exporter > Add New** and name the feed **News**.
+1. In the WordPress admin, open **Content Exporter**, add a new feed and name it **News**.
 2. In **Feed settings**, enter `news` in **Slug** and select **Posts** under **Source**.
 3. Under **Access**, choose **Public: anyone can read the feed**. For this public example, **Require authentication for all feeds** must be off in **Content Exporter > Settings**.
 4. In **Mapping**, click **Add row**. Use **Rule** = **Field**, choose **Title**, and set **JSON key** to `title`.
@@ -82,11 +80,11 @@ Open **Content Exporter > Settings** to configure all feeds, then click **Save C
 
 = Diagnostic messages =
 
-The settings page reports:
+The settings page warns when:
 
-* **Public REST access blocked:** another plugin or setting may block anonymous readers.
-* **Application Passwords unavailable:** authenticated feeds need this feature, normally available over HTTPS or locally.
-* **Sensitive fields included:** review the sensitive fields confirmed for enabled feeds, especially public ones.
+* the REST API seems blocked for anonymous requests, for example by a security plugin, so public feeds cannot be read;
+* some feeds require authentication but Application Passwords are not available, which WordPress offers only over HTTPS or locally;
+* enabled feeds export fields confirmed as sensitive or personal: check that this is intended, especially for public feeds.
 
 These messages do not change settings automatically.
 

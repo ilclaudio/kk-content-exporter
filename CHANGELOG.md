@@ -11,75 +11,66 @@ Allowed TAGS: Added, Changed, Deprecated, Removed, Fixed, Security.
 
 ## [1.0.1] - 2026-11-28
 ### Fixed
-- Malformed rows in a refused mapping draft no longer stop the editor.
-- Accepted items-per-page values keep the validated number when the feed is saved.
+- The editor survives malformed rows in a refused mapping draft.
+- A valid items-per-page value is saved as validated.
 ### Removed
-- The bundled Italian translation: translations come from translate.wordpress.org.
+- Bundled Italian translation: translations come from translate.wordpress.org.
 ### Security
-- A mapping refused on save is kept as a draft only decoded and encoded again, never as submitted.
+- A refused mapping is kept as a draft only after decoding and re-encoding, never as submitted.
 
 ## [1.0.0] - 2026-11-27
 ### Added
-- Guide for the developers of a feed reader, in `docs/` on the repository.
+- Guide for developers of a feed reader (`docs/`, repository only).
 ### Changed
 - Italian translation reviewed for consistent terms.
 - Development: stricter CI, monthly dependency updates, code clean-ups.
 ### Removed
-- The development note on the Plugins screen.
+- Development note on the Plugins screen.
 ### Fixed
 - Post meta registered for every post type keep their declared type.
-- With the output type Automatic, a key has the same JSON type in every item.
+- Output type Automatic: a key has the same JSON type in every item.
 - Very large page numbers or sizes return an empty page instead of an error.
 ### Security
 - The preview warns when an author display name is the login name.
 
 ## [0.0.4] - 2026-11-25
 ### Added
-- Feed endpoint `GET /wp-json/kkce/v1/<slug>` with pages, stable order, public or Application Password access.
+- Feed endpoint `GET /wp-json/kkce/v1/<slug>`: pages, stable order, public or Application Password access.
 - Date filters `modified_after`, `modified_before`, `published_after`; optional `lang` with Polylang.
 - Fields: featured image URL, taxonomy terms, site and item language, translation group.
-- Guide page with one tab per rule; FAQ on a user that can only read the feeds.
-- Setting to hide the endpoint from the REST API index; warnings for unpublished feeds and author logins.
+- Guide page with one tab per rule; setting to hide the endpoint from the REST API index.
+- Warnings for unpublished feeds and author logins; FAQ on a read-only feed user.
 - Development: Insomnia route runner, Polylang integration suite.
 ### Changed
-- Mapping editor redesigned: rows laid out as a form, collapsible, compact preview.
-- Feed status shown as an on/off switch.
-- A page of a feed costs the same queries whatever its number of items.
+- Mapping editor redesigned (form layout, collapsible rows, compact preview); feed status as an on/off switch.
+- A page of a feed costs the same queries whatever its size.
 ### Fixed
-- Only the feed editor changes a feed slug; a restored feed never shares another feed's address.
+- Only the feed editor changes a feed slug; a restored feed never takes another feed's address.
 - Preview: no "not known" error for fields of another post type, no unsaved-changes warning on item choice.
 - 401 responses of the plugin routes include a Basic authentication challenge.
 
 ## [0.0.3] - 2026-11-19
 ### Added
-- Post meta fields in the mapping: the keys in use, hidden keys listed apart, and any key typed by hand.
+- Post meta fields in the mapping: keys in use, hidden keys listed apart, any key typed by hand.
 ### Changed
-- Development tooling: the end-to-end tests run with `composer run test:e2e`, like the other test levels.
-- Development tooling: Docker test environments are named explicitly for integration (`inttest`) and end-to-end (`e2etest`) tests.
+- Development: `composer run test:e2e`; Docker environments named `inttest` and `e2etest`.
 
 ## [0.0.2] - 2026-11-15
 ### Changed
-- Development tooling: CI checks whitespace, builds the ZIP, audits the npm tools and runs the integration tests on WordPress 7.1.4 and 6.4.
+- Development: CI checks whitespace, builds the ZIP, audits npm tools, runs integration tests on WordPress 7.1.4 and 6.4.
 ### Fixed
 - A refused mapping shown again keeps its unfinished rows editable.
-- A sensitive field typed in a template shows its confirmation box at once.
+- A sensitive field typed in a template asks for confirmation at once.
 
 ## [0.0.1] - 2026-11-15
 ### Added
-- Plugin bootstrap, autoloader and lifecycle hooks.
-- Feeds (private post type `kkce_feed`) with slug, one or more post types, access, active flag and items per page.
-- Capability `kkce_read_export` for administrators.
-- List of the feeds with endpoint, post types, access and status.
-- Settings page: endpoints on/off, authentication for all feeds, maximum items per page, data removal on uninstall, diagnostics.
-- Uninstall that removes the data only when the setting is on.
-- Mapping of a feed: rules Field, Fixed value, Template, Lookup table and Condition, with exceptions per post type.
-- Mapping editor in the feed editor, with live preview, help texts and save.
-- Core WordPress fields as sources; author e-mail and login never offered.
-- Sensitive fields exported only after an explicit confirmation, and marked in the list and the settings.
-- Values normalized to the output type; content and excerpt as clean HTML; optional maximum text length.
-- Every key always present in every item, `null` when there is no value.
+- Feeds (private post type `kkce_feed`): slug, one or more post types, access, active flag, items per page.
+- Mapping rules Field, Fixed value, Template, Lookup table and Condition, with exceptions per post type.
+- Mapping editor with live preview; list of the feeds; settings page with diagnostics.
+- Core WordPress fields as sources; author e-mail and login never offered; sensitive fields only after confirmation.
+- Values normalized to the output type; every key in every item, `null` without a value.
+- Capability `kkce_read_export` for administrators; data removed on uninstall only when the setting is on.
 - Italian translation.
-- Development tooling: PHPCS, PHPStan level 8, PHPUnit, Git hooks with secret scan, CI with actions pinned to SHAs, AI context.
-- Development tooling: integration tests in Docker (wp-env) and Playwright end-to-end tests with axe-core.
+- Development: PHPCS, PHPStan level 8, PHPUnit, Git hooks with secret scan, CI with SHA-pinned actions, wp-env and Playwright tests.
 ### Security
 - No external HTTP request while content is rendered.
